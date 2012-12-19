@@ -132,6 +132,7 @@ class KansasInitHandler(KansasHandler):
 
     def handle_connect(self, request, output):
         with self._lock:
+            logging.info(request)
             if request['gameid'] in self.games:
                 logging.info("Joining existing game '%s'", request['gameid'])
                 game = self.games[request['gameid']]
@@ -167,25 +168,22 @@ class KansasGameHandler(KansasHandler):
 
         with self._lock:
             move = req['move']
-            accept, seqno = self.apply_move(move)
-            if accept:
-                logging.info("Accepted move request '%s'", req)
-                self.broadcast(
-                    set(self.streams.keys()) - {output},
-                    'update',
-                    {
-                        # move delta is sufficient in most cases
-                        'move': move,
-                        # dest_stack is needed resolve ordering conflicts
-                        'dest_stack': (self._state.data
-                            [move['dest_type']]
-                            [move['dest_key']]),
-                        # seqno is a sanity check for the client
-                        'seqno': seqno,
-                    })
-                output.reply({'accept': True, 'seqno': self._seqno})
-            else:
-                output.reply({'accept': False, 'seqno': self._seqno})
+            seqno = self.apply_move(move)
+            logging.info("Accepted move request '%s'", req)
+            self.broadcast(
+                set(self.streams.keys()) - {output.stream},
+                'update',
+                {
+                    # move delta is sufficient in most cases
+                    'move': move,
+                    # dest_stack is needed resolve ordering conflicts
+                    'dest_stack': (self._state.data
+                        [move['dest_type']]
+                        [move['dest_key']]),
+                    # seqno is a sanity check for the client
+                    'seqno': seqno,
+                })
+            output.reply(self._seqno)
 
     def handle_broadcast(self, req, output):
         with self._lock:
@@ -226,16 +224,12 @@ class KansasGameHandler(KansasHandler):
     def apply_move(self, move):
         """Applies move and increments seqno, returning True on success."""
         with self._lock:
-            card = move['cardid']
+            card = move['card']
             dest_type = move['dest_type']
             dest_key = move['dest_key']
             dest_orient = move['dest_orient']
-            try:
-                self._state.atomicMove(card, dest_type, dest_key, dest_orient)
-                return True, self.nextseqno()
-            except Exception, e:
-                logging.exception(e)
-                return False, self._seqno
+            self._state.atomicMove(card, dest_type, dest_key, dest_orient)
+            return self.nextseqno()
 
 
 
@@ -257,7 +251,7 @@ def web_socket_transfer_data(request):
             logging.info("Request type %s", req['type'])
             currentHandler = currentHandler.dispatch(
                 req['type'],
-                req,
+                req.get('data'),
                 JSONOutput(request.ws_stream, req['type']))
         except Exception, e:
             logging.exception(e)
