@@ -183,14 +183,13 @@ class KansasGameHandler(KansasHandler):
                     # seqno is a sanity check for the client
                     'seqno': seqno,
                 })
-            output.reply(self._seqno)
 
     def handle_broadcast(self, req, output):
         with self._lock:
             self.broadcast(
                 set(self.streams.keys()) - {output.stream},
-                'custom_broadcast',
-                req['data'])
+                'broadcast_message',
+                req)
             output.reply('ok')
 
     def handle_resync(self, req, output):
