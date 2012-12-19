@@ -1,8 +1,9 @@
-var grid = 250;
-var delta = 5;
+var grid = 100;
+var delta = 2;
 var ws = null;
 var hostname = window.location.hostname || "localhost"
 var wsport = 8080
+var ctr = 0;
 
 // http://stackoverflow.com/questions/5186441/javascript-drag-and-drop-for-touch-devices
 function touchHandler(event) {
@@ -40,8 +41,48 @@ $(document).ready(function() {
 
 	function log(msg) {
 		var console = $('#console');
-		console.append(msg);
+		console.append(msg + "\n");
 		console.scrollTop(console[0].scrollHeight - console.height());
+	}
+
+	function initDrag() {
+		$(".card").draggable({stack: ".card"});
+		$(".card").bind("dragstart", function(event, ui) {
+			requireConnect();
+			var target = $(event.currentTarget);
+			var card = target.prop("id");
+			ws.send("broadcast", {"subtype": "dragstart", "card": card});
+		});
+		$(".card").bind("dragstop", function(event, ui) {
+			var target = $(event.currentTarget);
+			var offset = target.offset();
+			var card = parseInt(target.prop("id").substr(5));
+			var dest_key = ((offset.left + grid/2) / grid) |
+						   ((offset.top + grid/2) / grid) << 16;
+			ws.send("move", {move: {card: card,
+									dest_type: "board",
+									dest_key: dest_key,
+									dest_orient: 0}});
+		});
+	}
+
+	function reset(state) {
+		$(".card").remove();
+		for (pos in state.board) {
+			var stack = state.board[pos];
+			for (z in stack) {
+				var cid = stack[z];
+				var x = (pos & 0xffff) * grid;
+				var y = (pos >> 16) * grid;
+				var img = '<img style="z-index: ' + state.zIndex[cid]
+					+ '; left: ' + (x + (z * delta)) + 'px'
+					+ '; top: ' + (y + (z * delta)) + 'px'
+					+ '" id="card_' + cid +
+					'" class="card" src="' + state.urls[cid] + '">'
+				$("#arena").append(img);
+			}
+		}
+		initDrag();
 	}
 
     ws = $.websocket("ws:///" + hostname + ":" + wsport + "/kansas", {
@@ -49,31 +90,34 @@ $(document).ready(function() {
         close: function() { alert("close"); },
         events: {
             connect_resp: function(e) {
-                log("Connected: " + e.data + "\n");
+                log("Connected: " + e.data);
 				$("#connect").hide();
 				$(".connected").show();
+				reset(e.data[0]);
             },
+			resync_resp: function(e) {
+				reset(e.data[0]);
+			},
             error: function(e) {
-                log("Error: " + e.msg + "\n");
+                log("Error: " + e.msg);
             },
             update: function(e) {
-                log("Update: " + JSON.stringify(e.data) + "\n");
-				var z = e.data.z_stack.length - 1;
+                log("Update: " + JSON.stringify(e.data));
+				var lz = e.data.z_stack.length - 1;
 				var x = (e.data.move.dest_key & 0xffff) * grid;
 				var y = (e.data.move.dest_key >> 16) * grid;
 				for (i in e.data.z_stack) {
 					if (i == e.data.z_stack.length - 1) {
 						continue; // allow the last element to animate
 					}
-					$("#card_" + e.data.z_stack[i]).css("z-index", i);
 					$("#card_" + e.data.z_stack[i]).css("left", x + i * delta);
 					$("#card_" + e.data.z_stack[i]).css("top", y + i * delta);
 				}
                 $("#card_" + e.data.move.card).css("opacity", "1.0");
-                $("#card_" + e.data.move.card).css("z-index", z + 1000);
+                $("#card_" + e.data.move.card).css("z-index", e.data.z_index);
                 $("#card_" + e.data.move.card).animate({
-					left: x + z * delta,
-					top: y + z * delta,
+					left: x + lz * delta,
+					top: y + lz * delta,
 				});
             },
 			broadcast_message: function(e) {
@@ -82,10 +126,10 @@ $(document).ready(function() {
 						$("#" + e.data.card).css("opacity", "0.7");
 						break;
 				}
-                log("Broadcast: " + JSON.stringify(e) + "\n");
+                log("Broadcast: " + JSON.stringify(e));
 			},
             _default: function(e) {
-                log("Unknown response: " + JSON.stringify(e) + "\n");
+                log("Unknown response: " + JSON.stringify(e));
             },
         },
     });
@@ -104,25 +148,6 @@ $(document).ready(function() {
     $("#sync").click(function(e) {
         ws.send("resync");
     });
-
-	$(".card").draggable({stack: ".card"});
-	$(".card").bind("dragstart", function(event, ui) {
-		requireConnect();
-		var target = $(event.currentTarget);
-		var card = target.prop("id");
-        ws.send("broadcast", {"subtype": "dragstart", "card": card});
-	});
-	$(".card").bind("dragstop", function(event, ui) {
-		var target = $(event.currentTarget);
-		var offset = target.offset();
-		var card = parseInt(target.prop("id").substr(5));
-		var dest_key = ((offset.left + grid/2) / grid) |
-		               ((offset.top + grid/2) / grid) << 16;
-        ws.send("move", {move: {card: card,
-                                dest_type: "board",
-                                dest_key: dest_key,
-                                dest_orient: 0}});
-	});
 });
 
 // vim: noet ts=4

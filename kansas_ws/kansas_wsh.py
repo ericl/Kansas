@@ -11,12 +11,25 @@ DEFAULT_DECK = {
     'deck_name': 'Test deck',
     'back_url': 'http://www.google.com/images/srpr/logo3w.png',
     'board': {
-        2: [6, 7],
-        3: [8, 9, 10],
+        196609: [6, 7],
+        262146: [8, 10],
+        196611: [9],
     },
     'hands': {
         'bob': [11, 12, 13],
         'steve': [14, 15],
+    },
+    'zIndex': {
+        6: 0,
+        7: 1,
+        8: 2,
+        9: 3,
+        10: 4,
+        11: 5,
+        12: 7,
+        13: 8,
+        14: 9,
+        15: 10,
     },
     'orientations': {
         6: 0,
@@ -31,11 +44,11 @@ DEFAULT_DECK = {
         15: 0,
     },
     'urls': {
-        6: 'http://www.google.com/images/srpr/logo3w.png',
-        7: 'http://www.google.com/images/srpr/logo3w.png',
-        8: 'http://www.google.com/images/srpr/logo3w.png',
-        9: 'http://www.google.com/images/srpr/logo3w.png',
-        10: 'http://www.google.com/images/srpr/logo3w.png',
+        6: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=6544&type=card',
+        7: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=134762&type=card',
+        8: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=3039&type=card',
+        9: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=174935&type=card',
+        10: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=139450&type=card',
         11: 'http://www.google.com/images/srpr/logo3w.png',
         12: 'http://www.google.com/images/srpr/logo3w.png',
         13: 'http://www.google.com/images/srpr/logo3w.png',
@@ -101,6 +114,7 @@ class KansasGameState(object):
             self.data[dest_type][dest_key] = []
         self.data[dest_type][dest_key].append(card)
         self.data['orientations'][card] = dest_orient
+        self.data['zIndex'][card] = max(self.data['zIndex'].values()) + 1
         self.index[card] = (dest_type, dest_key)
 
 
@@ -178,8 +192,10 @@ class KansasGameHandler(KansasHandler):
                 {
                     # move delta is sufficient in most cases
                     'move': move,
-                    # z_stack is needed resolve ordering conflicts
+                    # z_stack enforces stack ordering
                     'z_stack': self._state.data[dest_t][dest_k],
+                    # z_index enforces global ordering
+                    'z_index': self._state.data['zIndex'][move['card']],
                     # seqno is a sanity check for the client
                     'seqno': seqno,
                 })

@@ -7,7 +7,12 @@
     <script type="text/javascript" src="js/jquery.websocket-0.0.1.js"></script>
     <script type="text/javascript" src="js/kansas.js"></script>
     <script type="text/javascript" src="js/jquery-ui-1.9.2.custom.min.js"></script>
-
+    <style>
+        .card {
+            position: absolute;
+            border-radius: 10px;
+        }
+    </style>
   </head>
   <body>
   <textarea id="console" rows=15, cols=90></textarea><br>
@@ -15,11 +20,7 @@
   <div style="display: none" class="connected">
       <button id="sync">Sync</button>
   </div>
-  <div class="card" id="card_6" style="width: 150px; height: 200px; background-color: blue; position: absolute; left: 300px; top: 300px; z-index: 6"></div>
-  <div class="card" id="card_7" style="width: 150px; height: 200px; background-color: red; position: absolute; left: 320px; top: 310px; z-index: 5"></div>
-  <div class="card" id="card_8" style="width: 150px; height: 200px; background-color: green; position: absolute; left: 420px; top: 330px; z-index: 5"></div>
-  <div class="card" id="card_9" style="width: 150px; height: 200px; background-color: gray; position: absolute; left: 330px; top: 340px; z-index: 5"></div>
-  <div class="card" id="card_10" style="width: 150px; height: 200px; background-color: orange; position: absolute; left: 320px; top: 410px; z-index: 5"></div>
+  <div id="arena"></div>
   </body>
 </html>
 
