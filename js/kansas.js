@@ -1,6 +1,8 @@
 var grid = 250;
 var delta = 5;
 var ws = null;
+var hostname = window.location.hostname || "localhost"
+var wsport = 8080
 
 // http://stackoverflow.com/questions/5186441/javascript-drag-and-drop-for-touch-devices
 function touchHandler(event) {
@@ -42,7 +44,7 @@ $(document).ready(function() {
 		console.scrollTop(console[0].scrollHeight - console.height());
 	}
 
-    ws = $.websocket("ws:///" + window.location.hostname + ":8080/kansas", {
+    ws = $.websocket("ws:///" + hostname + ":" + wsport + "/kansas", {
         open: function() { alert("open"); },
         close: function() { alert("close"); },
         events: {
