@@ -1,0 +1,5 @@
+Dependencies:
+    pywebsocket - http://code.google.com/p/pywebsocket/
+
+Usage:
+    $ python test_server.py 8080
