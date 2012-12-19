@@ -168,6 +168,8 @@ class KansasGameHandler(KansasHandler):
 
         with self._lock:
             move = req['move']
+            dest_t = move['dest_type']
+            dest_k = move['dest_key']
             seqno = self.apply_move(move)
             logging.info("Accepted move request '%s'", req)
             self.broadcast(
@@ -176,10 +178,8 @@ class KansasGameHandler(KansasHandler):
                 {
                     # move delta is sufficient in most cases
                     'move': move,
-                    # z_index is needed resolve ordering conflicts
-                    'z_index': len(self._state.data
-                        [move['dest_type']]
-                        [move['dest_key']]),
+                    # z_stack is needed resolve ordering conflicts
+                    'z_stack': self._state.data[dest_t][dest_k],
                     # seqno is a sanity check for the client
                     'seqno': seqno,
                 })
