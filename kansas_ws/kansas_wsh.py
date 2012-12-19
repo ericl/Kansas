@@ -171,13 +171,13 @@ class KansasGameHandler(KansasHandler):
             seqno = self.apply_move(move)
             logging.info("Accepted move request '%s'", req)
             self.broadcast(
-                set(self.streams.keys()) - {output.stream},
+                set(self.streams.keys()),
                 'update',
                 {
                     # move delta is sufficient in most cases
                     'move': move,
-                    # dest_stack is needed resolve ordering conflicts
-                    'dest_stack': (self._state.data
+                    # z_index is needed resolve ordering conflicts
+                    'z_index': len(self._state.data
                         [move['dest_type']]
                         [move['dest_key']]),
                     # seqno is a sanity check for the client

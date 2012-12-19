@@ -29,7 +29,7 @@ $(document).ready(function() {
         ws.send("connect", {user: "ekl", gameid: "test"});
     });
 
-    $("#move").click(function(e) {
+    $("#move2").click(function(e) {
         $("#card6").animate({left: 5 * 100});
         ws.send("move", {move: {card: 6,
                                 dest_type: "board",
@@ -37,8 +37,12 @@ $(document).ready(function() {
                                 dest_orient: 2}});
     });
 
-    $("#sync").click(function(e) {
-        ws.send("resync");
+    $("#move").click(function(e) {
+        $("#card6").animate({left: 3 * 100});
+        ws.send("move", {move: {card: 6,
+                                dest_type: "board",
+                                dest_key: 3,
+                                dest_orient: 2}});
     });
 });
 
