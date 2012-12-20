@@ -8,9 +8,10 @@
     <script type="text/javascript" src="js/kansas.js"></script>
     <script type="text/javascript" src="js/jquery-ui-1.9.2.custom.min.js"></script>
     <style>
-        .card {
+        .card, #phantom {
             position: absolute;
-            border-radius: 10px;
+            border-radius: 7px;
+            height: 200px;
         }
     </style>
   </head>
@@ -20,7 +21,7 @@
   <div style="display: none" class="connected">
       <button id="sync">Sync</button>
   </div>
-  <div id="arena"><div id="phantom" style="display: none; position: absolute; border: 2px solid black; z-index: 999999; background-color: gray; opacity: 0.5; pointer-events: none;"></div>
+  <div id="arena"><div id="phantom" style="display: none; position: absolute; border: 2px solid black; background-color: gray; opacity: 0.4; pointer-events: none;"></div>
   </body>
 </html>
 

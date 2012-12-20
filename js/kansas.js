@@ -4,19 +4,27 @@ var ws = null;
 var hostname = window.location.hostname || "localhost"
 var wsport = 8080
 var ctr = 0;
-var user = "ekl";
-var gameid = "test";
+var user = "testuser1";
+var gameid = "testgame1";
 var phantom_dest = 0;
 var uuid = "p_" + Math.random().toString().substring(5);
+var resource_prefix = '';
+
+function log(msg) {
+	var console = $('#console');
+	console.append(msg + "\n");
+	console.scrollTop(console[0].scrollHeight - console.height());
+}
 
 // http://stackoverflow.com/questions/5186441/javascript-drag-and-drop-for-touch-devices
+// TODO find a more robust solution that supports hold touch, taps, and double taps.
 function touchHandler(event) {
     var touches = event.changedTouches,
     first = touches[0],
     type = "";
 
-    switch(event.type) {
-		case "touchstart": type = "mousedown"; break;
+    switch (event.type) {
+		case "touchstart": type="mousedown"; break;
 		case "touchmove": type="mousemove"; break;
 		case "touchend": type="mouseup"; break;
 		default: return;
@@ -43,18 +51,22 @@ $(document).ready(function() {
 	init();
 	var connected = false;
 
-	function log(msg) {
-		var console = $('#console');
-		console.append(msg + "\n");
-		console.scrollTop(console[0].scrollHeight - console.height());
-	}
-
-	function initDrag() {
+	function initCards() {
 		$(".card").draggable({stack: ".card"});
 		$(".card").bind("dragstart", function(event, ui) {
 			var target = $(event.currentTarget);
+			var offset = target.offset();
 			var card = target.prop("id");
 			ws.send("broadcast", {"subtype": "dragstart", "card": card});
+			var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
+			var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
+			var phantom = $("#phantom");
+			phantom.width(target.width());
+			phantom.height(target.height());
+			phantom.css("left", dest_x);
+			phantom.css("top", dest_y);
+			phantom.css("z-index", target.css("zIndex") - 1);
+			phantom.show();
 		});
 		$(".card").bind("drag", function(event, ui) {
 			var target = $(event.currentTarget);
@@ -64,12 +76,6 @@ $(document).ready(function() {
 			var dest_key = dest_x | dest_y << 16;
 			if (dest_key != phantom_dest) {
 				phantom_dest = dest_key;
-				var phantom = $("#phantom");
-				phantom.width(target.width());
-				phantom.height(target.height());
-				phantom.css("left", dest_x);
-				phantom.css("top", dest_y);
-				phantom.show();
 				ws.send("broadcast",
 					{
 						"subtype": "phantomupdate",
@@ -94,12 +100,55 @@ $(document).ready(function() {
 			var target = $(event.currentTarget);
 			var offset = target.offset();
 			var card = parseInt(target.prop("id").substr(5));
+			var orient = target.data("orient");
 			var dest_key = ((offset.left + grid/2) / grid) |
 						   ((offset.top + grid/2) / grid) << 16;
 			ws.send("move", {move: {card: card,
 									dest_type: "board",
 									dest_key: dest_key,
-									dest_orient: 0}});
+									dest_orient: orient}});
+		});
+		$(".card").dblclick(function(event) {
+			var target = $(event.currentTarget);
+			var orient = target.data("orient");
+			if (orient == 0) {
+				orient = 1;
+			}
+			if (orient > 0) {
+				target.prop("src", resource_prefix + target.data("back"));
+			} else {
+				target.prop("src", resource_prefix + target.data("front"));
+			}
+
+			var offset = target.offset();
+			var card = parseInt(target.prop("id").substr(5));
+			var orient = target.data("orient");
+			var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
+			var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
+			var dest_key = ((offset.left + grid/2) / grid) |
+						   ((offset.top + grid/2) / grid) << 16;
+			ws.send("broadcast",
+				{
+					"subtype": "phantomupdate",
+					"hide": false,
+					"uuid": uuid,
+					"name": user,
+					"left": dest_x,
+					"top": dest_y,
+					"width": target.width(),
+					"height": target.height()
+				});
+			ws.send("move", {move: {card: card,
+									dest_type: "board",
+									dest_key: dest_key,
+									dest_orient: -orient}});
+			ws.send("broadcast",
+				{
+					"subtype": "phantomupdate",
+					"hide": true,
+					"uuid": uuid,
+				});
+			target.data("orient", -orient);
 		});
 	}
 
@@ -111,15 +160,24 @@ $(document).ready(function() {
 				var cid = stack[z];
 				var x = (pos & 0xffff) * grid;
 				var y = (pos >> 16) * grid;
+				var url = state.urls[cid];
+				var back_url = state.back_urls[cid] || state.default_back_url;
+				resource_prefix = state.resource_prefix;
+				if (state.orientations[cid] < 0) {
+					url = back_url;
+				}
 				var img = '<img style="z-index: ' + state.zIndex[cid]
 					+ '; left: ' + (x + (z * delta)) + 'px'
 					+ '; top: ' + (y + (z * delta)) + 'px'
-					+ '" id="card_' + cid +
-					'" class="card" src="' + state.urls[cid] + '">'
+					+ '" id="card_' + cid + '"'
+					+ ' data-orient="' + state.orientations[cid] + '"'
+					+ ' data-front="' + state.urls[cid] + '"'
+					+ ' data-back="' + back_url + '"'
+					+ ' class="card" src="' + resource_prefix + url + '">'
 				$("#arena").append(img);
 			}
 		}
-		initDrag();
+		initCards();
 	}
 
     ws = $.websocket("ws:///" + hostname + ":" + wsport + "/kansas", {
@@ -153,12 +211,20 @@ $(document).ready(function() {
 					$("#card_" + e.data.z_stack[i]).css("left", x + i * delta);
 					$("#card_" + e.data.z_stack[i]).css("top", y + i * delta);
 				}
-                $("#card_" + e.data.move.card).css("opacity", "1.0");
-                $("#card_" + e.data.move.card).css("z-index", e.data.z_index);
-                $("#card_" + e.data.move.card).animate({
+				var target = $("#card_" + e.data.move.card);
+                target.css("opacity", "1.0");
+                target.css("z-index", e.data.z_index);
+                target.animate({
 					left: x + lz * delta,
 					top: y + lz * delta,
 				}, 'fast');
+				var orient = e.data.move.dest_orient;
+				target.data("orient", orient);
+				if (orient < 0) {
+					target.prop("src", resource_prefix + target.data("back"));
+				} else {
+					target.prop("src", resource_prefix + target.data("front"));
+				}
             },
 			broadcast_message: function(e) {
 				switch (e.data.subtype) {
@@ -173,7 +239,7 @@ $(document).ready(function() {
 							phantom = $(phantom);
 						}
 						if (e.data.hide) {
-							phantom.fadeOut();
+							phantom.fadeOut('slow');
 						} else {
 							phantom.width(e.data.width - 6);
 							phantom.height(e.data.height - 6);

@@ -7,68 +7,7 @@ import logging
 import threading
 import time
 
-
-DEFAULT_DECK = {
-    'deck_name': 'Test deck',
-    'back_url': 'http://www.google.com/images/srpr/logo3w.png',
-    'board': {
-        196609: [6, 7],
-        262146: [8, 10],
-        196611: [9],
-    },
-    'hands': {
-        'bob': [11, 12, 13],
-        'steve': [14, 15],
-    },
-    'zIndex': {
-        6: 0,
-        7: 1,
-        8: 2,
-        9: 3,
-        10: 4,
-        11: 5,
-        12: 7,
-        13: 8,
-        14: 9,
-        15: 10,
-    },
-    'orientations': {
-        6: 0,
-        7: 1,
-        8: 2,
-        9: 2,
-        10: 0,
-        11: 0,
-        12: 7,
-        13: 0,
-        14: 1,
-        15: 0,
-    },
-    'urls': {
-        6: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=6544&type=card',
-        7: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=134762&type=card',
-        8: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=3039&type=card',
-        9: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=174935&type=card',
-        10: 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=139450&type=card',
-        11: 'http://www.google.com/images/srpr/logo3w.png',
-        12: 'http://www.google.com/images/srpr/logo3w.png',
-        13: 'http://www.google.com/images/srpr/logo3w.png',
-        14: 'http://www.google.com/images/srpr/logo3w.png',
-        15: 'http://www.google.com/images/srpr/logo3w.png',
-    },
-    'titles': {
-        6: 'Ace of Spades',
-        7: 'Ace of Spades',
-        8: 'Ace of Spades',
-        9: 'Ace of Spades',
-        10: 'Ace of Spades',
-        11: 'Ace of Spades',
-        12: 'Ace of Spades',
-        13: 'Ace of Spades',
-        14: 'Ace of Spades',
-        15: 'Ace of Spades',
-    }
-}
+import decks
 
 
 class JSONOutput(object):
@@ -86,7 +25,7 @@ class JSONOutput(object):
 
 class KansasGameState(object):
     def __init__(self):
-        self.data = copy.deepcopy(DEFAULT_DECK)
+        self.data = copy.deepcopy(decks.DEFAULT_DECK)
         self.index = self.buildIndex()
 
     def buildIndex(self):
@@ -102,7 +41,7 @@ class KansasGameState(object):
     def atomicMove(self, card, dest_type, dest_key, dest_orient):
         assert dest_type in ['board', 'hands']
         assert type(dest_key) in [int, str, unicode]
-        assert dest_orient in range(8)
+        assert dest_orient in range(-4, 5)
 
         # Removes card from where it was.
         src_type, src_key = self.index[card]
