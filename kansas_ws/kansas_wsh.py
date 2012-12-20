@@ -5,6 +5,7 @@ import copy
 import json
 import logging
 import threading
+import time
 
 
 DEFAULT_DECK = {
@@ -223,6 +224,7 @@ class KansasGameHandler(KansasHandler):
 
     def broadcast(self, streamSet, reqtype, data):
         logging.info("Broadcasting %s: '%s'", reqtype, data)
+        start = time.time()
         for stream in streamSet:
             try:
                 stream.send_message(
@@ -235,6 +237,7 @@ class KansasGameHandler(KansasHandler):
                 logging.exception(e)
                 logging.warning("Removing broken stream %s", stream)
                 del self.streams[stream]
+        logging.info("Broadcast took %.2f seconds" % (time.time() - start))
 
     def apply_move(self, move):
         """Applies move and increments seqno, returning True on success."""

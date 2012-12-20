@@ -1,9 +1,13 @@
-var grid = 100;
+var grid = 50;
 var delta = 2;
 var ws = null;
 var hostname = window.location.hostname || "localhost"
 var wsport = 8080
 var ctr = 0;
+var user = "ekl";
+var gameid = "test";
+var phantom_dest = 0;
+var uuid = "p_" + Math.random().toString().substring(5);
 
 // http://stackoverflow.com/questions/5186441/javascript-drag-and-drop-for-touch-devices
 function touchHandler(event) {
@@ -48,12 +52,45 @@ $(document).ready(function() {
 	function initDrag() {
 		$(".card").draggable({stack: ".card"});
 		$(".card").bind("dragstart", function(event, ui) {
-			requireConnect();
 			var target = $(event.currentTarget);
 			var card = target.prop("id");
 			ws.send("broadcast", {"subtype": "dragstart", "card": card});
 		});
+		$(".card").bind("drag", function(event, ui) {
+			var target = $(event.currentTarget);
+			var offset = target.offset();
+			var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
+			var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
+			var dest_key = dest_x | dest_y << 16;
+			if (dest_key != phantom_dest) {
+				phantom_dest = dest_key;
+				var phantom = $("#phantom");
+				phantom.width(target.width());
+				phantom.height(target.height());
+				phantom.css("left", dest_x);
+				phantom.css("top", dest_y);
+				phantom.show();
+				ws.send("broadcast",
+					{
+						"subtype": "phantomupdate",
+						"hide": false,
+						"uuid": uuid,
+						"name": user,
+						"left": dest_x,
+						"top": dest_y,
+						"width": target.width(),
+						"height": target.height()
+					});
+			}
+		});
 		$(".card").bind("dragstop", function(event, ui) {
+			$("#phantom").fadeOut();
+			ws.send("broadcast",
+				{
+					"subtype": "phantomupdate",
+					"hide": true,
+					"uuid": uuid,
+				});
 			var target = $(event.currentTarget);
 			var offset = target.offset();
 			var card = parseInt(target.prop("id").substr(5));
@@ -98,6 +135,9 @@ $(document).ready(function() {
 			resync_resp: function(e) {
 				reset(e.data[0]);
 			},
+			broadcast_resp: function(e) {
+				log("broadcast ack: " + e.data);
+			},
             error: function(e) {
                 log("Error: " + e.msg);
             },
@@ -118,12 +158,29 @@ $(document).ready(function() {
                 $("#card_" + e.data.move.card).animate({
 					left: x + lz * delta,
 					top: y + lz * delta,
-				});
+				}, 'fast');
             },
 			broadcast_message: function(e) {
 				switch (e.data.subtype) {
 					case "dragstart":
 						$("#" + e.data.card).css("opacity", "0.7");
+						break;
+					case "phantomupdate":
+						var phantom = $("#" + e.data.uuid);
+						if (phantom.length == 0) {
+							phantom = '<div id="' + e.data.uuid + '" style="position: absolute; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: 999999; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+							$("#arena").append(phantom);
+							phantom = $(phantom);
+						}
+						if (e.data.hide) {
+							phantom.fadeOut();
+						} else {
+							phantom.width(e.data.width - 6);
+							phantom.height(e.data.height - 6);
+							phantom.css("left", e.data.left);
+							phantom.css("top", e.data.top);
+							phantom.show();
+						}
 						break;
 				}
                 log("Broadcast: " + JSON.stringify(e));
@@ -136,7 +193,7 @@ $(document).ready(function() {
 
 	function requireConnect() {
 		if (!connected) {
-			ws.send("connect", {user: "ekl", gameid: "test"});
+			ws.send("connect", {user: user, gameid: gameid});
 			connected = true;
 		}
 	}
@@ -148,6 +205,7 @@ $(document).ready(function() {
     $("#sync").click(function(e) {
         ws.send("resync");
     });
+	setTimeout(requireConnect, 1000);
 });
 
 // vim: noet ts=4
