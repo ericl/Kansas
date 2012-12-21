@@ -11,6 +11,8 @@ import decks
 
 
 class JSONOutput(object):
+    """JSONOutput is a convenience class for working with websocket streams."""
+
     def __init__(self, stream, reqtype):
         self.stream = stream
         self.reqtype = reqtype
@@ -24,6 +26,8 @@ class JSONOutput(object):
 
 
 class KansasGameState(object):
+    """KansasGameState holds the entire state of the game in json format."""
+
     def __init__(self):
         self.data = copy.deepcopy(decks.DEFAULT_DECK)
         self.index = self.buildIndex()
@@ -38,7 +42,7 @@ class KansasGameState(object):
                 index[card] = ('hands', user)
         return index
 
-    def atomicMove(self, card, dest_type, dest_key, dest_orient):
+    def moveCard(self, card, dest_type, dest_key, dest_orient):
         assert dest_type in ['board', 'hands']
         assert type(dest_key) in [int, str, unicode]
         assert dest_orient in range(-4, 5)
@@ -59,6 +63,9 @@ class KansasGameState(object):
 
 
 class KansasHandler(object):
+    """KansasHandler implements a state machine where the transitions are
+       driven by requests, and states correspond to KansasHandler classes."""
+
     def __init__(self):
         self._lock = threading.RLock()
         self.handlers = {
@@ -69,8 +76,9 @@ class KansasHandler(object):
         logging.debug("served ping")
         output.reply('pong')
 
-    def dispatch(self, reqtype, request, output):
-        """Returns response, continuingHandlerInstance."""
+    def transition(self, reqtype, request, output):
+        """Returns the handler instance that should serve future requests."""
+
         if reqtype not in self.handlers:
             raise Exception("Unexpected request type '%s'" % reqtype)
         logging.debug("serving %s", reqtype)
@@ -79,6 +87,8 @@ class KansasHandler(object):
 
 
 class KansasInitHandler(KansasHandler):
+    """The request handler for new websocket connections."""
+
     def __init__(self):
         KansasHandler.__init__(self)
         self.handlers['connect'] = self.handle_connect
@@ -99,15 +109,17 @@ class KansasInitHandler(KansasHandler):
             output.reply(game.snapshot())
 
 
-    def dispatch(self, reqtype, request, output):
+    def transition(self, reqtype, request, output):
         if reqtype == 'connect':
-            KansasHandler.dispatch(self, reqtype, request, output)
+            KansasHandler.transition(self, reqtype, request, output)
             return self.games[request['gameid']]
         else:
-            return KansasHandler.dispatch(self, reqtype, request, output)
+            return KansasHandler.transition(self, reqtype, request, output)
 
 
 class KansasGameHandler(KansasHandler):
+    """The request handler for clients in a game."""
+
     def __init__(self, creator, creatorOutputStream):
         KansasHandler.__init__(self)
         self._seqno = 1000
@@ -185,12 +197,12 @@ class KansasGameHandler(KansasHandler):
             dest_type = move['dest_type']
             dest_key = move['dest_key']
             dest_orient = move['dest_orient']
-            self._state.atomicMove(card, dest_type, dest_key, dest_orient)
+            self._state.moveCard(card, dest_type, dest_key, dest_orient)
             return self.nextseqno()
 
 
 
-rootHandler = KansasInitHandler()
+initHandler = KansasInitHandler()
 
 
 def web_socket_do_extra_handshake(request):
@@ -198,7 +210,9 @@ def web_socket_do_extra_handshake(request):
 
 
 def web_socket_transfer_data(request):
-    currentHandler = rootHandler
+    """Drives the state machine for each connected client."""
+
+    currentHandler = initHandler
     while True:
         line = request.ws_stream.receive_message()
         try:
@@ -206,7 +220,7 @@ def web_socket_transfer_data(request):
             logging.debug("Parsed json %s", req)
             logging.info("Handler %s", type(currentHandler))
             logging.info("Request type %s", req['type'])
-            currentHandler = currentHandler.dispatch(
+            currentHandler = currentHandler.transition(
                 req['type'],
                 req.get('data'),
                 JSONOutput(request.ws_stream, req['type']))
