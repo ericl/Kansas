@@ -1,5 +1,5 @@
-var grid = 50;
-var delta = 2;
+var grid = 75;
+var delta = 1;
 var ws = null;
 var hostname = window.location.hostname || "localhost"
 var wsport = 8080
@@ -67,6 +67,7 @@ $(document).ready(function() {
 			phantom.css("top", dest_y);
 			phantom.css("z-index", target.css("zIndex") - 1);
 			phantom.show();
+			phantom_dest = 0;
 		});
 		$(".card").bind("drag", function(event, ui) {
 			var target = $(event.currentTarget);
@@ -153,6 +154,7 @@ $(document).ready(function() {
 	}
 
 	function reset(state) {
+		log("Reset all local state.");
 		$(".card").remove();
 		for (pos in state.board) {
 			var stack = state.board[pos];
