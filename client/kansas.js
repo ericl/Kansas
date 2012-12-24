@@ -170,8 +170,8 @@ $(document).ready(function() {
             setOrientProperties(phantom, getOrient(target));
             phantom.width(target.width());
             phantom.height(target.height());
-            phantom.css("left", dest_x);
-            phantom.css("top", dest_y);
+            phantom.css("left", dest_x - 5);
+            phantom.css("top", dest_y - 5);
             phantom.css("z-index", target.css("zIndex") - 1);
             phantom.show();
             phantom_dest = 0;
