@@ -32,6 +32,9 @@ var resourcePrefix = '';
 var loggingEnabled = false;
 
 function heightOf(stackHeight) {
+    if (stackHeight > 1000000) {
+        return 0;
+    }
     var kStackDelta = 2;
     var kMaxVisibleStackHeight = 9;
     if (stackHeight > kMaxVisibleStackHeight) {
@@ -254,8 +257,14 @@ function redrawHand(animate) {
 function showPhantomAtCard(target) {
     var offset = target.offset();
     var stack_index = target.data("stack_index");
-    var x = parseInt((offset.left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
-    var y = parseInt((offset.top + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+    var k = kGridSpacing;
+    if (target.hasClass("inHand")) {
+        var x = offset.left;
+        var y = offset.top;
+    } else {
+        var x = parseInt((offset.left + k/2) / k) * k;
+        var y = parseInt((offset.top + k/2) / k) * k;
+    }
     var phantom = $("#phantom");
     setOrientProperties(phantom, getOrient(target));
     phantom.width(target.width());
