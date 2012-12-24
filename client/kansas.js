@@ -24,7 +24,7 @@ document.title = user + '@' + gameid;
 
 var ws = null;
 var activeCard = null;
-var handCache = null;
+var handCache = [];
 var dragging = false;
 var skipCollapse = false;
 var lastPhantomLocation = 0;
@@ -45,8 +45,10 @@ function removeFromArray(arr, item) {
     if (idx >= 0) {
         arr.splice(idx, 1);
         log("Removing item " + item + " from array.");
+        return true;
     } else {
         log("Item " + item + " not in array.");
+        return false;
     }
 }
 
@@ -355,7 +357,7 @@ $(document).ready(function() {
                 var offset = target.offset();
                 var dest_key = ((offset.left + kGridSpacing/2) / kGridSpacing) |
                                ((offset.top + kGridSpacing/2) / kGridSpacing) << 16;
-                if (dest_prev_type == "hands" && handCache) {
+                if (dest_prev_type == "hands") {
                     removeFromArray(handCache, card);
                     redrawHand(true);
                 }
@@ -472,6 +474,9 @@ $(document).ready(function() {
                     var lastindex = e.data.z_stack.length - 1;
                     var x = (e.data.move.dest_key & 0xffff) * kGridSpacing;
                     var y = (e.data.move.dest_key >> 16) * kGridSpacing;
+                    if (removeFromArray(handCache, e.data.move.card)) {
+                        redrawHand();
+                    }
                     for (i in e.data.z_stack) {
                         if (i == lastindex) {
                             continue; // Skips last element for later handling.
