@@ -29,8 +29,41 @@ class KansasGameState(object):
     """KansasGameState holds the entire state of the game in json format."""
 
     def __init__(self):
-        self.data = copy.deepcopy(decks.DEFAULT_DECK)
+        self.data = copy.deepcopy(decks.DEFAULT_MAGIC_DECK)
         self.index = self.buildIndex()
+        self.assignZIndices()
+        self.assignOrientations()
+
+    def assignZIndices(self):
+        if self.data['zIndex']:
+            i = max(self.data['zIndex'].values())
+        else:
+            i = 0
+        for loc, stack in self.data['board'].iteritems():
+            for card in stack:
+                if card not in self.data['zIndex']:
+                    self.data['zIndex'][card] = i
+                    i += 1
+                if card not in self.data['orientations']:
+                    self.data['orientations'][card] = -1
+        for user, hand in self.data['hands'].iteritems():
+            for card in hand:
+                if card not in self.data['zIndex']:
+                    self.data['zIndex'][card] = i
+                    i += 1
+                if card not in self.data['orientations']:
+                    self.data['orientations'][card] = -1
+
+    def assignOrientations(self):
+        i = 0
+        for loc, stack in self.data['board'].iteritems():
+            for card in stack:
+                self.data['zIndex'][card] = i
+                i += 1
+        for user, hand in self.data['hands'].iteritems():
+            for card in hand:
+                self.data['zIndex'][card] = i
+                i += 1
 
     def buildIndex(self):
         index = {}
@@ -47,19 +80,21 @@ class KansasGameState(object):
         assert type(dest_key) in [int, str, unicode]
         assert dest_orient in range(-4, 5)
 
-        # Removes card from where it was.
         src_type, src_key = self.index[card]
-        self.data[src_type][src_key].remove(card)
-        if len(self.data[src_type][src_key]) == 0:
-            del self.data[src_type][src_key]
+        if (src_type, src_key) != (dest_type, dest_key):
+            # Removes card from where it was.
+            self.data[src_type][src_key].remove(card)
+            if len(self.data[src_type][src_key]) == 0:
+                del self.data[src_type][src_key]
 
-        # Places card into new position.
-        if dest_key not in self.data[dest_type]:
-            self.data[dest_type][dest_key] = []
-        self.data[dest_type][dest_key].append(card)
+            # Places card into new position.
+            if dest_key not in self.data[dest_type]:
+                self.data[dest_type][dest_key] = []
+            self.data[dest_type][dest_key].append(card)
+            self.index[card] = (dest_type, dest_key)
+
         self.data['orientations'][card] = dest_orient
         self.data['zIndex'][card] = max(self.data['zIndex'].values()) + 1
-        self.index[card] = (dest_type, dest_key)
 
 
 class KansasHandler(object):

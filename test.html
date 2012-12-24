@@ -9,7 +9,6 @@
     <script type="text/javascript" src="client/kansas.js"></script>
     <style>
         body {
-            overflow: hidden;
             border: 0;
             padding: 0;
             margin: 0;
@@ -21,24 +20,26 @@
             position: absolute;
             top: 0px;
             border: 0;
+            overflow-y: scroll;
             padding: 0;
             margin: 0;
         }
 
         .active {
-            background-color: #faa !important;
+            background-color: #fcc !important;
         }
 
         #hand {
             width: 100%;
             background-color: #fee;
-            position: absolute;
+            position: fixed;
             bottom: 0px;
             height: 220px;
             border-top: 3px solid #a99;
             padding: 0;
             margin: 0;
             z-index: 2500000;
+            opacity: 0.8;
         }
 
         .card, #phantom {
@@ -59,7 +60,7 @@
         #menu {
             position: absolute;
             display: none;
-            z-index: 4500000;
+            z-index: 45000000 !important;
         }
 
         ol, ul {
@@ -88,19 +89,24 @@
         }
 
         .inHand {
-            z-index: 4000000 !important;
+/*            z-index: 4000000 !important; */
+            position: fixed !important;
+        }
+
+        .collapsed {
+            height: 95px !important;
         }
     </style>
   </head>
   <body>
   <textarea style="display: none; float: right;" id="console" rows=15 cols=90></textarea><br>
   <div id="arena">
-    <button id="connect">Connect</button>
-    <div style="display: none" class="connected">
+    <div style="display: none; position: fixed" class="connected">
         <button id="sync">Force Sync</button>
         <button id="debug">Toggle Debug</button>
         <button id="reset">Reset Game</button>
     </div>
+    <button id="connect">Connect</button>
     <ul id="menu">
       <li id="hidemenu"><i>Hide Menu</i></li>
       <li id="flip">Turn Over</li>
@@ -108,7 +114,7 @@
     </ul>
     <div id="phantom"></div>
   </div>
-  <div id="hand"></div>
+  <div id="hand" class="collapsed"></div>
   </body>
 </html>
 
