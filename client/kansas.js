@@ -190,7 +190,7 @@ function renderHandStack(hand, animate) {
     var handHeight = 220;
     var collapsedHandSpacing = Math.min(
         kHandSpacing + cardWidth,
-        (handWidth - cardWidth) / hand.length
+        (handWidth - cardWidth - kHandSpacing * 2) / (hand.length - 1)
     );
 
     // Computes height of hand necessary.
