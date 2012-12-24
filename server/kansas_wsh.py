@@ -83,11 +83,13 @@ class KansasHandler(object):
             raise Exception("Unexpected request type '%s'" % reqtype)
         logging.debug("serving %s", reqtype)
         self.handlers[reqtype](request, output)
+        
+        # Transitions to the current state by default.
         return self
 
 
 class KansasInitHandler(KansasHandler):
-    """The request handler for new websocket connections."""
+    """The request handler created for each new websocket connection."""
 
     def __init__(self):
         KansasHandler.__init__(self)
@@ -105,9 +107,10 @@ class KansasInitHandler(KansasHandler):
                 logging.info("Creating new game '%s'", request['gameid'])
                 game = KansasGameHandler(request['user'], output.stream)
                 self.games[request['gameid']] = game
+
+        # Atomically registers the player with the game handler.
         with game._lock:
             output.reply(game.snapshot())
-
 
     def transition(self, reqtype, request, output):
         if reqtype == 'connect':
@@ -118,7 +121,8 @@ class KansasInitHandler(KansasHandler):
 
 
 class KansasGameHandler(KansasHandler):
-    """The request handler for clients in a game."""
+    """There is single game handler for each game, shared among all players.
+       Enforces a global ordering on game-state update broadcasts."""
 
     def __init__(self, creator, creatorOutputStream):
         KansasHandler.__init__(self)

@@ -1,7 +1,8 @@
-Kansas is a general platform for card games on mobile devices.
+Kansas is a general platform for board games on mobile devices.
 Its goal is to enable friends to use their smartphone, tablet, or laptop
-in place of any deck of cards. This includes decks built from collectible
-cards as well as the standard 52-card deck.
+in place of any set of cards or game pieces. Like in games using physical
+pieces, Kansas assumes that players trust each other and can negotiate
+movements in person.
 
 Kansas is a work in progress.
 
@@ -9,9 +10,13 @@ Features:
 
     real-time synchronization
     cross-platform support
-    custom card decks
+    configurable actions? flip, shuffle, multimove
+    custom background / grid / stackable?
+    history log?
+    hidden hands for card games?
+    players facing different directions?
     saving games?
-    an intuitive and unobtrusive UI?
+    sharing of configurations?
 
 Dependencies:
 

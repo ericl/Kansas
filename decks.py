@@ -6,7 +6,7 @@ DEFAULT_DECK = {
     'default_back_url': 'Blue_Back.png',
     'board': {
         393218: [6,7,8,9],
-        524296: [10],
+        262149: [10],
     },
     'hands': {},
     'zIndex': {
@@ -21,7 +21,7 @@ DEFAULT_DECK = {
         7: -1,
         8: -1,
         9: -1,
-        10: 1,
+        10: 2,
     },
     'urls': {
         6: '2C.png',

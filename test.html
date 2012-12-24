@@ -13,6 +13,45 @@
             border-radius: 7px;
             height: 200px;
         }
+        
+        #phantom {
+            display: none;
+            position: absolute;
+            border: 5px solid orange;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        #menu {
+            position: absolute;
+            display: none;
+            z-index: 9999999;
+        }
+
+        ol, ul {
+            list-style: none;
+        }
+
+        #menu li:hover {
+            cursor: pointer;
+            background-color: #aaa;
+        }
+
+        .rotated {
+            transform: rotate(90deg);
+            -moz-transform: rotate(90deg);
+            -ms-transform: rotate(90deg);
+            -o-transform: rotate(90deg);
+            -webkit-transform: rotate(90deg) translate(-20%, -14%);
+        }
+
+        li {
+            padding: 1em;
+            border: 1px solid gray;
+            font-size: 25pt;
+            margin-bottom: -1px;
+            background-color: #eee;
+        }
     </style>
   </head>
   <body>
@@ -21,7 +60,13 @@
   <div style="display: none" class="connected">
       <button id="sync">Force Sync</button>
   </div>
-  <div id="arena"><div id="phantom" style="display: none; position: absolute; border: 2px solid black; background-color: gray; opacity: 0.4; pointer-events: none;"></div>
+  <div id="arena">
+    <ul id="menu">
+        <li id="hidemenu"><i>Hide Menu⨯</i></li>
+        <li id="flip">Turn Over</li>
+        <li id="rotate">Turn Sideways</li>
+    </ul>
+    <div id="phantom"></div>
   </body>
 </html>
 

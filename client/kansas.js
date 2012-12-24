@@ -1,5 +1,22 @@
+/**
+ * The client provides an eventually-consistent view of the game state.
+ * Synchronization works as follows. When the user moves a card, a "move"
+ * message is sent to the server. This "move" is immediately applied locally.
+ * The server then relays the move to all clients in a globally consistent order
+ * relative to other moves.
+ *
+ * Clients, upon receiving an "update" message, will update the local state of
+ * the card mentioned in the update. Once all clients have received the update,
+ * all the client states will be in sync.
+ *
+ * The client can also talk to all other clients by using a "broadcast" message,
+ * which again will be received by other clients in a globally consistent order.
+ */
+
+var activeCard = null;
+var dragging = false;
 var grid = 75;
-var delta = 1;
+var delta = 2;
 var ws = null;
 var hostname = window.location.hostname || "localhost"
 var wsport = 8080
@@ -40,20 +57,106 @@ function touchHandler(event) {
 	event.preventDefault();
 }
 
-function init() {
+function touchInit() {
    document.addEventListener("touchstart", touchHandler, true);
    document.addEventListener("touchmove", touchHandler, true);
    document.addEventListener("touchend", touchHandler, true);
    document.addEventListener("touchcancel", touchHandler, true);
 }
 
+function getOrient(card) {
+	var orient = card.data("orient");
+	if (orient == 0) {
+		orient = 1;
+	}
+	return orient;
+}
+
+function setOrientProperties(card, orient) {
+	card.data("orient", orient);
+	if (orient > 0) {
+		card.prop("src", resource_prefix + card.data("front"));
+	} else {
+		card.prop("src", resource_prefix + card.data("back"));
+	}
+
+	if (Math.abs(orient) == 2) {
+		card.addClass("rotated");
+	} else {
+		card.removeClass("rotated");
+	}
+}
+
+function changeOrient(card, orient) {
+	setOrientProperties(card, orient);
+
+	var offset = card.offset();
+	var cardId = parseInt(card.prop("id").substr(5));
+	var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
+	var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
+	var dest_key = ((offset.left + grid/2) / grid) |
+				   ((offset.top + grid/2) / grid) << 16;
+	ws.send("broadcast",
+		{
+			"subtype": "phantomupdate",
+			"hide": false,
+			"uuid": uuid,
+			"name": user,
+			"left": dest_x,
+			"top": dest_y,
+			"orient": getOrient(card),
+			"width": card.width(),
+			"height": card.height()
+		});
+	ws.send("move", {move: {card: cardId,
+							dest_type: "board",
+							dest_key: dest_key,
+							dest_orient: orient}});
+	ws.send("broadcast",
+		{
+			"subtype": "phantomupdate",
+			"hide": true,
+			"uuid": uuid,
+		});
+}
+
+function rotateCard(target) {
+	var orient = getOrient(target);
+	if (Math.abs(orient) == 1) {
+		orient *= 2;
+	} else if (Math.abs(orient) == 2) {
+		orient /= 2;
+	} else {
+		log("Card is not in supported orientation: at " + orient);
+		return;
+	}
+	changeOrient(target, orient);
+}
+
+function flipCard(target) {
+	changeOrient(target, -getOrient(target));
+}
+
+function showMenuAtCard(card) {
+	var offset = card.offset();
+	$("#menu").hide();
+	$("#menu").css("left", offset.left);
+	$("#menu").css("top", offset.top);
+	$("#menu").show();
+}
+
 $(document).ready(function() {
-	init();
+	touchInit();
 	var connected = false;
 
 	function initCards() {
+		$(".card").each(function(index, card) {
+			setOrientProperties($(card), getOrient($(card)));
+		});
 		$(".card").draggable({stack: ".card"});
 		$(".card").bind("dragstart", function(event, ui) {
+			dragging = true;
+			$("#menu").hide();
 			var target = $(event.currentTarget);
 			var offset = target.offset();
 			var card = target.prop("id");
@@ -61,6 +164,7 @@ $(document).ready(function() {
 			var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
 			var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
 			var phantom = $("#phantom");
+			setOrientProperties(phantom, getOrient(target));
 			phantom.width(target.width());
 			phantom.height(target.height());
 			phantom.css("left", dest_x);
@@ -70,6 +174,7 @@ $(document).ready(function() {
 			phantom_dest = 0;
 		});
 		$(".card").bind("drag", function(event, ui) {
+			dragging = true;
 			var target = $(event.currentTarget);
 			var offset = target.offset();
 			var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
@@ -85,12 +190,14 @@ $(document).ready(function() {
 						"name": user,
 						"left": dest_x,
 						"top": dest_y,
+						"orient": getOrient(target),
 						"width": target.width(),
 						"height": target.height()
 					});
 			}
 		});
 		$(".card").bind("dragstop", function(event, ui) {
+			dragging = false;
 			$("#phantom").fadeOut();
 			ws.send("broadcast",
 				{
@@ -109,53 +216,33 @@ $(document).ready(function() {
 									dest_key: dest_key,
 									dest_orient: orient}});
 		});
-		$(".card").dblclick(function(event) {
-			var target = $(event.currentTarget);
-			var orient = target.data("orient");
-			if (orient == 0) {
-				orient = 1;
-			}
-			if (orient > 0) {
-				target.prop("src", resource_prefix + target.data("back"));
-			} else {
-				target.prop("src", resource_prefix + target.data("front"));
-			}
 
-			var offset = target.offset();
-			var card = parseInt(target.prop("id").substr(5));
-			var orient = target.data("orient");
-			var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
-			var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
-			var dest_key = ((offset.left + grid/2) / grid) |
-						   ((offset.top + grid/2) / grid) << 16;
-			ws.send("broadcast",
-				{
-					"subtype": "phantomupdate",
-					"hide": false,
-					"uuid": uuid,
-					"name": user,
-					"left": dest_x,
-					"top": dest_y,
-					"width": target.width(),
-					"height": target.height()
-				});
-			ws.send("move", {move: {card: card,
-									dest_type: "board",
-									dest_key: dest_key,
-									dest_orient: -orient}});
-			ws.send("broadcast",
-				{
-					"subtype": "phantomupdate",
-					"hide": true,
-					"uuid": uuid,
-				});
-			target.data("orient", -orient);
+		$(".card").mouseup(function(event) {
+			if (!dragging) {
+				activeCard = $(event.currentTarget);
+				showMenuAtCard(activeCard);
+			}
+			dragging = false;
+		});
+		$("#menu").disableSelection();
+		$("#hidemenu").mouseup(function(event) {
+			$("#menu").hide();
+		});
+		$("#flip").mouseup(function(event) {
+			flipCard(activeCard);
+			$("#menu").hide();
+		});
+		$("#rotate").mouseup(function(event) {
+			rotateCard(activeCard);
+			$("#menu").hide();
 		});
 	}
 
 	function reset(state) {
 		log("Reset all local state.");
+		$(".uuid_phantom").remove();
 		$(".card").remove();
+		$("#arena").hide();
 		for (pos in state.board) {
 			var stack = state.board[pos];
 			for (z in stack) {
@@ -179,6 +266,7 @@ $(document).ready(function() {
 				$("#arena").append(img);
 			}
 		}
+		$("#arena").fadeIn();
 		initCards();
 	}
 
@@ -220,13 +308,7 @@ $(document).ready(function() {
 					left: x + lz * delta,
 					top: y + lz * delta,
 				}, 'fast');
-				var orient = e.data.move.dest_orient;
-				target.data("orient", orient);
-				if (orient < 0) {
-					target.prop("src", resource_prefix + target.data("back"));
-				} else {
-					target.prop("src", resource_prefix + target.data("front"));
-				}
+				setOrientProperties(target, e.data.move.dest_orient);
             },
 			broadcast_message: function(e) {
 				switch (e.data.subtype) {
@@ -236,13 +318,14 @@ $(document).ready(function() {
 					case "phantomupdate":
 						var phantom = $("#" + e.data.uuid);
 						if (phantom.length == 0) {
-							phantom = '<div id="' + e.data.uuid + '" style="position: absolute; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: 999999; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
-							$("#arena").append(phantom);
-							phantom = $(phantom);
+							var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: absolute; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: 999999; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+							$("#arena").append(node);
+						    phantom = $("#" + e.data.uuid);
 						}
 						if (e.data.hide) {
-							phantom.fadeOut('slow');
+							phantom.fadeOut();
 						} else {
+							setOrientProperties(phantom, e.data.orient);
 							phantom.width(e.data.width - 6);
 							phantom.height(e.data.height - 6);
 							phantom.css("left", e.data.left);
