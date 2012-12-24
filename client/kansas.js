@@ -187,6 +187,7 @@ function renderHandStack(hand, animate) {
     var currentX = kHandSpacing;
     var handWidth = $("#hand").width();
     var cardWidth = $("#card_" + hand[0]).width();
+    var cardHeight = $("#card_" + hand[0]).height();
     var handHeight = 220;
     var collapsedHandSpacing = Math.min(
         kHandSpacing + cardWidth,
@@ -207,6 +208,8 @@ function renderHandStack(hand, animate) {
             }
         }
     }
+
+    handHeight = Math.min(handHeight, $("#arena").height() - cardHeight * 1.2);
 
     $("#hand").height(handHeight);
     var currentX = kHandSpacing;
