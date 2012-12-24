@@ -226,6 +226,9 @@ $(document).ready(function() {
             dragging = true;
             $("#menu").hide();
             var target = $(event.currentTarget);
+            if (!target.hasClass("inHand")) {
+                $("#hand").removeClass("active");
+            }
             target.css("zIndex", 4500000);
             showPhantomAtCard(target);
             lastPhantomLocation = 0;
@@ -481,19 +484,19 @@ $(document).ready(function() {
         }
     }
 
-    $("#connect").click(function(e) {
+    $("#connect").mouseup(function(e) {
         requireConnect();
     });
 
-    $("#sync").click(function(e) {
+    $("#sync").mouseup(function(e) {
         ws.send("resync");
     });
 
-    $("#reset").click(function(e) {
+    $("#reset").mouseup(function(e) {
         ws.send("reset");
     });
 
-    $("#debug").click(function(e) {
+    $("#debug").mouseup(function(e) {
         $("#console").toggle();
         loggingEnabled = !loggingEnabled;
     });
