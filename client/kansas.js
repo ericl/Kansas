@@ -13,19 +13,21 @@
  * which again will be received by other clients in a globally consistent order.
  */
 
+var kGridSpacing = 75;
+var kStackDelta = 2;
+var kWSPort = 8080
+
+var hostname = window.location.hostname || "localhost"
+var gameid = "testgame1";
+var uuid = "p_" + Math.random().toString().substring(5);
+var user = window.location.hash || "user1";
+document.title = user + '@' + gameid;
+
+var ws = null;
 var activeCard = null;
 var dragging = false;
-var grid = 75;
-var delta = 2;
-var ws = null;
-var hostname = window.location.hostname || "localhost"
-var wsport = 8080
-var ctr = 0;
-var user = "testuser1";
-var gameid = "testgame1";
-var phantom_dest = 0;
-var uuid = "p_" + Math.random().toString().substring(5);
-var resource_prefix = '';
+var lastPhantomLocation = 0;
+var resourcePrefix = '';
 var loggingEnabled = false;
 
 function log(msg) {
@@ -78,9 +80,9 @@ function getOrient(card) {
 function setOrientProperties(card, orient) {
     card.data("orient", orient);
     if (orient > 0) {
-        card.prop("src", resource_prefix + card.data("front"));
+        card.prop("src", resourcePrefix + card.data("front"));
     } else {
-        card.prop("src", resource_prefix + card.data("back"));
+        card.prop("src", resourcePrefix + card.data("back"));
     }
 
     if (Math.abs(orient) == 2) {
@@ -95,25 +97,34 @@ function changeOrient(card, orient) {
 
     var offset = card.offset();
     var cardId = parseInt(card.prop("id").substr(5));
-    var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
-    var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
-    var dest_key = ((offset.left + grid/2) / grid) |
-                   ((offset.top + grid/2) / grid) << 16;
+    var x = parseInt((offset.left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+    var y = parseInt((offset.top + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+    var dest_type = "board";
+    var dest_prev_type = "board";
+    var dest_key = ((offset.left + kGridSpacing/2) / kGridSpacing) |
+                   ((offset.top + kGridSpacing/2) / kGridSpacing) << 16;
     ws.send("broadcast",
         {
             "subtype": "phantomupdate",
             "hide": false,
             "uuid": uuid,
             "name": user,
-            "left": dest_x,
-            "top": dest_y,
+            "left": x,
+            "top": y,
             "orient": getOrient(card),
             "width": card.width(),
             "height": card.height()
         });
+    if (card.hasClass("inHand")) {
+        dest_type = "hands";
+        dest_key = user;
+        dest_prev_type = "hands";
+    }
+    log("Sending orient change.");
     ws.send("move", {move: {card: cardId,
-                            dest_type: "board",
+                            dest_type: dest_type,
                             dest_key: dest_key,
+                            dest_prev_type: dest_type,
                             dest_orient: orient}});
     ws.send("broadcast",
         {
@@ -140,12 +151,64 @@ function flipCard(target) {
     changeOrient(target, -getOrient(target));
 }
 
+function moveOffscreen(target) {
+    target.animate({
+        left: target.css("left"),
+        top: 2000,
+        opacity: 0,
+    });
+}
+
+function renderHandStack(hand, animate) {
+    var acc = 10;
+    for (i in hand) {
+        var cd = $("#card_" + hand[i]);
+        cd.addClass("inHand");
+        cd.data("stack_index", 0);
+        var y = $("#hand").offset().top + 15;
+        if (animate) {
+            cd.animate({
+                left: acc,
+                top: y,
+                opacity: 1,
+            });
+        } else {
+            cd.css('left', acc);
+            cd.css('top', y);
+            cd.css('opacity', 1);
+        }
+        acc += Math.max(cd.width(), 143) + 10;
+    }
+}
+
+function showPhantomAtCard(target) {
+    var offset = target.offset();
+    var stack_index = target.data("stack_index");
+    var x = parseInt((offset.left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+    var y = parseInt((offset.top + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+    var phantom = $("#phantom");
+    setOrientProperties(phantom, getOrient(target));
+    phantom.width(target.width());
+    phantom.height(target.height());
+    var border_offset_x = 5;
+    var border_offset_y = 5;
+    if (phantom.hasClass("rotated")) {
+        border_offset_x = 6;
+        border_offset_y = 3;
+    }
+    phantom.css("left", x - border_offset_x + stack_index * kStackDelta);
+    phantom.css("top", y - border_offset_y + stack_index * kStackDelta);
+    phantom.css("z-index", target.css("zIndex") - 1);
+    phantom.show();
+}
+
 function showMenuAtCard(card) {
     var offset = card.offset();
     $("#menu").hide();
     $("#menu").css("left", offset.left);
     $("#menu").css("top", offset.top);
     $("#menu").show();
+    showPhantomAtCard(card);
 }
 
 $(document).ready(function() {
@@ -156,49 +219,43 @@ $(document).ready(function() {
         $(".card").each(function(index, card) {
             setOrientProperties($(card), getOrient($(card)));
         });
-        $(".card").draggable({stack: ".card"});
+
+        $(".card").draggable({stack: ".card", containment: $("#arena")});
+
         $(".card").bind("dragstart", function(event, ui) {
             dragging = true;
             $("#menu").hide();
             var target = $(event.currentTarget);
-            var offset = target.offset();
-            var card = target.prop("id");
-            ws.send("broadcast", {"subtype": "dragstart", "card": card});
-            var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
-            var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
-            var phantom = $("#phantom");
-            setOrientProperties(phantom, getOrient(target));
-            phantom.width(target.width());
-            phantom.height(target.height());
-            phantom.css("left", dest_x - 5);
-            phantom.css("top", dest_y - 5);
-            phantom.css("z-index", target.css("zIndex") - 1);
-            phantom.show();
-            phantom_dest = 0;
+            target.css("zIndex", 4500000);
+            showPhantomAtCard(target);
+            lastPhantomLocation = 0;
+            ws.send("broadcast", {"subtype": "dragstart", "card": target.prop("id")});
         });
+
         $(".card").bind("drag", function(event, ui) {
             dragging = true;
             var target = $(event.currentTarget);
             var offset = target.offset();
-            var dest_x = parseInt((offset.left + grid/2) / grid) * grid;
-            var dest_y = parseInt((offset.top + grid/2) / grid) * grid;
-            var dest_key = dest_x | dest_y << 16;
-            if (dest_key != phantom_dest) {
-                phantom_dest = dest_key;
+            var x = parseInt((offset.left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+            var y = parseInt((offset.top + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+            var dest_key = x | y << 16;
+            if (dest_key != lastPhantomLocation) {
+                lastPhantomLocation = dest_key;
                 ws.send("broadcast",
                     {
                         "subtype": "phantomupdate",
                         "hide": false,
                         "uuid": uuid,
                         "name": user,
-                        "left": dest_x,
-                        "top": dest_y,
+                        "left": x,
+                        "top": y,
                         "orient": getOrient(target),
                         "width": target.width(),
                         "height": target.height()
                     });
             }
         });
+
         $(".card").bind("dragstop", function(event, ui) {
             dragging = false;
             $("#phantom").fadeOut();
@@ -208,16 +265,46 @@ $(document).ready(function() {
                     "hide": true,
                     "uuid": uuid,
                 });
+            e = event;
             var target = $(event.currentTarget);
-            var offset = target.offset();
             var card = parseInt(target.prop("id").substr(5));
             var orient = target.data("orient");
-            var dest_key = ((offset.left + grid/2) / grid) |
-                           ((offset.top + grid/2) / grid) << 16;
+            if (target.hasClass("inHand")) {
+                var dest_prev_type = "hands";
+            } else {
+                var dest_prev_type = "board";
+            }
+            if ($("#hand").hasClass("active")) {
+                var dest_type = "hands";
+                var dest_key = user;
+            } else {
+                var dest_type = "board";
+                var offset = target.offset();
+                var dest_key = ((offset.left + kGridSpacing/2) / kGridSpacing) |
+                               ((offset.top + kGridSpacing/2) / kGridSpacing) << 16;
+            }
+            log("Sending card move.");
             ws.send("move", {move: {card: card,
-                                    dest_type: "board",
+                                    dest_prev_type: dest_prev_type,
+                                    dest_type: dest_type,
                                     dest_key: dest_key,
                                     dest_orient: orient}});
+        });
+
+        $("#arena").mouseover(function(event) {
+            $("#hand").removeClass("active");
+        });
+
+        $("#hand").droppable({
+            active: function(event, ui) {
+                alert("dropped");
+            },
+            over: function(event, ui) {
+                $("#hand").addClass("active");
+            },
+            out: function(event, ui) {
+                $("#hand").removeClass("active");
+            },
         });
 
         $(".card").mouseup(function(event) {
@@ -230,14 +317,17 @@ $(document).ready(function() {
         $("#menu").disableSelection();
         $("#hidemenu").mouseup(function(event) {
             $("#menu").hide();
+            $("#phantom").hide();
         });
         $("#flip").mouseup(function(event) {
             flipCard(activeCard);
             $("#menu").hide();
+            $("#phantom").hide();
         });
         $("#rotate").mouseup(function(event) {
             rotateCard(activeCard);
             $("#menu").hide();
+            $("#phantom").hide();
         });
     }
 
@@ -245,35 +335,54 @@ $(document).ready(function() {
         log("Reset all local state.");
         $(".uuid_phantom").remove();
         $(".card").remove();
-        $("#arena").hide();
+
+        function createImageNode(state, cid, stack_index) {
+            var url = state.urls[cid];
+            var back_url = state.back_urls[cid] || state.default_back_url;
+            if (state.orientations[cid] < 0) {
+                url = back_url;
+            }
+            var img = '<img style="z-index: ' + state.zIndex[cid] + '; display: none"'
+                + ' id="card_' + cid + '"'
+                + ' data-orient="' + state.orientations[cid] + '"'
+                + ' data-front="' + state.urls[cid] + '"'
+                + ' data-back="' + back_url + '"'
+                + ' data-stack_index="' + stack_index + '"'
+                + ' class="card" src="' + resourcePrefix + url + '">'
+            $("#arena").append(img);
+        }
+
+        resourcePrefix = state.resource_prefix;
         for (pos in state.board) {
             var stack = state.board[pos];
             for (z in stack) {
                 var cid = stack[z];
-                var x = (pos & 0xffff) * grid;
-                var y = (pos >> 16) * grid;
-                var url = state.urls[cid];
-                var back_url = state.back_urls[cid] || state.default_back_url;
-                resource_prefix = state.resource_prefix;
-                if (state.orientations[cid] < 0) {
-                    url = back_url;
-                }
-                var img = '<img style="z-index: ' + state.zIndex[cid]
-                    + '; left: ' + (x + (z * delta)) + 'px'
-                    + '; top: ' + (y + (z * delta)) + 'px'
-                    + '" id="card_' + cid + '"'
-                    + ' data-orient="' + state.orientations[cid] + '"'
-                    + ' data-front="' + state.urls[cid] + '"'
-                    + ' data-back="' + back_url + '"'
-                    + ' class="card" src="' + resource_prefix + url + '">'
-                $("#arena").append(img);
+                var x = (pos & 0xffff) * kGridSpacing;
+                var y = (pos >> 16) * kGridSpacing;
+                createImageNode(state, cid, z);
+                var card = $("#card_" + cid);
+                card.css('left', x + (z * kStackDelta));
+                card.css('top', y + (z * kStackDelta));
             }
         }
-        $("#arena").fadeIn();
+        for (player in state.hands) {
+            var hand = state.hands[player];
+            for (i in hand) {
+                createImageNode(state, hand[i], i);
+            }
+            if (player == user) {
+                renderHandStack(hand, false);
+            } else {
+                for (i in hand) {
+                    moveOffscreen($("#card_" + hand[i]));
+                }
+            }
+        }
+        $(".card").fadeIn();
         initCards();
     }
 
-    ws = $.websocket("ws:///" + hostname + ":" + wsport + "/kansas", {
+    ws = $.websocket("ws:///" + hostname + ":" + kWSPort + "/kansas", {
         open: function() { alert("open"); },
         close: function() { alert("close"); },
         events: {
@@ -287,31 +396,51 @@ $(document).ready(function() {
                 reset(e.data[0]);
             },
             broadcast_resp: function(e) {
-                log("broadcast ack: " + e.data);
             },
             error: function(e) {
                 log("Error: " + e.msg);
             },
+            reset: function(e) {
+                reset(e.data[0]);
+            },
             update: function(e) {
                 log("Update: " + JSON.stringify(e.data));
-                var lz = e.data.z_stack.length - 1;
-                var x = (e.data.move.dest_key & 0xffff) * grid;
-                var y = (e.data.move.dest_key >> 16) * grid;
-                for (i in e.data.z_stack) {
-                    if (i == e.data.z_stack.length - 1) {
-                        continue; // allow the last element to animate
-                    }
-                    $("#card_" + e.data.z_stack[i]).css("left", x + i * delta);
-                    $("#card_" + e.data.z_stack[i]).css("top", y + i * delta);
-                }
                 var target = $("#card_" + e.data.move.card);
-                target.css("opacity", "1.0");
-                target.css("z-index", e.data.z_index);
-                target.animate({
-                    left: x + lz * delta,
-                    top: y + lz * delta,
-                }, 'fast');
-                setOrientProperties(target, e.data.move.dest_orient);
+                if (e.data.move.dest_type == "board") {
+                    setOrientProperties(target, e.data.move.dest_orient);
+                    var lastindex = e.data.z_stack.length - 1;
+                    var x = (e.data.move.dest_key & 0xffff) * kGridSpacing;
+                    var y = (e.data.move.dest_key >> 16) * kGridSpacing;
+                    for (i in e.data.z_stack) {
+                        if (i == lastindex) {
+                            continue; // Skips last element for later handling.
+                        }
+                        var cd = $("#card_" + e.data.z_stack[i]);
+                        cd.css("left", x + i * kStackDelta);
+                        cd.css("top", y + i * kStackDelta);
+                        cd.data("stack_index", i);
+                    }
+                    target.data("stack_index", lastindex);
+                    target.css("position", "absolute");
+                    target.css("opacity", "1.0");
+                    target.css("z-index", e.data.z_index);
+                    target.animate({
+                        left: x + lastindex * kStackDelta,
+                        top: y + lastindex * kStackDelta,
+                        opacity: 1.0,
+                    }, 'fast');
+                    target.removeClass("inHand");
+                } else if (e.data.move.dest_type == "hands") {
+                    setOrientProperties(target, e.data.move.dest_orient);
+                    if (e.data.move.dest_key == user) {
+                        target.addClass("inHand");
+                        renderHandStack(e.data.z_stack, true);
+                    } else {
+                        moveOffscreen(target);
+                    }
+                } else {
+                    log("WARN: unknown dest type: " + e.data.move.dest_type);
+                }
             },
             broadcast_message: function(e) {
                 switch (e.data.subtype) {
@@ -360,9 +489,13 @@ $(document).ready(function() {
         ws.send("resync");
     });
 
+    $("#reset").click(function(e) {
+        ws.send("reset");
+    });
+
     $("#debug").click(function(e) {
-        $("#console").show();
-        loggingEnabled = true;
+        $("#console").toggle();
+        loggingEnabled = !loggingEnabled;
     });
 
     setTimeout(requireConnect, 1000);

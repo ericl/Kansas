@@ -5,8 +5,8 @@ DEFAULT_DECK = {
     'resource_prefix': 'third_party/cards52/cropped/',
     'default_back_url': 'Blue_Back.png',
     'board': {
-        393218: [6,7,8,9],
-        262149: [10],
+        262145: [6,7,8,9],
+        65540: [10],
     },
     'hands': {},
     'zIndex': {

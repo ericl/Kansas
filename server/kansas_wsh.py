@@ -131,6 +131,7 @@ class KansasGameHandler(KansasHandler):
         self.handlers['broadcast'] = self.handle_broadcast
         self.handlers['move'] = self.handle_move
         self.handlers['resync'] = self.handle_resync
+        self.handlers['reset'] = self.handle_reset
         self.streams = {creatorOutputStream: creator}
 
     def handle_move(self, req, output):
@@ -140,6 +141,13 @@ class KansasGameHandler(KansasHandler):
             move = req['move']
             dest_t = move['dest_type']
             dest_k = move['dest_key']
+            if dest_t == 'hands':
+                if move['dest_prev_type'] == 'board':
+                    move['dest_orient'] = 1
+                elif move['dest_orient'] > 0:
+                    move['dest_orient'] = 1
+                else:
+                    move['dest_orient'] = -1
             seqno = self.apply_move(move)
             logging.info("Accepted move request '%s'", req)
             self.broadcast(
@@ -167,6 +175,14 @@ class KansasGameHandler(KansasHandler):
     def handle_resync(self, req, output):
         with self._lock:
             output.reply(self.snapshot())
+
+    def handle_reset(self, req, output):
+        with self._lock:
+            self._state = KansasGameState()
+            self.broadcast(
+                set(self.streams.keys()),
+                'reset',
+                self.snapshot())
 
     def snapshot(self):
         with self._lock:
