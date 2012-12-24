@@ -294,22 +294,6 @@ $(document).ready(function() {
                                     dest_orient: orient}});
         });
 
-        $("#arena").mouseover(function(event) {
-            $("#hand").removeClass("active");
-        });
-
-        $("#hand").droppable({
-            active: function(event, ui) {
-                alert("dropped");
-            },
-            over: function(event, ui) {
-                $("#hand").addClass("active");
-            },
-            out: function(event, ui) {
-                $("#hand").removeClass("active");
-            },
-        });
-
         $(".card").mouseup(function(event) {
             if (!dragging) {
                 activeCard = $(event.currentTarget);
@@ -317,20 +301,9 @@ $(document).ready(function() {
             }
             dragging = false;
         });
-        $("#menu").disableSelection();
-        $("#hidemenu").mouseup(function(event) {
-            $("#menu").hide();
-            $("#phantom").hide();
-        });
-        $("#flip").mouseup(function(event) {
-            flipCard(activeCard);
-            $("#menu").hide();
-            $("#phantom").hide();
-        });
-        $("#rotate").mouseup(function(event) {
-            rotateCard(activeCard);
-            $("#menu").hide();
-            $("#phantom").hide();
+
+        $("#arena").mouseover(function(event) {
+            $("#hand").removeClass("active");
         });
     }
 
@@ -499,6 +472,37 @@ $(document).ready(function() {
     $("#debug").mouseup(function(e) {
         $("#console").toggle();
         loggingEnabled = !loggingEnabled;
+    });
+
+    $("#hand").droppable({
+        active: function(event, ui) {
+            alert("dropped");
+        },
+        over: function(event, ui) {
+            $("#hand").addClass("active");
+        },
+        out: function(event, ui) {
+            $("#hand").removeClass("active");
+        },
+    });
+
+    $("#menu").disableSelection();
+
+    $("#hidemenu").mouseup(function(event) {
+        $("#menu").hide();
+        $("#phantom").hide();
+    });
+
+    $("#flip").mouseup(function(event) {
+        flipCard(activeCard);
+        $("#menu").hide();
+        $("#phantom").hide();
+    });
+
+    $("#rotate").mouseup(function(event) {
+        rotateCard(activeCard);
+        $("#menu").hide();
+        $("#phantom").hide();
     });
 
     setTimeout(requireConnect, 1000);
