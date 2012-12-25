@@ -28,6 +28,7 @@ var handCache = [];
 var dragging = false;
 var skipCollapse = false;
 var lastPhantomLocation = 0;
+var startPhantomLocation = 0;
 var resourcePrefix = '';
 var loggingEnabled = false;
 
@@ -136,18 +137,38 @@ function targetToGridKey(target) {
     return gridKey(gridX(target), gridY(target));
 }
 
-function phantomUpdate(card) {
+function phantomUpdate(card, entireStack) {
+    if (card.hasClass("inHand")) {
+        return;
+    }
+    var stack_height = heightOf(card.data("stack_index"));
+    if (entireStack) {
+        var x = gridX(card);
+        var y = gridY(card);
+        var w = card.width() + stack_height;
+        var h = card.height() + stack_height;
+    } else if (startPhantomLocation == targetToGridKey(card)) {
+        var x = gridX(card) + stack_height;
+        var y = gridY(card) + stack_height;
+        var w = card.width();
+        var h = card.height();
+    } else {
+        var x = gridX(card);
+        var y = gridY(card);
+        var w = card.width();
+        var h = card.height();
+    }
     ws.send("broadcast",
         {
             "subtype": "phantomupdate",
             "hide": false,
             "uuid": uuid,
             "name": user,
-            "left": gridX(card),
-            "top": gridY(card),
+            "left": x,
+            "top": y,
             "orient": getOrient(card),
-            "width": card.width(),
-            "height": card.height()
+            "width": w,
+            "height": h,
         });
 }
 
@@ -205,7 +226,7 @@ function flipStack(target) {
         return;
     }
     var dest_key = targetToGridKey(target);
-    phantomUpdate(target);
+    phantomUpdate(target, true);
     ws.send("stackop", {op_type: "reverse",
                         dest_type: "board",
                         dest_key: dest_key});
@@ -217,7 +238,7 @@ function shufStack(target) {
         return;
     }
     var dest_key = targetToGridKey(target);
-    phantomUpdate(target);
+    phantomUpdate(target, true);
     ws.send("stackop", {op_type: "shuffle",
                         dest_type: "board",
                         dest_key: dest_key});
@@ -230,7 +251,7 @@ function cleanupStack(target) {
         return;
     }
     var dest_key = targetToGridKey(target);
-    phantomUpdate(target);
+    phantomUpdate(target, true);
     ws.send("stackop", {op_type: "cleanup",
                         dest_type: "board",
                         dest_key: dest_key});
@@ -374,13 +395,15 @@ $(document).ready(function() {
             }
             target.css("zIndex", 4500000);
             showPhantomAtCard(target);
-            lastPhantomLocation = 0;
+            lastPhantomLocation = startPhantomLocation = targetToGridKey(target);
+            phantomUpdate(target);
             ws.send("broadcast", {"subtype": "dragstart", "card": target.prop("id")});
         });
 
         $(".card").bind("drag", function(event, ui) {
-            dragging = true;
             var target = $(event.currentTarget);
+            dragging = true;
+            target.stop();
             var dest_key = targetToGridKey(target);
             if (dest_key != lastPhantomLocation) {
                 lastPhantomLocation = dest_key;
@@ -586,8 +609,10 @@ $(document).ready(function() {
                             phantom = $("#" + e.data.uuid);
                         }
                         if (e.data.hide) {
-                            phantom.fadeOut();
+                            phantom.fadeOut(2000);
                         } else {
+                            phantom.stop();
+                            phantom.css('opacity', 1.0);
                             setOrientProperties(phantom, e.data.orient);
                             phantom.width(e.data.width - 6);
                             phantom.height(e.data.height - 6);

@@ -1,8 +1,8 @@
 Kansas is a general platform for card games on mobile devices.
 Its goal is to enable friends to use their smartphone, tablet, or laptop
-in place of any set of cards. Like in games using physical cards
-, Kansas assumes that players trust each other and can negotiate rules
-and movements in person.
+in place of any set of cards. Like in games using physical cards,
+Kansas is designed under the assmuption that players trust each other
+and can negotiate rules and movements in person.
 
 Kansas is a work in progress.
 
@@ -10,13 +10,6 @@ Features:
 
     real-time synchronization
     cross-platform support
-    configurable actions? flip, shuffle, multimove
-    custom background / grid / stackable?
-    history log?
-    hidden hands for card games?
-    players facing different directions?
-    saving games?
-    sharing of configurations?
 
 Dependencies:
 
