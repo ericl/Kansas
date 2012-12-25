@@ -60,8 +60,9 @@ class KansasGameState(object):
             self.data['orientations'][card] *= -1
 
     def resetOrientations(self, stack):
+        canonicalOrient = self.data['orientations'][stack[-1]]
         for card in stack:
-            self.data['orientations'][card] = -1
+            self.data['orientations'][card] = canonicalOrient
 
     def reassignZ(self, stack):
         i = max(self.data['zIndex'].values()) + 1
@@ -194,9 +195,8 @@ class KansasGameHandler(KansasHandler):
                 stack.reverse()
                 self._state.reverseOrientations(stack)
             elif req['op_type'] == 'shuffle':
-                random.shuffle(stack)
-            elif req['op_type'] == 'cleanup':
                 self._state.resetOrientations(stack)
+                random.shuffle(stack)
             else:
                 raise Exception("invalid stackop type")
             self._state.reassignZ(stack)

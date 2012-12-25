@@ -263,19 +263,6 @@ function shufStack(target) {
     phantomDone();
 }
 
-function cleanupStack(target) {
-    if (target.hasClass("inHand")) {
-        changeOrient(target, -1);
-        return;
-    }
-    var dest_key = targetToGridKey(target);
-    phantomUpdate(target, true);
-    ws.send("stackop", {op_type: "cleanup",
-                        dest_type: "board",
-                        dest_key: dest_key});
-    phantomDone();
-}
-
 function moveOffscreen(target) {
     target.animate({
         left: target.css("left"),
@@ -436,7 +423,7 @@ $(document).ready(function() {
                 var dest_prev_type = "board";
             }
             if ($("#hand").hasClass("active")) {
-                $("#hand").removeClass("active");
+                setTimeout(function() { $("#hand").removeClass("active"); }, 700);
                 var dest_type = "hands";
                 var dest_key = user;
             } else {
@@ -754,7 +741,6 @@ $(document).ready(function() {
             'rotate': rotateCard,
             'flipstack': flipStack,
             'shufstack': shufStack,
-            'cleanupstack': cleanupStack,
         };
         eventTable[$(event.currentTarget).attr("id")](activeCard);
         $("#menu").hide();
