@@ -617,7 +617,6 @@ $(document).ready(function() {
                         cd.data("stack_index", i);
                     }
                     target.data("stack_index", lastindex);
-                    target.css("position", "absolute");
                     target.css("opacity", "1.0");
                     target.css("z-index", e.data.z_index);
                     target.animate({
@@ -646,7 +645,7 @@ $(document).ready(function() {
                     case "phantomupdate":
                         var phantom = $("#" + e.data.uuid);
                         if (phantom.length == 0) {
-                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: absolute; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: 999999; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: 999999; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
                             $("#arena").append(node);
                             phantom = $("#" + e.data.uuid);
                         }

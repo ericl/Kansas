@@ -47,7 +47,7 @@
         }
 
         .card, #phantom {
-            position: absolute;
+            position: fixed;
             border-radius: 7px;
             height: 200px;
         }
@@ -55,7 +55,6 @@
         #phantom {
             border-radius: 13px;
             display: none;
-            position: absolute;
             border: 5px solid orange;
             opacity: 0.4;
             pointer-events: none;
@@ -95,10 +94,6 @@
             margin-bottom: -1px;
             background-color: #222;
             font-family: sans;
-        }
-
-        .inHand {
-            position: fixed !important;
         }
 
         .collapsed {
