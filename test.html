@@ -17,6 +17,7 @@
         #arena {
             width: 100%;
             height: 100%;
+            background-color: #FEE8D6;
             position: absolute;
             top: 0px;
             border: 0;
@@ -26,12 +27,13 @@
         }
 
         .active {
-            background-color: #fcc !important;
+            background-color: #330000 !important;
+            opacity: 1.0 !important;
         }
 
         #hand {
             width: 100%;
-            background-color: #fee;
+            background-color: #000;
             position: fixed;
             bottom: 0px;
             height: 220px;
@@ -39,7 +41,9 @@
             padding: 0;
             margin: 0;
             z-index: 2500000;
-            opacity: 0.8;
+            opacity: 0.9;
+            /* hides white line on android */
+            margin-bottom: -2px !important;
         }
 
         .card, #phantom {
@@ -60,19 +64,21 @@
         #menu {
             position: absolute;
             display: none;
-            z-index: 45000000 !important;
+            z-index: 47500000 !important;
         }
 
         ol, ul {
             list-style: none;
         }
 
-        #menu li:hover {
+        #menu li:hover, #menu li.hover {
             cursor: pointer;
-            background-color: #aaa;
+            background-color: #333;
         }
 
         .rotated {
+            margin-top: 25px;
+            margin-left: -10px;
             transform: rotate(90deg) translate(-20%, -14%);
             -moz-transform: rotate(90deg) translate(-20%, -14%);
             -ms-transform: rotate(90deg) translate(-20%, -14%);
@@ -82,10 +88,13 @@
 
         li {
             padding: 1em;
-            border: 1px solid gray;
-            font-size: 15pt;
+            border: 1px solid black;
+            color: white;
+            border-radius: 10px;
+            font-size: 20pt;
             margin-bottom: -1px;
-            background-color: #eee;
+            background-color: #222;
+            font-family: sans;
         }
 
         .inHand {
@@ -95,11 +104,24 @@
         .collapsed {
             height: 95px !important;
         }
+
+        .zoomed {
+            left: 50%;
+            right: 50%;
+            top: 35%;
+            bottom: 75%;
+            position: absolute;
+            z-index: 99900000 !important;
+            border-radius: 22px;
+            display: none;
+            background-color: black;
+        }
     </style>
   </head>
   <body>
-  <textarea style="display: none; float: right;" id="console" rows=15 cols=90></textarea><br>
+  <textarea style="display: none; position: absolute; z-index: 9999999; right: 0" id="console" rows=15 cols=90></textarea><br>
   <div id="arena">
+    <img src="" class="zoomed"></img>
     <div style="display: none; position: fixed" class="connected">
         <button id="sync">Force Sync</button>
         <button id="debug">Toggle Debug</button>
@@ -107,12 +129,12 @@
     </div>
     <button id="connect">Connect</button>
     <ul id="menu">
-      <li id="hidemenu"><i>Hide Menu</i></li>
+      <li class="boardonly" id="zoom">View Larger</li>
       <li id="flip">Flip Over</li>
-      <li id="rotate">Tap Card</li>
-      <li id="shufstack">Shuffle Stack</li>
-      <li id="flipstack">Turn Over Stack</li>
-      <li id="cleanupstack">Clean Up Stack</li>
+      <li class="boardonly" id="rotate">Tap Card</li>
+      <li class="boardonly" id="shufstack">Shuffle Stack</li>
+      <li class="boardonly" id="flipstack">Turn Over Stack</li>
+      <li class="boardonly" id="cleanupstack">Clean Up Stack</li>
     </ul>
     <div id="phantom"></div>
   </div>

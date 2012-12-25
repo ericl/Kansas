@@ -24,6 +24,7 @@ document.title = user + '@' + gameid;
 
 var ws = null;
 var activeCard = null;
+var menuReady = false;
 var handCache = [];
 var dragging = false;
 var skipCollapse = false;
@@ -120,12 +121,17 @@ function setOrientProperties(card, orient) {
 
 function gridX(card) {
     var offset = card.offset();
-    return parseInt((offset.left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+    var left = offset.left;
+    return parseInt((left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
 }
 
 function gridY(card) {
     var offset = card.offset();
-    return parseInt((offset.top + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+    var tp = offset.top;
+    if (card.hasClass("rotated")) {
+        tp -= parseInt(card.css("margin-top"));
+    }
+    return parseInt((tp + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
 }
 
 function gridKey(x, y) {
@@ -216,6 +222,18 @@ function rotateCard(target) {
     changeOrient(target, orient);
 }
 
+function zoomCard(target) {
+    $(".zoomed").prop("src", target.prop("src"));
+    if (window.innerHeight > window.innerWidth) {
+        $(".zoomed").width("60%");
+    } else {
+        $(".zoomed").height("60%");
+    }
+    $(".zoomed").css("margin-left", - ($(".zoomed").width() / 2));
+    $(".zoomed").css("margin-top", - ($(".zoomed").height() / 2));
+    $(".zoomed").fadeIn();
+}
+
 function flipCard(target) {
     changeOrient(target, -getOrient(target));
 }
@@ -268,7 +286,7 @@ function moveOffscreen(target) {
 
 function renderHandStack(hand, animate) {
     handCache = hand;
-    var kHandSpacing = 10;
+    var kHandSpacing = 5;
     var currentX = kHandSpacing;
     var handWidth = $("#hand").width();
     var cardWidth = $("#card_" + hand[0]).width();
@@ -299,17 +317,18 @@ function renderHandStack(hand, animate) {
     $("#hand").height(handHeight);
     var currentX = kHandSpacing;
     var currentY = $("#hand").position().top - $(window).scrollTop() + 15;
+    var collapsed = $("#hand").hasClass("collapsed");
 
     for (i in hand) {
         var cd = $("#card_" + hand[i]);
-        if (!$("#hand").hasClass("collapsed")) {
+        if (!collapsed) {
             if (currentX + cd.width() + 10 > handWidth) {
                 currentY += cd.height() + kHandSpacing;
                 currentX = kHandSpacing;
             }
         }
         cd.addClass("inHand");
-        cd.css("zIndex", 4000000 + i);
+        cd.css("zIndex", 4000000 + parseInt(i));
         cd.data("stack_index", 4000000 + i);
         if (animate) {
             cd.animate({
@@ -344,8 +363,8 @@ function showPhantomAtCard(target) {
         var x = offset.left;
         var y = offset.top;
     } else {
-        var x = parseInt((offset.left + k/2) / k) * k;
-        var y = parseInt((offset.top + k/2) / k) * k;
+        var x = gridX(target);
+        var y = gridY(target);
     }
     var phantom = $("#phantom");
     setOrientProperties(phantom, getOrient(target));
@@ -361,15 +380,6 @@ function showPhantomAtCard(target) {
     phantom.css("top", y - border_offset_y + heightOf(stack_index));
     phantom.css("z-index", target.css("zIndex") - 1);
     phantom.show();
-}
-
-function showMenuAtCard(card) {
-    var offset = card.offset();
-    $("#menu").hide();
-    $("#menu").css("left", offset.left);
-    $("#menu").css("top", offset.top);
-    $("#menu").show();
-    showPhantomAtCard(card);
 }
 
 $(document).ready(function() {
@@ -389,6 +399,7 @@ $(document).ready(function() {
         $(".card").bind("dragstart", function(event, ui) {
             dragging = true;
             $("#menu").hide();
+            $(".zoomed").fadeOut();
             var target = $(event.currentTarget);
             if (!target.hasClass("inHand")) {
                 $("#hand").removeClass("active");
@@ -425,6 +436,7 @@ $(document).ready(function() {
                 var dest_prev_type = "board";
             }
             if ($("#hand").hasClass("active")) {
+                $("#hand").removeClass("active");
                 var dest_type = "hands";
                 var dest_key = user;
             } else {
@@ -447,7 +459,7 @@ $(document).ready(function() {
             activeCard = $(event.currentTarget);
         });
 
-        $(".card").mouseup(function(event) {
+        function showMenuForEvent(event) {
             var target = $(event.currentTarget);
             if (!dragging) {
                 if (target.hasClass("inHand")
@@ -455,11 +467,41 @@ $(document).ready(function() {
                     $("#hand").removeClass("collapsed");
                     redrawHand(true);
                 } else {
-                    showMenuAtCard(target);
+                    var offset = target.offset();
+                    if (target.hasClass("inHand")) {
+                        zoomCard(target);
+                        $(".boardonly").hide();
+                    } else {
+                        $(".boardonly").show();
+                    }
+                    $("#menu").hide();
+                    $("#menu li").removeClass("hover");
+                    var vExcess = Math.max(0,
+                        offset.top + $("#menu").height() - window.innerHeight + 20
+                    );
+                    var hExcess = Math.max(0,
+                        offset.left + $("#menu").width() - window.innerWidth + 20
+                    );
+                    $("#menu").css("top", offset.top - vExcess);
+                    $("#menu").css("left", offset.left - hExcess);
+                    $("#menu").show();
+                    $("#menu").css("z-index", 450000000);
+                    showPhantomAtCard(target);
+                    menuReady = false;
                 }
             }
             skipCollapse = true;
             dragging = false;
+        }
+
+        $(".card").contextmenu(function(event) {
+            showMenuForEvent(event);
+            return false;
+        });
+
+        $(".card").mouseup(function(event) {
+            showMenuForEvent(event);
+            return true;
         });
     }
 
@@ -691,54 +733,53 @@ $(document).ready(function() {
             skipCollapse = false;
         } else {
             log("arena mouseup: collapse hand");
+            $(".zoomed").fadeOut();
             $("#hand").addClass("collapsed");
             redrawHand(true);
         }
     });
 
-    $("#hidemenu").mouseup(function(event) {
-        $("#menu").hide();
-        $("#phantom").hide();
-        skipCollapse = true;
-    })
+    $("#menu li").mousedown(function(event) {
+        menuReady = true;
+        event.stopPropagation();
+        $(event.currentTarget).addClass("hover");
+    });
 
-    $("#flip").mouseup(function(event) {
-        flipCard(activeCard);
+    $("#menu li").mouseup(function(event) {
+        if (!menuReady) {
+            return;
+        }
+        var eventTable = {
+            'zoom': zoomCard,
+            'flip': flipCard,
+            'rotate': rotateCard,
+            'flipstack': flipStack,
+            'shufstack': shufStack,
+            'cleanupstack': cleanupStack,
+        };
+        eventTable[$(event.currentTarget).attr("id")](activeCard);
         $("#menu").hide();
+        $("#menu li").removeClass("hover");
         $("#phantom").hide();
         skipCollapse = true;
     });
 
-    $("#rotate").mouseup(function(event) {
-        rotateCard(activeCard);
-        $("#menu").hide();
-        $("#phantom").hide();
-        skipCollapse = true;
+    $("#menu").mousedown(function(event) {
+        menuReady = true;
     });
 
-    $("#flipstack").mouseup(function(event) {
-        flipStack(activeCard);
+    $("#arena").mousedown(function(event) {
         $("#menu").hide();
         $("#phantom").hide();
-        skipCollapse = true;
     });
 
-    $("#shufstack").mouseup(function(event) {
-        shufStack(activeCard);
+    $("#hand").mousedown(function(event) {
         $("#menu").hide();
         $("#phantom").hide();
-        skipCollapse = true;
-    });
-
-    $("#cleanupstack").mouseup(function(event) {
-        cleanupStack(activeCard);
-        $("#menu").hide();
-        $("#phantom").hide();
-        skipCollapse = true;
     });
 
     $("#hand").mouseup(function(event) {
-        log("hand mouseup: show hand");
+        log("hand click: show hand");
         if ($("#hand").hasClass("collapsed")) {
             $("#hand").removeClass("collapsed");
             redrawHand(true);
