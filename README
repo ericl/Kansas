@@ -1,5 +1,6 @@
-Kansas is a general platform for card games on mobile devices.
-Its goal is to enable friends to use their smartphone, tablet, or laptop
+Kansas gives users with a virtual deck of cards on their mobile device.
+
+The goal is to enable friends to use their smartphone, tablet, or laptop
 in place of any set of cards. Like in games using physical cards,
 Kansas is designed under the assmuption that players trust each other
 and can negotiate rules and movements in person.
@@ -25,4 +26,7 @@ Running a test server:
 
         $ python -m SimpleHTTPServer
 
-    Visit http://localhost:8080/test.html or test_sync.html.
+    Then, visit:
+        
+        http://localhost:8080/test.html#playerName
+
