@@ -4,6 +4,7 @@
 import copy
 import json
 import logging
+import random
 import threading
 import time
 
@@ -54,6 +55,20 @@ class KansasGameState(object):
                 if card not in self.data['orientations']:
                     self.data['orientations'][card] = -1
 
+    def reverseOrientations(self, stack):
+        for card in stack:
+            self.data['orientations'][card] *= -1
+
+    def resetOrientations(self, stack):
+        for card in stack:
+            self.data['orientations'][card] = -1
+
+    def reassignZ(self, stack):
+        i = max(self.data['zIndex'].values()) + 1
+        for card in stack:
+            self.data['zIndex'][card] = i
+            i += 1
+
     def assignOrientations(self):
         i = 0
         for loc, stack in self.data['board'].iteritems():
@@ -77,7 +92,7 @@ class KansasGameState(object):
 
     def moveCard(self, card, dest_type, dest_key, dest_orient):
         assert dest_type in ['board', 'hands']
-        assert type(dest_key) in [int, str, unicode]
+        assert type(dest_key) in [int, str, unicode], type(dest_key)
         assert dest_orient in range(-4, 5)
 
         src_type, src_key = self.index[card]
@@ -165,13 +180,38 @@ class KansasGameHandler(KansasHandler):
         self._state = KansasGameState()
         self.handlers['broadcast'] = self.handle_broadcast
         self.handlers['move'] = self.handle_move
+        self.handlers['stackop'] = self.handle_stackop
         self.handlers['resync'] = self.handle_resync
         self.handlers['reset'] = self.handle_reset
         self.streams = {creatorOutputStream: creator}
 
-    def handle_move(self, req, output):
-        """Processes and broadcasts a globally ordered series of updates."""
+    def handle_stackop(self, req, output):
+        with self._lock:
+            dest_t = req['dest_type']
+            dest_k = req['dest_key']
+            stack = self._state.data[dest_t][dest_k]
+            if req['op_type'] == 'reverse':
+                stack.reverse()
+                self._state.reverseOrientations(stack)
+            elif req['op_type'] == 'shuffle':
+                random.shuffle(stack)
+            elif req['op_type'] == 'cleanup':
+                self._state.resetOrientations(stack)
+            else:
+                raise Exception("invalid stackop type")
+            self._state.reassignZ(stack)
+            self.broadcast(
+                set(self.streams.keys()),
+                'stackupdate',
+                {
+                    'op': req,
+                    'z_stack': stack,
+                    'z_index': [self._state.data['zIndex'][c] for c in stack],
+                    'orient': [self._state.data['orientations'][c] for c in stack],
+                    'seqno': self.nextseqno(),
+                })
 
+    def handle_move(self, req, output):
         with self._lock:
             move = req['move']
             dest_t = move['dest_type']

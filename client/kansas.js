@@ -117,29 +117,57 @@ function setOrientProperties(card, orient) {
     }
 }
 
-function changeOrient(card, orient) {
-    setOrientProperties(card, orient);
-
+function gridX(card) {
     var offset = card.offset();
-    var cardId = parseInt(card.prop("id").substr(5));
-    var x = parseInt((offset.left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
-    var y = parseInt((offset.top + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
-    var dest_type = "board";
-    var dest_prev_type = "board";
-    var dest_key = ((offset.left + kGridSpacing/2) / kGridSpacing) |
-                   ((offset.top + kGridSpacing/2) / kGridSpacing) << 16;
+    return parseInt((offset.left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+}
+
+function gridY(card) {
+    var offset = card.offset();
+    return parseInt((offset.top + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
+}
+
+function gridKey(x, y) {
+    return ((x + kGridSpacing/2) / kGridSpacing) |
+           ((y + kGridSpacing/2) / kGridSpacing) << 16;
+}
+
+function targetToGridKey(target) {
+    return gridKey(gridX(target), gridY(target));
+}
+
+function phantomUpdate(card) {
     ws.send("broadcast",
         {
             "subtype": "phantomupdate",
             "hide": false,
             "uuid": uuid,
             "name": user,
-            "left": x,
-            "top": y,
+            "left": gridX(card),
+            "top": gridY(card),
             "orient": getOrient(card),
             "width": card.width(),
             "height": card.height()
         });
+}
+
+function phantomDone() {
+    ws.send("broadcast",
+        {
+            "subtype": "phantomupdate",
+            "hide": true,
+            "uuid": uuid,
+        });
+}
+
+function changeOrient(card, orient) {
+    setOrientProperties(card, orient);
+    phantomUpdate(card);
+
+    var cardId = parseInt(card.prop("id").substr(5));
+    var dest_type = "board";
+    var dest_prev_type = "board";
+    var dest_key = targetToGridKey(card);
     if (card.hasClass("inHand")) {
         dest_type = "hands";
         dest_key = user;
@@ -151,12 +179,7 @@ function changeOrient(card, orient) {
                             dest_key: dest_key,
                             dest_prev_type: dest_type,
                             dest_orient: orient}});
-    ws.send("broadcast",
-        {
-            "subtype": "phantomupdate",
-            "hide": true,
-            "uuid": uuid,
-        });
+    phantomDone();
 }
 
 function rotateCard(target) {
@@ -174,6 +197,44 @@ function rotateCard(target) {
 
 function flipCard(target) {
     changeOrient(target, -getOrient(target));
+}
+
+function flipStack(target) {
+    if (target.hasClass("inHand")) {
+        flipCard(target);
+        return;
+    }
+    var dest_key = targetToGridKey(target);
+    phantomUpdate(target);
+    ws.send("stackop", {op_type: "reverse",
+                        dest_type: "board",
+                        dest_key: dest_key});
+    phantomDone();
+}
+
+function shufStack(target) {
+    if (target.hasClass("inHand")) {
+        return;
+    }
+    var dest_key = targetToGridKey(target);
+    phantomUpdate(target);
+    ws.send("stackop", {op_type: "shuffle",
+                        dest_type: "board",
+                        dest_key: dest_key});
+    phantomDone();
+}
+
+function cleanupStack(target) {
+    if (target.hasClass("inHand")) {
+        changeOrient(target, -1);
+        return;
+    }
+    var dest_key = targetToGridKey(target);
+    phantomUpdate(target);
+    ws.send("stackop", {op_type: "cleanup",
+                        dest_type: "board",
+                        dest_key: dest_key});
+    phantomDone();
 }
 
 function moveOffscreen(target) {
@@ -320,38 +381,17 @@ $(document).ready(function() {
         $(".card").bind("drag", function(event, ui) {
             dragging = true;
             var target = $(event.currentTarget);
-            var offset = target.offset();
-            var x = parseInt((offset.left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
-            var y = parseInt((offset.top + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
-            var dest_key = x | y << 16;
-            var hactive = $("#hand").hasClass("active");
-            var hsmall = $("#hand").hasClass("collapsed");
+            var dest_key = targetToGridKey(target);
             if (dest_key != lastPhantomLocation) {
                 lastPhantomLocation = dest_key;
-                ws.send("broadcast",
-                    {
-                        "subtype": "phantomupdate",
-                        "hide": false,
-                        "uuid": uuid,
-                        "name": user,
-                        "left": x,
-                        "top": y,
-                        "orient": getOrient(target),
-                        "width": target.width(),
-                        "height": target.height()
-                    });
+                phantomUpdate(target);
             }
         });
 
         $(".card").bind("dragstop", function(event, ui) {
             dragging = false;
             $("#phantom").fadeOut();
-            ws.send("broadcast",
-                {
-                    "subtype": "phantomupdate",
-                    "hide": true,
-                    "uuid": uuid,
-                });
+            phantomDone();
             e = event;
             var target = $(event.currentTarget);
             var card = parseInt(target.prop("id").substr(5));
@@ -366,9 +406,7 @@ $(document).ready(function() {
                 var dest_key = user;
             } else {
                 var dest_type = "board";
-                var offset = target.offset();
-                var dest_key = ((offset.left + kGridSpacing/2) / kGridSpacing) |
-                               ((offset.top + kGridSpacing/2) / kGridSpacing) << 16;
+                var dest_key = targetToGridKey(target);
                 if (dest_prev_type == "hands") {
                     removeFromArray(handCache, card);
                     redrawHand(true);
@@ -406,6 +444,8 @@ $(document).ready(function() {
         log("Reset all local state.");
         $(".uuid_phantom").remove();
         $(".card").remove();
+        $("#menu").hide();
+        $("#phantom").hide();
         handCache = null;
 
         function createImageNode(state, cid, stack_index) {
@@ -477,6 +517,19 @@ $(document).ready(function() {
             },
             reset: function(e) {
                 reset(e.data[0]);
+            },
+            stackupdate: function(e) {
+                log("Stack update: " + JSON.stringify(e.data));
+                var x = (e.data.op.dest_key & 0xffff) * kGridSpacing;
+                var y = (e.data.op.dest_key >> 16) * kGridSpacing;
+                for (i in e.data.z_stack) {
+                    var cd = $("#card_" + e.data.z_stack[i]);
+                    cd.css("left", x + heightOf(i));
+                    cd.css("top", y + heightOf(i));
+                    cd.data("stack_index", i);
+                    cd.css("z-index", e.data.z_index[i]);
+                    setOrientProperties(cd, e.data.orient[i]);
+                }
             },
             update: function(e) {
                 log("Update: " + JSON.stringify(e.data));
@@ -633,6 +686,27 @@ $(document).ready(function() {
 
     $("#rotate").mouseup(function(event) {
         rotateCard(activeCard);
+        $("#menu").hide();
+        $("#phantom").hide();
+        skipCollapse = true;
+    });
+
+    $("#flipstack").mouseup(function(event) {
+        flipStack(activeCard);
+        $("#menu").hide();
+        $("#phantom").hide();
+        skipCollapse = true;
+    });
+
+    $("#shufstack").mouseup(function(event) {
+        shufStack(activeCard);
+        $("#menu").hide();
+        $("#phantom").hide();
+        skipCollapse = true;
+    });
+
+    $("#cleanupstack").mouseup(function(event) {
+        cleanupStack(activeCard);
         $("#menu").hide();
         $("#phantom").hide();
         skipCollapse = true;
