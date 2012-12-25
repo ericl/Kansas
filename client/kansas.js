@@ -260,6 +260,9 @@ function shufStack(target) {
     if (target.hasClass("inHand")) {
         return;
     }
+    if (!confirm("Are you sure you want to shuffle this?")) {
+        return;
+    }
     var dest_key = targetToGridKey(target);
     phantomUpdate(target, true);
     ws.send("stackop", {op_type: "shuffle",
@@ -692,7 +695,9 @@ $(document).ready(function() {
     });
 
     $("#reset").mouseup(function(e) {
-        ws.send("reset");
+        if (confirm("Are you sure you want to reset the game?")) {
+            ws.send("reset");
+        }
     });
 
     $("#debug").mouseup(function(e) {
