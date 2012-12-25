@@ -377,6 +377,7 @@ function showPhantomAtCard(target) {
     phantom.css("left", x - border_offset_x + heightOf(stack_index));
     phantom.css("top", y - border_offset_y + heightOf(stack_index));
     phantom.css("z-index", target.css("zIndex") - 1);
+    phantom.css("opacity", 0.4);
     phantom.show();
 }
 
