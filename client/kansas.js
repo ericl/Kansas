@@ -46,6 +46,16 @@ function heightOf(stackHeight) {
     return stackHeight * kStackDelta;
 }
 
+function spin() {
+    document.body.style.cursor = 'wait';
+    $("#spinner").fadeIn('fast');
+}
+
+function unspin() {
+    document.body.style.cursor = 'default';
+    $("#spinner").fadeOut();
+}
+
 function removeFromArray(arr, item) {
     var idx = $.inArray(item, arr);
     if (idx >= 0) {
@@ -202,6 +212,7 @@ function changeOrient(card, orient) {
         dest_prev_type = "hands";
     }
     log("Sending orient change.");
+    spin();
     ws.send("move", {move: {card: cardId,
                             dest_type: dest_type,
                             dest_key: dest_key,
@@ -250,6 +261,7 @@ function flipStack(target) {
     }
     var dest_key = targetToGridKey(target);
     phantomUpdate(target, true);
+    spin();
     ws.send("stackop", {op_type: "reverse",
                         dest_type: "board",
                         dest_key: dest_key});
@@ -265,6 +277,7 @@ function shufStack(target) {
     }
     var dest_key = targetToGridKey(target);
     phantomUpdate(target, true);
+    spin();
     ws.send("stackop", {op_type: "shuffle",
                         dest_type: "board",
                         dest_key: dest_key});
@@ -446,6 +459,7 @@ $(document).ready(function() {
                 }
             }
             log("Sending card move.");
+            spin();
             ws.send("move", {move: {card: card,
                                     dest_prev_type: dest_prev_type,
                                     dest_type: dest_type,
@@ -567,12 +581,14 @@ $(document).ready(function() {
         close: function() { alert("close"); },
         events: {
             connect_resp: function(e) {
+                unspin();
                 log("Connected: " + e.data);
                 $("#connect").hide();
                 $(".connected").show();
                 reset(e.data[0]);
             },
             resync_resp: function(e) {
+                unspin();
                 reset(e.data[0]);
             },
             broadcast_resp: function(e) {
@@ -582,8 +598,10 @@ $(document).ready(function() {
             },
             reset: function(e) {
                 reset(e.data[0]);
+                unspin();
             },
             stackupdate: function(e) {
+                unspin();
                 log("Stack update: " + JSON.stringify(e.data));
                 var x = (e.data.op.dest_key & 0xffff) * kGridSpacing;
                 var y = (e.data.op.dest_key >> 16) * kGridSpacing;
@@ -602,6 +620,7 @@ $(document).ready(function() {
                 }
             },
             update: function(e) {
+                unspin();
                 log("Update: " + JSON.stringify(e.data));
                 var target = $("#card_" + e.data.move.card);
                 if (e.data.move.dest_type == "board") {
@@ -682,6 +701,7 @@ $(document).ready(function() {
 
     function requireConnect() {
         if (!connected) {
+            spin();
             ws.send("connect", {user: user, gameid: gameid});
             connected = true;
         }
@@ -692,11 +712,13 @@ $(document).ready(function() {
     });
 
     $("#sync").mouseup(function(e) {
+        spin();
         ws.send("resync");
     });
 
     $("#reset").mouseup(function(e) {
         if (confirm("Are you sure you want to reset the game?")) {
+            spin();
             ws.send("reset");
         }
     });
