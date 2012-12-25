@@ -26,6 +26,7 @@ var ws = null;
 var activeCard = null;
 var menuReady = false;
 var handCache = [];
+var XXX_jitter = 1;
 var dragging = false;
 var skipCollapse = false;
 var lastPhantomLocation = 0;
@@ -223,7 +224,11 @@ function rotateCard(target) {
 }
 
 function zoomCard(target) {
-    $(".zoomed").prop("src", target.prop("src"));
+    var old = $(".zoomed");
+    $(".zoomed").fadeOut(function() { old.remove(); });
+
+    var imgNode = '<img src="' + target.prop("src") + '" class="zoomed"></img>'
+    $("#arena").append(imgNode);
     if (window.innerHeight > window.innerWidth) {
         $(".zoomed").width("60%");
     } else {
@@ -264,14 +269,16 @@ function shufStack(target) {
 }
 
 function moveOffscreen(target) {
-    target.animate({
-        left: target.css("left"),
-        top: 2000,
-        opacity: 0,
-    });
+    if (parseInt(target.css("top")) != 2000) {
+        target.animate({
+            left: target.css("left"),
+            top: 2000,
+            opacity: 0,
+        });
+    }
 }
 
-function renderHandStack(hand, animate) {
+function renderHandStack(hand){ 
     handCache = hand;
     var kHandSpacing = 5;
     var currentX = kHandSpacing;
@@ -300,11 +307,14 @@ function renderHandStack(hand, animate) {
     }
 
     handHeight = Math.min(handHeight, $("#arena").height() - cardHeight * 1.2);
-
     $("#hand").height(handHeight);
+
     var currentX = kHandSpacing;
     var currentY = $("#hand").position().top - $(window).scrollTop() + 15;
     var collapsed = $("#hand").hasClass("collapsed");
+
+    /* TODO(ekl) https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97 */
+    XXX_jitter *= -1;
 
     for (i in hand) {
         var cd = $("#card_" + hand[i]);
@@ -317,16 +327,14 @@ function renderHandStack(hand, animate) {
         cd.addClass("inHand");
         cd.css("zIndex", 4000000 + parseInt(i));
         cd.data("stack_index", 4000000 + i);
-        if (animate) {
+        var xChanged = parseInt(currentX) != parseInt(cd.css('left'));
+        var yChanged = parseInt(currentY) != parseInt(cd.css('top'));
+        if (xChanged || yChanged) {
             cd.animate({
-                left: currentX,
-                top: currentY,
-                opacity: 1,
+                left: currentX + (xChanged ? 0 : XXX_jitter),
+                top: currentY + (yChanged ? 0 : XXX_jitter),
+                opacity: 1.0,
             });
-        } else {
-            cd.css('left', currentX);
-            cd.css('top', currentY);
-            cd.css('opacity', 1);
         }
         if ($("#hand").hasClass("collapsed")) {
             currentX += collapsedHandSpacing;
@@ -336,9 +344,9 @@ function renderHandStack(hand, animate) {
     }
 }
 
-function redrawHand(animate) {
+function redrawHand() {
     if (handCache) {
-        renderHandStack(handCache, animate);
+        renderHandStack(handCache);
     }
 }
 
@@ -423,7 +431,6 @@ $(document).ready(function() {
                 var dest_prev_type = "board";
             }
             if ($("#hand").hasClass("active")) {
-                setTimeout(function() { $("#hand").removeClass("active"); }, 700);
                 var dest_type = "hands";
                 var dest_key = user;
             } else {
@@ -431,7 +438,7 @@ $(document).ready(function() {
                 var dest_key = targetToGridKey(target);
                 if (dest_prev_type == "hands") {
                     removeFromArray(handCache, card);
-                    redrawHand(true);
+                    redrawHand();
                 }
             }
             log("Sending card move.");
@@ -452,7 +459,7 @@ $(document).ready(function() {
                 if (target.hasClass("inHand")
                         && $("#hand").hasClass("collapsed")) {
                     $("#hand").removeClass("collapsed");
-                    redrawHand(true);
+                    redrawHand();
                 } else {
                     var offset = target.offset();
                     if (target.hasClass("inHand")) {
@@ -528,8 +535,10 @@ $(document).ready(function() {
                 var y = (pos >> 16) * kGridSpacing;
                 createImageNode(state, cid, z);
                 var card = $("#card_" + cid);
-                card.css('left', x + heightOf(z));
-                card.css('top', y + heightOf(z));
+                card.animate({
+                    left: x + heightOf(z),
+                    top: y + heightOf(z),
+                });
             }
         }
         for (player in state.hands) {
@@ -576,11 +585,16 @@ $(document).ready(function() {
                 var y = (e.data.op.dest_key >> 16) * kGridSpacing;
                 for (i in e.data.z_stack) {
                     var cd = $("#card_" + e.data.z_stack[i]);
+                    cd.hide();
+                }
+                for (i in e.data.z_stack) {
+                    var cd = $("#card_" + e.data.z_stack[i]);
                     cd.css("left", x + heightOf(i));
                     cd.css("top", y + heightOf(i));
                     cd.data("stack_index", i);
                     cd.css("z-index", e.data.z_index[i]);
                     setOrientProperties(cd, e.data.orient[i]);
+                    cd.fadeIn();
                 }
             },
             update: function(e) {
@@ -604,11 +618,15 @@ $(document).ready(function() {
                         cd.data("stack_index", i);
                     }
                     target.data("stack_index", lastindex);
-                    target.css("opacity", "1.0");
                     target.css("z-index", e.data.z_index);
+                    var newX = x + heightOf(lastindex);
+                    var newY = y + heightOf(lastindex);
+                    var xChanged = parseInt(newX) != parseInt(target.css('left'));
+                    var yChanged = parseInt(newY) != parseInt(target.css('top'));
+                    XXX_jitter *= -1;
                     target.animate({
-                        left: x + heightOf(lastindex),
-                        top: y + heightOf(lastindex),
+                        left: newX + (xChanged ? 0 : XXX_jitter),
+                        top: newY + (yChanged ? 0 : XXX_jitter),
                         opacity: 1.0,
                     }, 'fast');
                     target.removeClass("inHand");
@@ -690,7 +708,7 @@ $(document).ready(function() {
             }
             $("#hand").addClass("active");
             if (dragging && !activeCard.hasClass("inHand")) {
-                redrawHand(true);
+                redrawHand();
             }
         },
         out: function(event, ui) {
@@ -701,7 +719,7 @@ $(document).ready(function() {
             $("#hand").removeClass("active");
             if (dragging && !$("#hand").hasClass("collapsed")) {
                 $("#hand").addClass("collapsed");
-                redrawHand(true);
+                redrawHand();
             }
         },
         tolerance: "touch",
@@ -721,7 +739,7 @@ $(document).ready(function() {
             log("arena mouseup: collapse hand");
             $(".zoomed").fadeOut();
             $("#hand").addClass("collapsed");
-            redrawHand(true);
+            redrawHand();
         }
     });
 
@@ -767,11 +785,11 @@ $(document).ready(function() {
         log("hand click: show hand");
         if ($("#hand").hasClass("collapsed")) {
             $("#hand").removeClass("collapsed");
-            redrawHand(true);
+            redrawHand();
         }
     });
 
-    $(window).resize(function() { redrawHand(false); });
+    $(window).resize(function() { redrawHand(); });
     setTimeout(requireConnect, 1000);
 });
 
