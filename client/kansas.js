@@ -28,6 +28,7 @@ var menuReady = false;
 var handCache = [];
 var XXX_jitter = 1;
 var dragging = false;
+var localMaxZ = 100;
 var skipCollapse = false;
 var lastPhantomLocation = 0;
 var startPhantomLocation = 0;
@@ -452,10 +453,23 @@ $(document).ready(function() {
                 var dest_key = user;
             } else {
                 var dest_type = "board";
-                var dest_key = targetToGridKey(target);
+                var x = gridX(target);
+                var y = gridY(target);
+                var dest_key = gridKey(x, y);
                 if (dest_prev_type == "hands") {
                     removeFromArray(handCache, card);
                     redrawHand();
+                }
+                var xChanged = parseInt(x) != parseInt(target.css('left'));
+                var yChanged = parseInt(y) != parseInt(target.css('top'));
+                target.css("zIndex", localMaxZ);
+                localMaxZ += 1;
+                if (xChanged || yChanged) {
+                    target.animate({
+                        left: x + (xChanged ? 0 : XXX_jitter),
+                        top: y + (yChanged ? 0 : XXX_jitter),
+                        opacity: 1.0,
+                    });
                 }
             }
             log("Sending card move.");
@@ -615,6 +629,7 @@ $(document).ready(function() {
                     cd.css("top", y + heightOf(i));
                     cd.data("stack_index", i);
                     cd.css("z-index", e.data.z_index[i]);
+                    localMaxZ = Math.max(localMaxZ, e.data.z_index[i]);
                     setOrientProperties(cd, e.data.orient[i]);
                     cd.fadeIn();
                 }
@@ -642,6 +657,7 @@ $(document).ready(function() {
                     }
                     target.data("stack_index", lastindex);
                     target.css("z-index", e.data.z_index);
+                    localMaxZ = Math.max(localMaxZ, e.data.z_index);
                     var newX = x + heightOf(lastindex);
                     var newY = y + heightOf(lastindex);
                     var xChanged = parseInt(newX) != parseInt(target.css('left'));
