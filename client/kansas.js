@@ -379,14 +379,15 @@ function shuffleStack(topCard) {
 /* Garbage collects older zoomed image. */
 function removeOldZoom() {
     var old = $(".zoomed");
-    $(".zoomed").fadeOut(function() { old.remove(); });
+    $(".zoomed").fadeOut();
+    setTimeout(function() { old.remove(); }, 1000);
 }
 
 /**
  * Displays a large version of the card image at the center of the screen.
  */
 function zoomCard(card) {
-    removeOldZoom();
+    var old = $(".zoomed");
     showSpinner();
     var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
     var imgNode = '<img src="' + toResource(url) + '" class="zoomed"></img>'
@@ -404,6 +405,7 @@ function zoomCard(card) {
             newNode.fadeIn();
             clearInterval(interval);
             hideSpinner();
+            setTimeout(function() { old.remove(); }, 1000);
         }
     }, 50);
 }
