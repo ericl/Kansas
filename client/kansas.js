@@ -24,7 +24,7 @@ var ws = null;
 document.title = user + '@' + gameid;
 
 // Configuration constants for grid spacing and logging.
-var kGridSpacing = 75;
+var kGridSpacing = 35;
 var loggingEnabled = false;
 
 // Tracks local state of the hand and zIndex of the topmost card.
@@ -211,14 +211,14 @@ function setOrientProperties(card, orient) {
 /* Returns the x position of the card snapped-to the grid. */
 function gridX(card) {
     var offset = card.offset();
-    var left = offset.left;
+    var left = offset.left - heightOf(card.data("stack_index"));
     return parseInt((left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
 }
 
 /* Returns the y position of the card snapped-to the grid. */
 function gridY(card) {
     var offset = card.offset();
-    var tp = offset.top;
+    var tp = offset.top - heightOf(card.data("stack_index"));
     if (card.hasClass("rotated")) {
         tp -= parseInt(card.css("margin-top"));
     }
@@ -548,6 +548,7 @@ $(document).ready(function() {
         $(".card").draggable({
             containment: $("#arena"),
             refreshPositions: true,
+            grid: [kGridSpacing, kGridSpacing],
         });
 
         $(".card").bind("dragstart", function(event, ui) {
@@ -604,17 +605,8 @@ $(document).ready(function() {
                     removeFromArray(handCache, cardId);
                     redrawHand();
                 }
-                var xChanged = parseInt(x) != parseInt(card.css('left'));
-                var yChanged = parseInt(y) != parseInt(card.css('top'));
                 card.css("zIndex", localMaxZ);
                 localMaxZ += 1;
-                if (xChanged || yChanged) {
-                    card.animate({
-                        left: x + (xChanged ? 0 : XXX_jitter),
-                        top: y + (yChanged ? 0 : XXX_jitter),
-                        opacity: 1.0,
-                    }, animationLength);
-                }
             }
             log("Sending card move.");
             showSpinner();
@@ -767,6 +759,7 @@ $(document).ready(function() {
 
             error: function(e) {
                 log("Server Error: " + e.msg);
+                alert("Server Error: " + e.msg);
             },
 
             reset: function(e) {
