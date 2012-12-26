@@ -363,11 +363,21 @@ function moveOffscreen(card) {
 function renderHandStack(hand) {
     handCache = hand;
     var kHandSpacing = 5;
+    var kDefaultCardWidth = 143;
+    var kDefaultCardHeight = 200;
     var currentX = kHandSpacing;
     var handWidth = $("#hand").width();
     var cardWidth = $("#card_" + hand[0]).width();
     var cardHeight = $("#card_" + hand[0]).height();
-    var handHeight = 220;
+    if (cardWidth == 0) {
+        log("using default card width");
+        cardWidth = kDefaultCardWidth;
+    }
+    if (cardHeight == 0) {
+        log("using default card  height");
+        cardHeight = kDefaultCardHeight;
+    }
+    var handHeight = cardHeight + 2 * kHandSpacing;
     var collapsedHandSpacing = Math.min(
         kHandSpacing + cardWidth,
         (handWidth - cardWidth - kHandSpacing * 2) / (hand.length - 1)
@@ -380,7 +390,7 @@ function renderHandStack(hand) {
         }
         var cd = $("#card_" + hand[i]);
         if (!$("#hand").hasClass("collapsed")) {
-            currentX += Math.max(cd.width(), 143) + kHandSpacing;
+            currentX += cardWidth + kHandSpacing;
             if (currentX + cd.width() + 10 > handWidth) {
                 handHeight += cd.height() + kHandSpacing;
                 currentX = kHandSpacing;
@@ -391,7 +401,7 @@ function renderHandStack(hand) {
     $("#hand").height(handHeight);
 
     var currentX = kHandSpacing;
-    var currentY = $("#hand").position().top - $(window).scrollTop() + 15;
+    var currentY = $("#hand").position().top - $(window).scrollTop() + kHandSpacing;
     var collapsed = $("#hand").hasClass("collapsed");
 
     XXX_jitter *= -1;
@@ -419,7 +429,7 @@ function renderHandStack(hand) {
         if ($("#hand").hasClass("collapsed")) {
             currentX += collapsedHandSpacing;
         } else {
-            currentX += Math.max(cd.width(), 143) + kHandSpacing;
+            currentX += cardWidth + kHandSpacing;
         }
     }
 }
