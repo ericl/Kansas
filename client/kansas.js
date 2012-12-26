@@ -81,15 +81,25 @@ function toResource(url) {
 }
 
 /* Shows the "Loading..." spinner. */
+var spinnerShowQueued = false;
 function showSpinner() {
-    document.body.style.cursor = 'wait';
-    $("#spinner").fadeIn('fast');
+    if (!spinnerShowQueued) {
+        spinnerShowQueued = true;
+        setTimeout(reallyShowSpinner, 500);
+    }
+}
+
+function reallyShowSpinner() {
+    if (spinnerShowQueued) {
+        $("#spinner").show();
+        spinnerShowQueued = false;
+    }
 }
 
 /* Hides the "Loading..." spinner. */
 function hideSpinner() {
-    document.body.style.cursor = 'default';
-    $("#spinner").fadeOut();
+    spinnerShowQueued = false;
+    $("#spinner").hide();
 }
 
 /**
