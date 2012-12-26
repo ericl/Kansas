@@ -13,30 +13,50 @@
  * which again will be received by other clients in a globally consistent order.
  */
 
-var kGridSpacing = 75;
-var kWSPort = 8080
 
+// Default settings for websocket connection.
+var kWSPort = 8080
 var hostname = window.location.hostname || "localhost"
 var gameid = "testgame1";
 var uuid = "p_" + Math.random().toString().substring(5);
 var user = window.location.hash || "#alice";
+var ws = null;
 document.title = user + '@' + gameid;
 
-var ws = null;
-var activeCard = null;
-var menuReady = false;
-var handCache = [];
-var XXX_jitter = 1;
-var dragging = false;
-var localMaxZ = 100;
-var skipCollapse = false;
-var lastPhantomLocation = 0;
-var startPhantomLocation = 0;
-var resourcePrefix = '';
+// Configuration constants for grid spacing and logging.
+var kGridSpacing = 75;
 var loggingEnabled = false;
 
+// Tracks local state of the hand and zIndex of the topmost card.
+var handCache = [];
+var localMaxZ = 200;
+
+// Minimum zIndexes for cards in hand and card being dragged.
+var kHandZIndex = 4000000;
+var kDraggingZIndex = 4500000;
+
+// The URL prefix from which card images are downloaded from.
+var resourcePrefix = '';
+
+// Tracks the dragging card and the highlight (phantom) it leaves behind.
+var draggingCard = null;
+var lastPhantomLocation = 0;
+var startPhantomLocation = 0;
+
+// Tracks mouseup/down state for correct event handling.
+var menuActionsReady = false;
+var doNotCollapseHand = false;
+var dragging = false;
+
+// Workaround for https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
+var XXX_jitter = 1;
+
+/**
+ * When cards are stacked on each other we want to provide a 3d-illusion.
+ * heightOf() returns the proper x, y offset for cards in the stack.
+ */
 function heightOf(stackHeight) {
-    if (stackHeight > 1000000) {
+    if (stackHeight >= kHandZIndex) {
         return 0;
     }
     var kStackDelta = 2;
@@ -47,16 +67,22 @@ function heightOf(stackHeight) {
     return stackHeight * kStackDelta;
 }
 
-function spin() {
+/* Shows the "Loading..." spinner. */
+function showSpinner() {
     document.body.style.cursor = 'wait';
     $("#spinner").fadeIn('fast');
 }
 
-function unspin() {
+/* Hides the "Loading..." spinner. */
+function hideSpinner() {
     document.body.style.cursor = 'default';
     $("#spinner").fadeOut();
 }
 
+/**
+ * Utility that removes an element from an array.
+ * Returns if the element was present in the array.
+ */
 function removeFromArray(arr, item) {
     var idx = $.inArray(item, arr);
     if (idx >= 0) {
@@ -69,6 +95,7 @@ function removeFromArray(arr, item) {
     }
 }
 
+/* Logs a message to the debug console */
 function log(msg) {
     if (loggingEnabled) {
         var console = $('#console');
@@ -77,8 +104,10 @@ function log(msg) {
     }
 }
 
-// http://stackoverflow.com/questions/5186441/javascript-drag-and-drop-for-touch-devices
-// TODO find a more robust solution that supports hold touch, taps, and double taps.
+/**
+ * Hack to map touch into mouse events, from
+ * http://stackoverflow.com/questions/5186441/javascript-drag-and-drop-for-touch-devices
+ */
 function touchHandler(event) {
     var touches = event.changedTouches,
     first = touches[0],
@@ -101,13 +130,11 @@ function touchHandler(event) {
     event.preventDefault();
 }
 
-function touchInit() {
-   document.addEventListener("touchstart", touchHandler, true);
-   document.addEventListener("touchmove", touchHandler, true);
-   document.addEventListener("touchend", touchHandler, true);
-   document.addEventListener("touchcancel", touchHandler, true);
-}
-
+/**
+ * Returns the card orientation (one of [-4,-3,-2,-1,1,2,3,4]).
+ * Here, card is the jquery selection corresponding to the card,
+ * e.g. $("#card_24")
+ */
 function getOrient(card) {
     var orient = card.data("orient");
     if (orient == 0) {
@@ -116,6 +143,7 @@ function getOrient(card) {
     return orient;
 }
 
+/* Changes the visible orientation the card */
 function setOrientProperties(card, orient) {
     card.data("orient", orient);
     if (orient > 0) {
@@ -131,12 +159,14 @@ function setOrientProperties(card, orient) {
     }
 }
 
+/* Returns the x position of the card snapped-to the grid. */
 function gridX(card) {
     var offset = card.offset();
     var left = offset.left;
     return parseInt((left + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
 }
 
+/* Returns the y position of the card snapped-to the grid. */
 function gridY(card) {
     var offset = card.offset();
     var tp = offset.top;
@@ -146,15 +176,35 @@ function gridY(card) {
     return parseInt((tp + kGridSpacing/2) / kGridSpacing) * kGridSpacing;
 }
 
+/**
+ * Produces the unique 32-bit identifier for an (x, y) tuple
+ * that the websocket server uses to specify a position.
+ */
 function gridKey(x, y) {
     return ((x + kGridSpacing/2) / kGridSpacing) |
            ((y + kGridSpacing/2) / kGridSpacing) << 16;
 }
 
-function targetToGridKey(target) {
-    return gridKey(gridX(target), gridY(target));
+/* Extracts x-value from key as produced by gridKey. */
+function keyToX(key) {
+    return (key & 0xffff) * kGridSpacing;
 }
 
+/* Extracts y-value from key as produced by gridKey. */
+function keyToY(key) {
+    return (key >> 16) * kGridSpacing;
+}
+
+/* Identical to gridKey() but taking a jquery selection. */
+function cardToGridKey(card) {
+    return gridKey(gridX(card), gridY(card));
+}
+
+/**
+ * Broadcasts the location of card to other users, so that their clients
+ * can draw a phantom box where the card is being dragged. If entireStack
+ * is set to True, the phantom box will encompass the entire stack.
+ */
 function phantomUpdate(card, entireStack) {
     if (card.hasClass("inHand")) {
         return;
@@ -165,12 +215,14 @@ function phantomUpdate(card, entireStack) {
         var y = gridY(card);
         var w = card.width() + stack_height;
         var h = card.height() + stack_height;
-    } else if (startPhantomLocation == targetToGridKey(card)) {
+    } else if (startPhantomLocation == cardToGridKey(card)) {
+        // In this case the card is still close to the stack.
         var x = gridX(card) + stack_height;
         var y = gridY(card) + stack_height;
         var w = card.width();
         var h = card.height();
     } else {
+        // In this case the card has been dragged off the stack.
         var x = gridX(card);
         var y = gridY(card);
         var w = card.width();
@@ -190,6 +242,7 @@ function phantomUpdate(card, entireStack) {
         });
 }
 
+/* Broadcasts that the user is done dragging the card. */
 function phantomDone() {
     ws.send("broadcast",
         {
@@ -199,6 +252,7 @@ function phantomDone() {
         });
 }
 
+/* Sets and broadcasts the visible orientation of the card. */
 function changeOrient(card, orient) {
     setOrientProperties(card, orient);
     phantomUpdate(card);
@@ -206,14 +260,14 @@ function changeOrient(card, orient) {
     var cardId = parseInt(card.prop("id").substr(5));
     var dest_type = "board";
     var dest_prev_type = "board";
-    var dest_key = targetToGridKey(card);
+    var dest_key = cardToGridKey(card);
     if (card.hasClass("inHand")) {
         dest_type = "hands";
         dest_key = user;
         dest_prev_type = "hands";
     }
     log("Sending orient change.");
-    spin();
+    showSpinner();
     ws.send("move", {move: {card: cardId,
                             dest_type: dest_type,
                             dest_key: dest_key,
@@ -222,8 +276,9 @@ function changeOrient(card, orient) {
     phantomDone();
 }
 
-function rotateCard(target) {
-    var orient = getOrient(target);
+/* Toggles and broadcasts card rotation. */
+function rotateCard(card) {
+    var orient = getOrient(card);
     if (Math.abs(orient) == 1) {
         orient *= 2;
     } else if (Math.abs(orient) == 2) {
@@ -232,14 +287,56 @@ function rotateCard(target) {
         log("Card is not in supported orientation: at " + orient);
         return;
     }
-    changeOrient(target, orient);
+    changeOrient(card, orient);
 }
 
-function zoomCard(target) {
+/* Toggles and broadcasts card face up/down. */
+function flipCard(card) {
+    changeOrient(card, -getOrient(card));
+}
+
+/* Requests a stack flip from the server. */
+function flipStack(topCard) {
+    if (topCard.hasClass("inHand")) {
+        flipCard(topCard);
+        return;
+    }
+    var dest_key = cardToGridKey(topCard);
+    phantomUpdate(topCard, true);
+    showSpinner();
+    ws.send("stackop", {op_type: "reverse",
+                        dest_type: "board",
+                        dest_key: dest_key});
+    phantomDone();
+}
+
+/* Requests a stack shuffle from the server. */
+function shuffleStack(topCard) {
+    if (topCard.hasClass("inHand")) {
+        return;
+    }
+    if (!confirm("Are you sure you want to shuffle this?")) {
+        return;
+    }
+    var dest_key = cardToGridKey(topCard);
+    phantomUpdate(topCard, true);
+    showSpinner();
+    ws.send("stackop", {op_type: "shuffle",
+                        dest_type: "board",
+                        dest_key: dest_key});
+    phantomDone();
+}
+
+/**
+ * Displays a large version of the card image at the center of the screen.
+ */
+function zoomCard(card) {
+    // Garbage collects older zoomed images.
     var old = $(".zoomed");
     $(".zoomed").fadeOut(function() { old.remove(); });
 
-    var imgNode = '<img src="' + target.prop("src") + '" class="zoomed"></img>'
+    // Creates new zoomed image node.
+    var imgNode = '<img src="' + card.prop("src") + '" class="zoomed"></img>'
     $("#arena").append(imgNode);
     if (window.innerHeight > window.innerWidth) {
         $(".zoomed").width("60%");
@@ -251,51 +348,19 @@ function zoomCard(target) {
     $(".zoomed").fadeIn();
 }
 
-function flipCard(target) {
-    changeOrient(target, -getOrient(target));
-}
-
-function flipStack(target) {
-    if (target.hasClass("inHand")) {
-        flipCard(target);
-        return;
-    }
-    var dest_key = targetToGridKey(target);
-    phantomUpdate(target, true);
-    spin();
-    ws.send("stackop", {op_type: "reverse",
-                        dest_type: "board",
-                        dest_key: dest_key});
-    phantomDone();
-}
-
-function shufStack(target) {
-    if (target.hasClass("inHand")) {
-        return;
-    }
-    if (!confirm("Are you sure you want to shuffle this?")) {
-        return;
-    }
-    var dest_key = targetToGridKey(target);
-    phantomUpdate(target, true);
-    spin();
-    ws.send("stackop", {op_type: "shuffle",
-                        dest_type: "board",
-                        dest_key: dest_key});
-    phantomDone();
-}
-
-function moveOffscreen(target) {
-    if (parseInt(target.css("top")) != 2000) {
-        target.animate({
-            left: target.css("left"),
+/* Moves a card offscreen - used for hiding hands of other players. */
+function moveOffscreen(card) {
+    if (parseInt(card.css("top")) != 2000) {
+        card.animate({
+            left: card.css("left"),
             top: 2000,
             opacity: 0,
         });
     }
 }
 
-function renderHandStack(hand){ 
+/* Redraws user's hand given an array of cards present. */
+function renderHandStack(hand) {
     handCache = hand;
     var kHandSpacing = 5;
     var currentX = kHandSpacing;
@@ -308,7 +373,7 @@ function renderHandStack(hand){
         (handWidth - cardWidth - kHandSpacing * 2) / (hand.length - 1)
     );
 
-    // Computes height of hand necessary.
+    // Computes and sets height of hand necessary to hold cards.
     for (i in hand) {
         if (i == hand.length - 1) {
             break;
@@ -322,7 +387,6 @@ function renderHandStack(hand){
             }
         }
     }
-
     handHeight = Math.min(handHeight, $("#arena").height() - cardHeight * 1.2);
     $("#hand").height(handHeight);
 
@@ -330,7 +394,6 @@ function renderHandStack(hand){
     var currentY = $("#hand").position().top - $(window).scrollTop() + 15;
     var collapsed = $("#hand").hasClass("collapsed");
 
-    /* TODO(ekl) https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97 */
     XXX_jitter *= -1;
 
     for (i in hand) {
@@ -342,8 +405,8 @@ function renderHandStack(hand){
             }
         }
         cd.addClass("inHand");
-        cd.css("zIndex", 4000000 + parseInt(i));
-        cd.data("stack_index", 4000000 + i);
+        cd.css("zIndex", kHandZIndex + parseInt(i));
+        cd.data("stack_index", kHandZIndex + i);
         var xChanged = parseInt(currentX) != parseInt(cd.css('left'));
         var yChanged = parseInt(currentY) != parseInt(cd.css('top'));
         if (xChanged || yChanged) {
@@ -361,27 +424,29 @@ function renderHandStack(hand){
     }
 }
 
+/* Forces a re-render of the hand after a handCache update. */
 function redrawHand() {
     if (handCache) {
         renderHandStack(handCache);
     }
 }
 
-function showPhantomAtCard(target) {
-    var offset = target.offset();
-    var stack_index = target.data("stack_index");
+/* Draws a highlight around the card. */
+function drawPhantom(card) {
+    var offset = card.offset();
+    var stack_index = card.data("stack_index");
     var k = kGridSpacing;
-    if (target.hasClass("inHand")) {
+    if (card.hasClass("inHand")) {
         var x = offset.left;
         var y = offset.top;
     } else {
-        var x = gridX(target);
-        var y = gridY(target);
+        var x = gridX(card);
+        var y = gridY(card);
     }
     var phantom = $("#phantom");
-    setOrientProperties(phantom, getOrient(target));
-    phantom.width(target.width());
-    phantom.height(target.height());
+    setOrientProperties(phantom, getOrient(card));
+    phantom.width(card.width());
+    phantom.height(card.height());
     var border_offset_x = 5;
     var border_offset_y = 5;
     if (phantom.hasClass("rotated")) {
@@ -390,13 +455,16 @@ function showPhantomAtCard(target) {
     }
     phantom.css("left", x - border_offset_x + heightOf(stack_index));
     phantom.css("top", y - border_offset_y + heightOf(stack_index));
-    phantom.css("z-index", target.css("zIndex") - 1);
+    phantom.css("zIndex", card.css("zIndex") - 1);
     phantom.css("opacity", 0.4);
     phantom.show();
 }
 
 $(document).ready(function() {
-    touchInit();
+    document.addEventListener("touchstart", touchHandler, true);
+    document.addEventListener("touchmove", touchHandler, true);
+    document.addEventListener("touchend", touchHandler, true);
+    document.addEventListener("touchcancel", touchHandler, true);
     var connected = false;
 
     function initCards() {
@@ -417,9 +485,9 @@ $(document).ready(function() {
             if (!target.hasClass("inHand")) {
                 $("#hand").removeClass("active");
             }
-            target.css("zIndex", 4500000);
-            showPhantomAtCard(target);
-            lastPhantomLocation = startPhantomLocation = targetToGridKey(target);
+            target.css("zIndex", kDraggingZIndex);
+            drawPhantom(target);
+            lastPhantomLocation = startPhantomLocation = cardToGridKey(target);
             phantomUpdate(target);
             ws.send("broadcast", {"subtype": "dragstart", "card": target.prop("id")});
         });
@@ -428,7 +496,7 @@ $(document).ready(function() {
             var target = $(event.currentTarget);
             dragging = true;
             target.stop();
-            var dest_key = targetToGridKey(target);
+            var dest_key = cardToGridKey(target);
             if (dest_key != lastPhantomLocation) {
                 lastPhantomLocation = dest_key;
                 phantomUpdate(target);
@@ -439,11 +507,10 @@ $(document).ready(function() {
             dragging = false;
             $("#phantom").fadeOut();
             phantomDone();
-            e = event;
-            var target = $(event.currentTarget);
-            var card = parseInt(target.prop("id").substr(5));
-            var orient = target.data("orient");
-            if (target.hasClass("inHand")) {
+            var card = $(event.currentTarget);
+            var cardId = parseInt(card.prop("id").substr(5));
+            var orient = card.data("orient");
+            if (card.hasClass("inHand")) {
                 var dest_prev_type = "hands";
             } else {
                 var dest_prev_type = "board";
@@ -453,19 +520,19 @@ $(document).ready(function() {
                 var dest_key = user;
             } else {
                 var dest_type = "board";
-                var x = gridX(target);
-                var y = gridY(target);
+                var x = gridX(card);
+                var y = gridY(card);
                 var dest_key = gridKey(x, y);
                 if (dest_prev_type == "hands") {
-                    removeFromArray(handCache, card);
+                    removeFromArray(handCache, cardId);
                     redrawHand();
                 }
-                var xChanged = parseInt(x) != parseInt(target.css('left'));
-                var yChanged = parseInt(y) != parseInt(target.css('top'));
-                target.css("zIndex", localMaxZ);
+                var xChanged = parseInt(x) != parseInt(card.css('left'));
+                var yChanged = parseInt(y) != parseInt(card.css('top'));
+                card.css("zIndex", localMaxZ);
                 localMaxZ += 1;
                 if (xChanged || yChanged) {
-                    target.animate({
+                    card.animate({
                         left: x + (xChanged ? 0 : XXX_jitter),
                         top: y + (yChanged ? 0 : XXX_jitter),
                         opacity: 1.0,
@@ -473,8 +540,8 @@ $(document).ready(function() {
                 }
             }
             log("Sending card move.");
-            spin();
-            ws.send("move", {move: {card: card,
+            showSpinner();
+            ws.send("move", {move: {card: cardId,
                                     dest_prev_type: dest_prev_type,
                                     dest_type: dest_type,
                                     dest_key: dest_key,
@@ -482,26 +549,29 @@ $(document).ready(function() {
         });
 
         $(".card").mousedown(function(event) {
-            activeCard = $(event.currentTarget);
+            draggingCard = $(event.currentTarget);
         });
 
         function showMenuForEvent(event) {
-            var target = $(event.currentTarget);
+            var card = $(event.currentTarget);
             if (!dragging) {
-                if (target.hasClass("inHand")
+                if (card.hasClass("inHand")
                         && $("#hand").hasClass("collapsed")) {
+                    // Expands the hand if a card is clicked on in collapsed mode.
                     $("#hand").removeClass("collapsed");
                     redrawHand();
                 } else {
-                    var offset = target.offset();
-                    if (target.hasClass("inHand")) {
-                        zoomCard(target);
+                    // Otherwise, shows a menu for the card.
+                    var offset = card.offset();
+                    if (card.hasClass("inHand")) {
+                        zoomCard(card);
                         $(".boardonly").hide();
                     } else {
                         $(".boardonly").show();
                     }
                     $("#menu").hide();
                     $("#menu li").removeClass("hover");
+                    // Ensures that the menu is visible onscreen.
                     var vExcess = Math.max(0,
                         offset.top + $("#menu").height() - window.innerHeight + 20
                     );
@@ -511,12 +581,11 @@ $(document).ready(function() {
                     $("#menu").css("top", offset.top - vExcess);
                     $("#menu").css("left", offset.left - hExcess);
                     $("#menu").show();
-                    $("#menu").css("z-index", 450000000);
-                    showPhantomAtCard(target);
-                    menuReady = false;
+                    drawPhantom(card);
+                    menuActionsReady = false;
                 }
             }
-            skipCollapse = true;
+            doNotCollapseHand = true;
             dragging = false;
         }
 
@@ -531,12 +600,14 @@ $(document).ready(function() {
         });
     }
 
+    /* Discards and redownloads all local state from the server. */
     function reset(state) {
         log("Reset all local state.");
         $(".uuid_phantom").remove();
         $(".card").remove();
         $("#menu").hide();
         $("#phantom").hide();
+        resourcePrefix = state.resource_prefix;
         handCache = null;
 
         function createImageNode(state, cid, stack_index) {
@@ -548,7 +619,7 @@ $(document).ready(function() {
             if (state.orientations[cid] < 0) {
                 url = back_url;
             }
-            var img = '<img style="z-index: ' + state.zIndex[cid] + '; display: none"'
+            var img = '<img style="zIndex: ' + state.zIndex[cid] + '; display: none"'
                 + ' id="card_' + cid + '"'
                 + ' data-orient="' + state.orientations[cid] + '"'
                 + ' data-front="' + state.urls[cid] + '"'
@@ -558,13 +629,13 @@ $(document).ready(function() {
             $("#arena").append(img);
         }
 
-        resourcePrefix = state.resource_prefix;
+        // Recreates the board.
         for (pos in state.board) {
             var stack = state.board[pos];
             for (z in stack) {
                 var cid = stack[z];
-                var x = (pos & 0xffff) * kGridSpacing;
-                var y = (pos >> 16) * kGridSpacing;
+                var x = keyToX(pos);
+                var y = keyToY(pos);
                 createImageNode(state, cid, z);
                 var card = $("#card_" + cid);
                 card.animate({
@@ -573,6 +644,8 @@ $(document).ready(function() {
                 });
             }
         }
+
+        // Recreates the hand.
         for (player in state.hands) {
             var hand = state.hands[player];
             for (i in hand) {
@@ -595,50 +668,64 @@ $(document).ready(function() {
         close: function() { alert("close"); },
         events: {
             connect_resp: function(e) {
-                unspin();
+                hideSpinner();
                 log("Connected: " + e.data);
                 $("#connect").hide();
                 $(".connected").show();
                 reset(e.data[0]);
             },
+
             resync_resp: function(e) {
-                unspin();
+                hideSpinner();
                 reset(e.data[0]);
             },
+
             broadcast_resp: function(e) {
+                /* Ignores acks for the phantom update messages we broadcast. */
             },
+
             error: function(e) {
-                log("Error: " + e.msg);
+                log("Server Error: " + e.msg);
+                alert("Server Error: " + e.msg);
             },
+
             reset: function(e) {
+                hideSpinner();
                 reset(e.data[0]);
-                unspin();
             },
+
             stackupdate: function(e) {
-                unspin();
+                hideSpinner();
                 log("Stack update: " + JSON.stringify(e.data));
-                var x = (e.data.op.dest_key & 0xffff) * kGridSpacing;
-                var y = (e.data.op.dest_key >> 16) * kGridSpacing;
+                var x = keyToX(e.data.op.dest_key);
+                var y = keyToY(e.data.op.dest_key);
+
+                /* Temporarily hides each card in the stack. */
                 for (i in e.data.z_stack) {
                     var cd = $("#card_" + e.data.z_stack[i]);
                     cd.hide();
                 }
+
+                /* Redraws and shows each card in the stack. */
                 for (i in e.data.z_stack) {
                     var cd = $("#card_" + e.data.z_stack[i]);
                     cd.css("left", x + heightOf(i));
                     cd.css("top", y + heightOf(i));
                     cd.data("stack_index", i);
-                    cd.css("z-index", e.data.z_index[i]);
+                    cd.css("zIndex", e.data.z_index[i]);
                     localMaxZ = Math.max(localMaxZ, e.data.z_index[i]);
                     setOrientProperties(cd, e.data.orient[i]);
                     cd.fadeIn();
                 }
             },
+
             update: function(e) {
-                unspin();
+                hideSpinner();
                 log("Update: " + JSON.stringify(e.data));
                 var target = $("#card_" + e.data.move.card);
+
                 if (e.data.move.dest_type == "board") {
+
                     setOrientProperties(target, e.data.move.dest_orient);
                     var lastindex = e.data.z_stack.length - 1;
                     var x = (e.data.move.dest_key & 0xffff) * kGridSpacing;
@@ -656,7 +743,7 @@ $(document).ready(function() {
                         cd.data("stack_index", i);
                     }
                     target.data("stack_index", lastindex);
-                    target.css("z-index", e.data.z_index);
+                    target.css("zIndex", e.data.z_index);
                     localMaxZ = Math.max(localMaxZ, e.data.z_index);
                     var newX = x + heightOf(lastindex);
                     var newY = y + heightOf(lastindex);
@@ -669,7 +756,9 @@ $(document).ready(function() {
                         opacity: 1.0,
                     }, 'fast');
                     target.removeClass("inHand");
+
                 } else if (e.data.move.dest_type == "hands") {
+
                     setOrientProperties(target, e.data.move.dest_orient);
                     if (e.data.move.dest_key == user) {
                         target.addClass("inHand");
@@ -677,10 +766,12 @@ $(document).ready(function() {
                     } else {
                         moveOffscreen(target);
                     }
+
                 } else {
                     log("WARN: unknown dest type: " + e.data.move.dest_type);
                 }
             },
+
             broadcast_message: function(e) {
                 switch (e.data.subtype) {
                     case "dragstart":
@@ -689,7 +780,7 @@ $(document).ready(function() {
                     case "phantomupdate":
                         var phantom = $("#" + e.data.uuid);
                         if (phantom.length == 0) {
-                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: 999999; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; zIndex: 999999; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
                             $("#arena").append(node);
                             phantom = $("#" + e.data.uuid);
                         }
@@ -707,7 +798,7 @@ $(document).ready(function() {
                         }
                         break;
                 }
-                log("Broadcast: " + JSON.stringify(e));
+                log("Recv broadcast: " + JSON.stringify(e));
             },
             _default: function(e) {
                 log("Unknown response: " + JSON.stringify(e));
@@ -715,26 +806,26 @@ $(document).ready(function() {
         },
     });
 
-    function requireConnect() {
+    function tryConnect() {
         if (!connected) {
-            spin();
+            showSpinner();
             ws.send("connect", {user: user, gameid: gameid});
             connected = true;
         }
     }
 
     $("#connect").mouseup(function(e) {
-        requireConnect();
+        tryConnect();
     });
 
     $("#sync").mouseup(function(e) {
-        spin();
+        showSpinner();
         ws.send("resync");
     });
 
     $("#reset").mouseup(function(e) {
         if (confirm("Are you sure you want to reset the game?")) {
-            spin();
+            showSpinner();
             ws.send("reset");
         }
     });
@@ -747,17 +838,17 @@ $(document).ready(function() {
     $("#hand").droppable({
         over: function(event, ui) {
             if (dragging) {
-                var card = parseInt(activeCard.prop("id").substr(5));
+                var card = parseInt(draggingCard.prop("id").substr(5));
                 removeFromArray(handCache, card);
             }
             $("#hand").addClass("active");
-            if (dragging && !activeCard.hasClass("inHand")) {
+            if (dragging && !draggingCard.hasClass("inHand")) {
                 redrawHand();
             }
         },
         out: function(event, ui) {
             if (dragging) {
-                var card = parseInt(activeCard.prop("id").substr(5));
+                var card = parseInt(draggingCard.prop("id").substr(5));
                 removeFromArray(handCache, card);
             }
             $("#hand").removeClass("active");
@@ -776,9 +867,9 @@ $(document).ready(function() {
     $("#hand").disableSelection();
 
     $("#arena").mouseup(function(event) {
-        if (skipCollapse) {
+        if (doNotCollapseHand) {
             log("arena mouseup: skipping collapse");
-            skipCollapse = false;
+            doNotCollapseHand = false;
         } else {
             log("arena mouseup: collapse hand");
             $(".zoomed").fadeOut();
@@ -788,13 +879,13 @@ $(document).ready(function() {
     });
 
     $("#menu li").mousedown(function(event) {
-        menuReady = true;
+        menuActionsReady = true;
         event.stopPropagation();
         $(event.currentTarget).addClass("hover");
     });
 
     $("#menu li").mouseup(function(event) {
-        if (!menuReady) {
+        if (!menuActionsReady) {
             return;
         }
         var eventTable = {
@@ -802,17 +893,17 @@ $(document).ready(function() {
             'flip': flipCard,
             'rotate': rotateCard,
             'flipstack': flipStack,
-            'shufstack': shufStack,
+            'shufstack': shuffleStack,
         };
-        eventTable[$(event.currentTarget).attr("id")](activeCard);
+        eventTable[$(event.currentTarget).attr("id")](draggingCard);
         $("#menu").hide();
         $("#menu li").removeClass("hover");
         $("#phantom").hide();
-        skipCollapse = true;
+        doNotCollapseHand = true;
     });
 
     $("#menu").mousedown(function(event) {
-        menuReady = true;
+        menuActionsReady = true;
     });
 
     $("#arena").mousedown(function(event) {
@@ -834,7 +925,7 @@ $(document).ready(function() {
     });
 
     $(window).resize(function() { redrawHand(); });
-    setTimeout(requireConnect, 1000);
+    setTimeout(tryConnect, 1000);
 });
 
 // vim: et sw=4
