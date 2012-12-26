@@ -42,6 +42,7 @@ var resourcePrefix = '';
 var draggingCard = null;
 var lastPhantomLocation = 0;
 var startPhantomLocation = 0;
+var phantomHideQueued = {};
 
 // Tracks mouseup/down state for correct event handling.
 var menuActionsReady = false;
@@ -858,10 +859,15 @@ $(document).ready(function() {
                             phantom = $("#" + e.data.uuid);
                         }
                         if (e.data.hide) {
+                            phantomHideQueued[e.data.uuid] = true;
                             setTimeout(function() {
-                                phantom.hide();
+                                if (phantomHideQueued[e.data.uuid]) {
+                                    phantom.hide();
+                                    phantomHideQueued[e.data.uuid] = false;
+                                }
                             }, 1500);
                         } else {
+                            phantomHideQueued[e.data.uuid] = false;
                             phantom.stop();
                             phantom.css('opacity', 1.0);
                             setOrientProperties(phantom, e.data.orient);
