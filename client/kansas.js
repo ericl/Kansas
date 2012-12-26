@@ -860,12 +860,14 @@ $(document).ready(function() {
                     case "phantomupdate":
                         var phantom = $("#" + e.data.uuid);
                         if (phantom.length == 0) {
-                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kDraggingZIndex + 100000000) + '; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kDraggingZIndex + 100000000) + '; font-family: sans;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
                             $("#arena").append(node);
                             phantom = $("#" + e.data.uuid);
                         }
                         if (e.data.hide) {
-                            phantom.fadeOut(2000);
+                            setTimeout(function() {
+                                phantom.hide();
+                            }, 1500);
                         } else {
                             phantom.stop();
                             phantom.css('opacity', 1.0);
