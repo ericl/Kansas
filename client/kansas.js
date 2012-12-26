@@ -80,16 +80,42 @@ function toResource(url) {
     }
 }
 
+/* Highlights hand to receive drops. */
+function activateHand() {
+    deactivateQueued = false;
+    $("#hand").addClass("active");
+}
+
+/* Removes highlight from hand. */
+function deactivateHand() {
+    deactivateQueued = false;
+    $("#hand").removeClass("active");
+}
+
+/* Removes highlight from hand after a while. */
+var deactivateQueued = false;
+function deferDeactivateHand() {
+    deactivateQueued = true;
+    setTimeout(_reallyDeactivateHand, 700);
+}
+
+function _reallyDeactivateHand() {
+    if (deactivateQueued) {
+        $("#hand").removeClass("active");
+        deactivateQueued = false;
+    }
+}
+
 /* Shows the "Loading..." spinner. */
 var spinnerShowQueued = false;
 function showSpinner() {
     if (!spinnerShowQueued) {
         spinnerShowQueued = true;
-        setTimeout(reallyShowSpinner, 500);
+        setTimeout(_reallyShowSpinner, 500);
     }
 }
 
-function reallyShowSpinner() {
+function _reallyShowSpinner() {
     if (spinnerShowQueued) {
         $("#spinner").show();
         spinnerShowQueued = false;
@@ -528,11 +554,13 @@ $(document).ready(function() {
             removeOldZoom();
             var target = $(event.currentTarget);
             if (!target.hasClass("inHand")) {
-                $("#hand").removeClass("active");
+                deactivateHand();
             }
+            /* Slow on mobile.
             target.css("zIndex", kDraggingZIndex);
             drawPhantom(target);
             lastPhantomLocation = startPhantomLocation = cardToGridKey(target);
+            */
             phantomUpdate(target);
             ws.send("broadcast", {"subtype": "dragstart", "card": target.prop("id")});
         });
@@ -553,6 +581,7 @@ $(document).ready(function() {
             $("#phantom").fadeOut();
             phantomDone();
             var card = $(event.currentTarget);
+            card.css("zIndex", kDraggingZIndex);
             var cardId = parseInt(card.prop("id").substr(5));
             var orient = card.data("orient");
             if (card.hasClass("inHand")) {
@@ -561,6 +590,7 @@ $(document).ready(function() {
                 var dest_prev_type = "board";
             }
             if ($("#hand").hasClass("active")) {
+                deferDeactivateHand();
                 var dest_type = "hands";
                 var dest_key = user;
             } else {
@@ -889,7 +919,7 @@ $(document).ready(function() {
                 var card = parseInt(draggingCard.prop("id").substr(5));
                 removeFromArray(handCache, card);
             }
-            $("#hand").addClass("active");
+            activateHand();
             if (dragging && !draggingCard.hasClass("inHand")) {
                 redrawHand();
             }
@@ -899,7 +929,7 @@ $(document).ready(function() {
                 var card = parseInt(draggingCard.prop("id").substr(5));
                 removeFromArray(handCache, card);
             }
-            $("#hand").removeClass("active");
+            deactivateHand();
             if (dragging && !$("#hand").hasClass("collapsed")) {
                 $("#hand").addClass("collapsed");
                 redrawHand();
@@ -955,6 +985,7 @@ $(document).ready(function() {
     });
 
     $("#arena").mousedown(function(event) {
+        deactivateHand();
         $("#menu").hide();
         $("#phantom").hide();
     });
