@@ -51,6 +51,10 @@ var dragging = false;
 // Workaround for https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
 var XXX_jitter = 1;
 
+// Set to kAnimationLength once initial load has completed.
+var animationLength = 0;
+var kAnimationLength = 500;
+
 /**
  * When cards are stacked on each other we want to provide a 3d-illusion.
  * heightOf() returns the proper x, y offset for cards in the stack.
@@ -65,6 +69,15 @@ function heightOf(stackHeight) {
         stackHeight = kMaxVisibleStackHeight;
     }
     return stackHeight * kStackDelta;
+}
+
+/* Returns absolute url of a resource. */
+function toResource(url) {
+    if (url && url.toString().substring(0,5) == "http:") {
+        return url;
+    } else {
+        return resourcePrefix + url;
+    }
 }
 
 /* Shows the "Loading..." spinner. */
@@ -100,7 +113,7 @@ function log(msg) {
     if (loggingEnabled) {
         var console = $('#console');
         console.append(msg + "\n");
-        console.scrollTop(console[0].scrollHeight - console.height());
+        console.scrollTop(console[0].scrollHeight - console.outerHeight());
     }
 }
 
@@ -147,9 +160,9 @@ function getOrient(card) {
 function setOrientProperties(card, orient) {
     card.data("orient", orient);
     if (orient > 0) {
-        card.prop("src", resourcePrefix + card.data("front"));
+        card.prop("src", toResource(card.data("front")));
     } else {
-        card.prop("src", resourcePrefix + card.data("back"));
+        card.prop("src", toResource(card.data("back")));
     }
 
     if (Math.abs(orient) == 2) {
@@ -213,20 +226,20 @@ function phantomUpdate(card, entireStack) {
     if (entireStack) {
         var x = gridX(card);
         var y = gridY(card);
-        var w = card.width() + stack_height;
-        var h = card.height() + stack_height;
+        var w = card.outerWidth() + stack_height;
+        var h = card.outerHeight() + stack_height;
     } else if (startPhantomLocation == cardToGridKey(card)) {
         // In this case the card is still close to the stack.
         var x = gridX(card) + stack_height;
         var y = gridY(card) + stack_height;
-        var w = card.width();
-        var h = card.height();
+        var w = card.outerWidth();
+        var h = card.outerHeight();
     } else {
         // In this case the card has been dragged off the stack.
         var x = gridX(card);
         var y = gridY(card);
-        var w = card.width();
-        var h = card.height();
+        var w = card.outerWidth();
+        var h = card.outerHeight();
     }
     ws.send("broadcast",
         {
@@ -327,25 +340,36 @@ function shuffleStack(topCard) {
     phantomDone();
 }
 
+/* Garbage collects older zoomed image. */
+function removeOldZoom() {
+    var old = $(".zoomed");
+    $(".zoomed").fadeOut(function() { old.remove(); });
+}
+
 /**
  * Displays a large version of the card image at the center of the screen.
  */
 function zoomCard(card) {
-    // Garbage collects older zoomed images.
-    var old = $(".zoomed");
-    $(".zoomed").fadeOut(function() { old.remove(); });
-
-    // Creates new zoomed image node.
-    var imgNode = '<img src="' + card.prop("src") + '" class="zoomed"></img>'
+    removeOldZoom();
+    showSpinner();
+    var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
+    var imgNode = '<img src="' + toResource(url) + '" class="zoomed"></img>'
     $("#arena").append(imgNode);
+    var newNode = $(".zoomed");
     if (window.innerHeight > window.innerWidth) {
-        $(".zoomed").width("60%");
+        newNode.width("60%");
     } else {
-        $(".zoomed").height("60%");
+        newNode.height("60%");
     }
-    $(".zoomed").css("margin-left", - ($(".zoomed").width() / 2));
-    $(".zoomed").css("margin-top", - ($(".zoomed").height() / 2));
-    $(".zoomed").fadeIn();
+    var interval = setInterval(function() {
+        if (newNode.width() > 0 && newNode.height() > 0) {
+            newNode.css("margin-left", - ($(".zoomed").outerWidth() / 2));
+            newNode.css("margin-top", - ($(".zoomed").outerHeight() / 2));
+            newNode.fadeIn();
+            clearInterval(interval);
+            hideSpinner();
+        }
+    }, 50);
 }
 
 /* Moves a card offscreen - used for hiding hands of other players. */
@@ -363,17 +387,18 @@ function moveOffscreen(card) {
 function renderHandStack(hand) {
     handCache = hand;
     var kHandSpacing = 5;
-    var kDefaultCardWidth = 143;
+    var kDefaultCardWidth = 140;
     var kDefaultCardHeight = 200;
+    var kConsiderUnloaded = 20;
     var currentX = kHandSpacing;
-    var handWidth = $("#hand").width();
-    var cardWidth = $("#card_" + hand[0]).width();
-    var cardHeight = $("#card_" + hand[0]).height();
-    if (cardWidth == 0) {
+    var handWidth = $("#hand").outerWidth();
+    var cardWidth = $("#card_" + hand[0]).outerWidth();
+    var cardHeight = $("#card_" + hand[0]).outerHeight();
+    if (cardWidth < kConsiderUnloaded) {
         log("using default card width");
         cardWidth = kDefaultCardWidth;
     }
-    if (cardHeight == 0) {
+    if (cardHeight < kConsiderUnloaded) {
         log("using default card  height");
         cardHeight = kDefaultCardHeight;
     }
@@ -391,13 +416,13 @@ function renderHandStack(hand) {
         var cd = $("#card_" + hand[i]);
         if (!$("#hand").hasClass("collapsed")) {
             currentX += cardWidth + kHandSpacing;
-            if (currentX + cd.width() + 10 > handWidth) {
-                handHeight += cd.height() + kHandSpacing;
+            if (currentX + cardWidth + 10 > handWidth) {
+                handHeight += cardHeight + kHandSpacing;
                 currentX = kHandSpacing;
             }
         }
     }
-    handHeight = Math.min(handHeight, $("#arena").height() - cardHeight * 1.2);
+    handHeight = Math.min(handHeight, $("#arena").outerHeight() - cardHeight * 1.2);
     $("#hand").height(handHeight);
 
     var currentX = kHandSpacing;
@@ -409,8 +434,8 @@ function renderHandStack(hand) {
     for (i in hand) {
         var cd = $("#card_" + hand[i]);
         if (!collapsed) {
-            if (currentX + cd.width() + 10 > handWidth) {
-                currentY += cd.height() + kHandSpacing;
+            if (currentX + cardWidth + 10 > handWidth) {
+                currentY += cardHeight + kHandSpacing;
                 currentX = kHandSpacing;
             }
         }
@@ -424,7 +449,7 @@ function renderHandStack(hand) {
                 left: currentX + (xChanged ? 0 : XXX_jitter),
                 top: currentY + (yChanged ? 0 : XXX_jitter),
                 opacity: 1.0,
-            });
+            }, animationLength);
         }
         if ($("#hand").hasClass("collapsed")) {
             currentX += collapsedHandSpacing;
@@ -455,8 +480,8 @@ function drawPhantom(card) {
     }
     var phantom = $("#phantom");
     setOrientProperties(phantom, getOrient(card));
-    phantom.width(card.width());
-    phantom.height(card.height());
+    phantom.width(card.outerWidth());
+    phantom.height(card.outerHeight());
     var border_offset_x = 5;
     var border_offset_y = 5;
     if (phantom.hasClass("rotated")) {
@@ -490,7 +515,7 @@ $(document).ready(function() {
         $(".card").bind("dragstart", function(event, ui) {
             dragging = true;
             $("#menu").hide();
-            $(".zoomed").fadeOut();
+            removeOldZoom();
             var target = $(event.currentTarget);
             if (!target.hasClass("inHand")) {
                 $("#hand").removeClass("active");
@@ -546,7 +571,7 @@ $(document).ready(function() {
                         left: x + (xChanged ? 0 : XXX_jitter),
                         top: y + (yChanged ? 0 : XXX_jitter),
                         opacity: 1.0,
-                    });
+                    }, animationLength);
                 }
             }
             log("Sending card move.");
@@ -583,10 +608,10 @@ $(document).ready(function() {
                     $("#menu li").removeClass("hover");
                     // Ensures that the menu is visible onscreen.
                     var vExcess = Math.max(0,
-                        offset.top + $("#menu").height() - window.innerHeight + 20
+                        offset.top + $("#menu").outerHeight() - window.innerHeight + 20
                     );
                     var hExcess = Math.max(0,
-                        offset.left + $("#menu").width() - window.innerWidth + 20
+                        offset.left + $("#menu").outerWidth() - window.innerWidth + 20
                     );
                     $("#menu").css("top", offset.top - vExcess);
                     $("#menu").css("left", offset.left - hExcess);
@@ -612,6 +637,7 @@ $(document).ready(function() {
 
     /* Discards and redownloads all local state from the server. */
     function reset(state) {
+        animationLength = 0;
         log("Reset all local state.");
         $(".uuid_phantom").remove();
         $(".card").remove();
@@ -621,21 +647,23 @@ $(document).ready(function() {
         handCache = null;
 
         function createImageNode(state, cid, stack_index) {
-            var url = state.urls[cid];
+            var front_url = state.urls_small[cid] || state.urls[cid];
             var back_url = state.back_urls[cid] || state.default_back_url;
+            var url = front_url;
             if (state.orientations[cid] == undefined) {
                 state.orientations[cid] = -1;
             }
             if (state.orientations[cid] < 0) {
                 url = back_url;
             }
-            var img = '<img style="zIndex: ' + state.zIndex[cid] + '; display: none"'
+            var img = '<img style="z-index: ' + state.zIndex[cid] + '; display: none"'
                 + ' id="card_' + cid + '"'
                 + ' data-orient="' + state.orientations[cid] + '"'
-                + ' data-front="' + state.urls[cid] + '"'
+                + ' data-front="' + front_url + '"'
+                + ' data-front_full="' + state.urls[cid] + '"'
                 + ' data-back="' + back_url + '"'
                 + ' data-stack_index="' + stack_index + '"'
-                + ' class="card" src="' + resourcePrefix + url + '">'
+                + ' class="card" src="' + toResource(url) + '">'
             $("#arena").append(img);
         }
 
@@ -651,7 +679,7 @@ $(document).ready(function() {
                 card.animate({
                     left: x + heightOf(z),
                     top: y + heightOf(z),
-                });
+                }, animationLength);
             }
         }
 
@@ -671,6 +699,7 @@ $(document).ready(function() {
         }
         $(".card").fadeIn();
         initCards();
+        animationLength = kAnimationLength;
     }
 
     ws = $.websocket("ws:///" + hostname + ":" + kWSPort + "/kansas", {
@@ -696,7 +725,6 @@ $(document).ready(function() {
 
             error: function(e) {
                 log("Server Error: " + e.msg);
-                alert("Server Error: " + e.msg);
             },
 
             reset: function(e) {
@@ -790,7 +818,7 @@ $(document).ready(function() {
                     case "phantomupdate":
                         var phantom = $("#" + e.data.uuid);
                         if (phantom.length == 0) {
-                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; zIndex: 999999; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kDraggingZIndex + 100000000) + '; font-size: small;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
                             $("#arena").append(node);
                             phantom = $("#" + e.data.uuid);
                         }
@@ -882,7 +910,7 @@ $(document).ready(function() {
             doNotCollapseHand = false;
         } else {
             log("arena mouseup: collapse hand");
-            $(".zoomed").fadeOut();
+            removeOldZoom();
             $("#hand").addClass("collapsed");
             redrawHand();
         }

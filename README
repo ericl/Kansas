@@ -15,6 +15,7 @@ Features:
 Dependencies:
 
     pywebsocket - http://code.google.com/p/pywebsocket/
+    python-imaging
 
 Running a test server:
 

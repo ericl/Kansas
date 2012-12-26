@@ -1,14 +1,82 @@
 # Implementation of Kansas websocket handler.
 
 
+
+import Image
 import copy
 import json
 import logging
+import os
 import random
 import threading
 import time
-
+import urllib2
 import decks
+
+
+kSmallImageSize = (140, 200)
+kServingPrefix = ''
+kCachePath = '../cache'
+if not os.path.exists(kCachePath):
+    os.makedirs(kCachePath)
+
+
+class CachingLoader(dict):
+    def __init__(self, values):
+        start = time.time()
+        dict.__init__(self, copy.deepcopy(values))
+        self.oldPrefix = self['resource_prefix']
+        logging.info("new CachingLoader")
+
+        # The cached files are assumed served from this path by another server.
+        self['resource_prefix'] = kServingPrefix
+
+        def download(suffix):
+            url = self.toResource(suffix)
+            path = self.cachePath(url)
+            if not os.path.exists(path):
+                logging.info("GET " + url)
+                imgdata = urllib2.urlopen(url).read()
+                with open(path, 'w') as f:
+                    f.write(imgdata)
+            return path
+
+        # Caches front image urls.
+        for card, suffix in self['urls'].items():
+            # Downloads large version of images.
+            large_path = download(suffix)
+            self['urls'][card] = large_path
+
+            # Generates small version of images.
+            small_path = large_path[:-4] + '_small.jpg'
+            if not os.path.exists(small_path):
+                self.resize(large_path, small_path)
+            self['urls_small'][card] = small_path
+
+        # Caches the back image.
+        self['default_back_url'] = download(self['default_back_url'])
+
+        # Caches other back urls.
+        for card, suffix in self['back_urls'].items():
+            self['back_urls'][card] = download(suffix)
+
+        logging.info("Cache load in %.3f seconds" % (time.time() - start))
+
+    def cachePath(self, url):
+        return os.path.join(kCachePath, hex(hash(url))[2:] + '.jpg')
+
+    def resize(self, large_path, small_path):
+        """Resizes image found at large_path and saves to small_path."""
+        logging.info("Resize %s -> %s" % (large_path, small_path))
+        Image.open(large_path)\
+             .resize(kSmallImageSize, Image.ANTIALIAS)\
+             .save(small_path)
+
+    def toResource(self, url):
+        if url.startswith('http:'):
+            return url
+        else:
+            return self.oldPrefix + url
 
 
 class JSONOutput(object):
@@ -30,7 +98,7 @@ class KansasGameState(object):
     """KansasGameState holds the entire state of the game in json format."""
 
     def __init__(self):
-        self.data = copy.deepcopy(decks.DEFAULT_MAGIC_DECK)
+        self.data = CachingLoader(decks.DEFAULT_MAGIC_DECK)
         self.index = self.buildIndex()
         self.assignZIndices()
         self.assignOrientations()
