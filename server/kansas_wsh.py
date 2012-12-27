@@ -17,6 +17,8 @@ import decks
 kSmallImageSize = (140, 200)
 kServingPrefix = ''
 kCachePath = '../cache'
+
+
 if not os.path.exists(kCachePath):
     os.makedirs(kCachePath)
 
@@ -48,7 +50,7 @@ class CachingLoader(dict):
             self['urls'][card] = large_path
 
             # Generates small version of images.
-            small_path = large_path[:-4] + '_small.jpg'
+            small_path = large_path[:-4] + ('@%dx%d.jpg' % kSmallImageSize)
             if not os.path.exists(small_path):
                 self.resize(large_path, small_path)
             self['urls_small'][card] = small_path
@@ -63,7 +65,7 @@ class CachingLoader(dict):
         logging.info("Cache load in %.3f seconds" % (time.time() - start))
 
     def cachePath(self, url):
-        return os.path.join(kCachePath, hex(hash(url))[2:] + '.jpg')
+        return os.path.join(kCachePath, hex(hash('$' + url))[2:] + '.jpg')
 
     def resize(self, large_path, small_path):
         """Resizes image found at large_path and saves to small_path."""

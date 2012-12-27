@@ -426,7 +426,7 @@ function showHoverMenu(card) {
     var numCards = parseInt(card.data("stack_index")) + 1;
     var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
     var src = toResource(url);
-    var flipStr = getOrient(card) > 0 ? "Cover" : "Uncover";
+    var flipStr = getOrient(card) > 0 ? "Cover" : "Reveal";
     var tapStr = card.hasClass("rotated") ? "Untap" : "Tap";
     var imgCls = '';
     if (card.hasClass("rotated")) {
@@ -470,12 +470,13 @@ function showHoverMenu(card) {
         $(".boardonly").removeClass("disabled");
         $(".bulk").addClass("disabled");
     }
+    var newImg = newNode.children("img");
     newNode.width(805);
     newNode.height(kCardHeight * kHoverCardRatio);
     newNode.css("margin-left", - ($(".hovermenu").outerWidth() / 2));
     newNode.css("margin-top", - ($(".hovermenu").outerHeight() / 2));
     if (old.filter(':visible').length > 0) {
-        if (oldimg.prop("src") == newNode.children("img").prop("src")) {
+        if (oldimg.prop("src") == newImg.prop("src")) {
             oldimg.fadeOut();
         }
         newNode.fadeIn();
@@ -675,6 +676,7 @@ $(document).ready(function() {
                     showHoverMenu(card);
                 } else {
                     removeHoverMenu();
+                    $(".card").removeClass("highlight");
                 }
             }
             disableArenaEvents = true;
@@ -1009,10 +1011,10 @@ $(document).ready(function() {
         } else {
             $(".hovermenu li").addClass("disabled");
             target.addClass("poison-source");
+            $(".card").removeClass("highlight");
             $(".hovermenu").fadeOut();
+            hoverCardId = null;
         }
-        hoverCardId = null;
-        $(".card").removeClass("highlight");
         return false; /* Necessary for shufstackconfirm. */
     });
 
