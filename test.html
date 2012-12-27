@@ -30,55 +30,70 @@
 
         #hand {
             width: 100%;
-            background-color: #321;
-            border-top: 2px solid #977;
+            background-color: #257390;
+            border-top: 2px solid #33b5e5;
             position: fixed;
             bottom: 0px;
             height: 220px;
             padding: 0;
             margin: 0;
             z-index: 2500000;
-            opacity: 0.85;
+            opacity: 0.80;
             /* hides white line on android */
             margin-bottom: -2px !important;
         }
 
         .collapsed {
             height: 100px !important;
+            background-color: #000000 !important;
+            border-top: 2px solid #555 !important;
         }
 
         .active {
-            border-top: 2px solid #FFE4C4 !important;
+            background-color: #257390 !important;
+            border-top: 2px solid #33b5e5 !important;
         }
 
-        .card, #phantom {
+        li.confirm {
+            background-color: #550000 !important;
+        }
+
+        li.confirm:hover, li.confirm.hover {
+            background-color: #aa0000 !important;
+        }
+
+        .card {
             position: fixed;
             border-radius: 8px;
             border: 4px solid black;
             height: 200px;
         }
         
-        #phantom {
-            border-radius: 13px;
-            display: none;
-            border: 5px solid orange;
-            opacity: 0.4;
-            pointer-events: none;
-        }
-
-        #menu {
-            position: absolute;
-            display: none;
-            z-index: 47500000 !important;
-        }
-
         ol, ul {
             list-style: none;
         }
 
-        #menu li:hover, #menu li.hover {
+        li:hover, li.hover {
             cursor: pointer;
-            background-color: #333;
+            background-color: #257491;
+        }
+
+        li.poison-source {
+            background-color: #257491 !important;
+            color: white !important;
+        }
+
+        .disabled:hover {
+            cursor: default !important;
+        }
+
+        .hoverRotate {
+            transform: rotate(5deg);
+            -moz-transform: rotate(5deg);
+            -ms-transform: rotate(5deg);
+            -o-transform: rotate(5deg);
+            -webkit-transform: rotate(5deg) translate(7%, 7%);
+            margin-bottom: 80px;
         }
 
         .rotated {
@@ -92,27 +107,71 @@
         }
 
         li {
-            padding: 1em;
-            border: 1px solid black;
             color: white;
-            border-radius: 10px;
-            font-size: 20pt;
-            margin-bottom: -1px;
-            background-color: #222;
-            font-family: sans;
+            line-height: 120px;
+            height: 120px;
+            vertical-align: middle;
+            font-size: 30pt;
+            font-family: sans-serif;
+            text-align: left;
+            border-bottom: 2px solid #2e2e30;
+            margin-bottom: -9px;
+            padding-left: 18px;
         }
 
-        .zoomed {
+        li.top {
+            border-top: 3px solid #404144;
+        }
+        
+        .header {
+            color: #bebebe;
+            font-weight: bold;
+            font-family: sans-serif;
+            font-size: 20pt;
+        }
+
+        div.hovermenu {
             left: 50%;
+            border-radius: 8px;
             right: 50%;
-            border: 8px solid black;
             top: 35%;
             bottom: 75%;
+            border: 8px solid black;
             position: absolute;
             z-index: 99900000 !important;
-            border-radius: 22px;
             display: none;
             background-color: black;
+        }
+
+        .hovermenu img, img.hovermenu {
+            z-index: 99900009 !important;
+        }
+
+        .disabled {
+            color: #4c4c4c !important;
+            background-color: transparent !important;
+            pointer-events: none;
+        }
+
+        div.hovernote {
+            color: #bebebe;
+            font-family: sans-serif;
+            text-align: center;
+            font-size: 20pt;
+            padding-bottom: 3pt;
+            padding-top: 2pt;
+            background-color: #000;
+            width: auto;
+            position: relative;
+            font-style: italic;
+            margin-left: -8px;
+            margin-right: -8px;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        .highlight {
+            border: 4px solid #33b5e5;
         }
     </style>
   </head>
@@ -124,16 +183,7 @@
         <button id="debug">Toggle Debug</button>
         <button id="reset">Reset Game</button>
     </div>
-    <button id="connect" style="float: left">Connect</button>
-    <div id="spinner" style="float: right; border-bottom-left-radius: 15px; padding: 12px; background-color: #FFFBDF; font-size: 25pt;">Loading...</div>
-    <ul id="menu">
-      <li class="boardonly" id="zoom">View Larger</li>
-      <li id="flip">Flip Over</li>
-      <li class="boardonly" id="rotate">Tap Card</li>
-      <li class="boardonly" id="flipstack">Turn Over Stack</li>
-      <li class="boardonly" id="shufstack">Shuffle Stack</li>
-    </ul>
-    <div id="phantom"></div>
+    <div id="spinner" style="font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding: 12px; background-color: #FFFBDF; font-size: 25pt;">Loading...</div>
   </div>
   <div id="hand" class="collapsed"></div>
   </body>

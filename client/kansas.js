@@ -31,22 +31,23 @@ var loggingEnabled = false;
 var handCache = [];
 var localMaxZ = 200;
 
-// Minimum zIndexes for cards in hand and card being dragged.
+// Minimum zIndexes for various states.
 var kHandZIndex = 4000000;
 var kDraggingZIndex = 4500000;
+var kPhantomZIndex = 5500000;
 
 // The URL prefix from which card images are downloaded from.
 var resourcePrefix = '';
 
-// Tracks the dragging card and the highlight (phantom) it leaves behind.
+// Tracks the dragging card, phantom, and card shown in hover menu.
 var draggingCard = null;
+var hoverCardId = null;
 var lastPhantomLocation = 0;
 var startPhantomLocation = 0;
 var phantomHideQueued = {};
 
 // Tracks mouseup/down state for correct event handling.
-var menuActionsReady = false;
-var doNotCollapseHand = false;
+var disableArenaEvents = false;
 var dragging = false;
 
 // Workaround for https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
@@ -55,6 +56,13 @@ var XXX_jitter = 1;
 // Set to kAnimationLength once initial load has completed.
 var animationLength = 0;
 var kAnimationLength = 500;
+
+
+// Geometry of cards.
+var kCardWidth = 140;
+var kCardHeight = 200;
+var kHoverCardRatio = 4;
+var kHoverTapRatio = kHoverCardRatio * 0.875;
 
 /**
  * When cards are stacked on each other we want to provide a 3d-illusion.
@@ -97,7 +105,7 @@ function deactivateHand() {
 var deactivateQueued = false;
 function deferDeactivateHand() {
     deactivateQueued = true;
-    setTimeout(_reallyDeactivateHand, 700);
+    setTimeout(_reallyDeactivateHand, 1000);
 }
 
 function _reallyDeactivateHand() {
@@ -338,11 +346,26 @@ function rotateCard(card) {
         return;
     }
     changeOrient(card, orient);
+    if (Math.abs(orient) > 1) {
+        $(".hovermenu")
+            .children("img")
+            .height(kCardHeight * kHoverTapRatio)
+            .width(kCardWidth * kHoverTapRatio)
+            .addClass("hoverRotate");
+    } else {
+        $(".hovermenu")
+            .children("img")
+            .removeClass("hoverRotate")
+            .height(kCardHeight * kHoverCardRatio)
+            .width(kCardWidth * kHoverCardRatio);
+    }
 }
 
 /* Toggles and broadcasts card face up/down. */
 function flipCard(card) {
     changeOrient(card, -getOrient(card));
+    var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
+    $(".hovermenu").children("img").prop("src", url);
 }
 
 /* Requests a stack flip from the server. */
@@ -360,12 +383,19 @@ function flipStack(topCard) {
     phantomDone();
 }
 
+function shuffleStackConfirm() {
+    var node = $(".shufstackconfirm");
+    node.removeClass("shufstackconfirm");
+    node.removeClass("hover");
+    node.addClass("confirm");
+    node.data("key", "shufstack");
+    node.html("You&nbsp;sure?");
+    return true;
+}
+
 /* Requests a stack shuffle from the server. */
 function shuffleStack(topCard) {
     if (topCard.hasClass("inHand")) {
-        return;
-    }
-    if (!confirm("Are you sure you want to shuffle this?")) {
         return;
     }
     var dest_key = cardToGridKey(topCard);
@@ -377,48 +407,93 @@ function shuffleStack(topCard) {
     phantomDone();
 }
 
-/* Garbage collects older zoomed image. */
-function removeOldZoom() {
-    var old = $(".zoomed");
-    $(".zoomed").fadeOut();
+/* Garbage collects older hovermenu image. */
+function removeHoverMenu() {
+    hoverCardId = null;
+    var old = $(".hovermenu");
+    old.hide();
     setTimeout(function() { old.remove(); }, 1000);
 }
 
 /**
- * Displays a large version of the card image at the center of the screen.
+ * Displays a large version of the card image at the center of the screen,
+ * along with controls for the stack.
  */
-function zoomCard(card) {
-    var old = $(".zoomed");
-    showSpinner();
+function showHoverMenu(card) {
+    hoverCardId = card.prop("id");
+    var old = $(".hovermenu");
+    var oldimg = $(".hovermenu img");
+    var numCards = parseInt(card.data("stack_index")) + 1;
     var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
-    var imgNode = '<img src="' + toResource(url) + '" class="zoomed"></img>'
-    $("#arena").append(imgNode);
-    var newNode = $(".zoomed");
-    if (window.innerHeight > window.innerWidth) {
-        newNode.width("60%");
+    var src = toResource(url);
+    var flipStr = getOrient(card) > 0 ? "Cover" : "Uncover";
+    var tapStr = card.hasClass("rotated") ? "Untap" : "Tap";
+    var imgCls = '';
+    if (card.hasClass("rotated")) {
+        log("rotated card");
+        var height = kCardHeight * kHoverTapRatio;
+        var width = kCardWidth * kHoverTapRatio;
+        imgCls = "hoverRotate";
     } else {
-        newNode.height("60%");
+        log("vertical card");
+        var height = kCardHeight * kHoverCardRatio;
+        var width = kCardWidth * kHoverCardRatio;
     }
-    var interval = setInterval(function() {
-        if (newNode.width() > 0 && newNode.height() > 0) {
-            newNode.css("margin-left", - ($(".zoomed").outerWidth() / 2));
-            newNode.css("margin-top", - ($(".zoomed").outerHeight() / 2));
-            newNode.fadeIn();
-            clearInterval(interval);
-            hideSpinner();
-            setTimeout(function() { old.remove(); }, 1000);
+    var html = ('<div class="hovermenu">'
+        + '<img class="' + imgCls + '" style="height: '
+        + height + 'px; width: ' + width + 'px;"'
+        + ' src="' + src + '"></img>'
+        + '<ul class="hovermenu" style="float: right; width: 50px;">'
+        + '<span class="header" style="margin-left: -190px">&nbsp;ACTION</span>"'
+        + '<li class="top" style="margin-top: 10px; margin-left: -190px"'
+        + ' data-key=flip>' + flipStr + '</li>'
+        + '<li style="margin-top: 10px; margin-left: -190px"'
+        + ' class="boardonly" data-key="rotate">' + tapStr + '</li>'
+        + '<li style="margin-top: 10px; font-size: 30pt;'
+        + ' margin-left: -190px" class="boardonly bulk"'
+        + ' data-key="flipstack">Flip&nbsp;All</li>'
+        + '<li style="margin-top: 10px; font-size: 30pt;'
+        + ' margin-left: -190px" class="boardonly bulk shufstackconfirm"'
+        + ' data-key="shufstackconfirm">Shuffle</li>'
+        + '</ul>'
+        + '<div class="hovernote"><span>' + numCards + ' cards in stack</span></div>'
+        + '</div>');
+    var newNode = $(html).appendTo("body");
+    if (card.hasClass("inHand")) {
+        $(".boardonly").addClass("disabled");
+        $(".hovernote").hide();
+    } else if (numCards > 1) {
+        $(".hovernote").show();
+        $(".boardonly").removeClass("disabled");
+    } else {
+        $(".hovernote").hide();
+        $(".boardonly").removeClass("disabled");
+        $(".bulk").addClass("disabled");
+    }
+    newNode.width(805);
+    newNode.height(kCardHeight * kHoverCardRatio);
+    newNode.css("margin-left", - ($(".hovermenu").outerWidth() / 2));
+    newNode.css("margin-top", - ($(".hovermenu").outerHeight() / 2));
+    if (old.filter(':visible').length > 0) {
+        if (oldimg.prop("src") == newNode.children("img").prop("src")) {
+            oldimg.fadeOut();
         }
-    }, 50);
+        newNode.fadeIn();
+    } else {
+        newNode.show();
+    }
+    setTimeout(function() { old.remove(); }, 1200);
 }
 
 /* Moves a card offscreen - used for hiding hands of other players. */
 function moveOffscreen(card) {
-    if (parseInt(card.css("top")) != 2000) {
+    var kOffscreenY = 2000;
+    if (parseInt(card.css("top")) != kOffscreenY) {
         card.animate({
             left: card.css("left"),
-            top: 2000,
+            top: kOffscreenY,
             opacity: 0,
-        });
+        }, animationLength);
     }
 }
 
@@ -426,21 +501,11 @@ function moveOffscreen(card) {
 function renderHandStack(hand) {
     handCache = hand;
     var kHandSpacing = 5;
-    var kDefaultCardWidth = 140;
-    var kDefaultCardHeight = 200;
     var kConsiderUnloaded = 20;
     var currentX = kHandSpacing;
     var handWidth = $("#hand").outerWidth();
-    var cardWidth = $("#card_" + hand[0]).outerWidth();
-    var cardHeight = $("#card_" + hand[0]).outerHeight();
-    if (cardWidth < kConsiderUnloaded) {
-        log("using default card width");
-        cardWidth = kDefaultCardWidth;
-    }
-    if (cardHeight < kConsiderUnloaded) {
-        log("using default card  height");
-        cardHeight = kDefaultCardHeight;
-    }
+    var cardWidth = kCardWidth + 8;
+    var cardHeight = kCardHeight + 8;
     var handHeight = cardHeight + 2 * kHandSpacing;
     var collapsedHandSpacing = Math.min(
         kHandSpacing + cardWidth,
@@ -505,35 +570,6 @@ function redrawHand() {
     }
 }
 
-/* Draws a highlight around the card. */
-function drawPhantom(card) {
-    var offset = card.offset();
-    var stack_index = card.data("stack_index");
-    var k = kGridSpacing;
-    if (card.hasClass("inHand")) {
-        var x = offset.left;
-        var y = offset.top;
-    } else {
-        var x = gridX(card);
-        var y = gridY(card);
-    }
-    var phantom = $("#phantom");
-    setOrientProperties(phantom, getOrient(card));
-    phantom.width(card.outerWidth());
-    phantom.height(card.outerHeight());
-    var border_offset_x = 5;
-    var border_offset_y = 5;
-    if (phantom.hasClass("rotated")) {
-        border_offset_x = 6;
-        border_offset_y = 3;
-    }
-    phantom.css("left", x - border_offset_x + heightOf(stack_index));
-    phantom.css("top", y - border_offset_y + heightOf(stack_index));
-    phantom.css("zIndex", card.css("zIndex") - 1);
-    phantom.css("opacity", 0.4);
-    phantom.show();
-}
-
 $(document).ready(function() {
     document.addEventListener("touchstart", touchHandler, true);
     document.addEventListener("touchmove", touchHandler, true);
@@ -542,6 +578,8 @@ $(document).ready(function() {
     var connected = false;
 
     function initCards() {
+        $(".card").disableSelection();
+
         $(".card").each(function(index, card) {
             setOrientProperties($(card), getOrient($(card)));
         });
@@ -554,17 +592,15 @@ $(document).ready(function() {
 
         $(".card").bind("dragstart", function(event, ui) {
             dragging = true;
-            $("#menu").hide();
-            removeOldZoom();
+            removeHoverMenu();
             var target = $(event.currentTarget);
             if (!target.hasClass("inHand")) {
                 deactivateHand();
             }
             /* Slow on mobile.
             target.css("zIndex", kDraggingZIndex);
-            drawPhantom(target);
-            lastPhantomLocation = startPhantomLocation = cardToGridKey(target);
             */
+            lastPhantomLocation = startPhantomLocation = cardToGridKey(target);
             phantomUpdate(target);
             ws.send("broadcast", {"subtype": "dragstart", "card": target.prop("id")});
         });
@@ -582,7 +618,7 @@ $(document).ready(function() {
 
         $(".card").bind("dragstop", function(event, ui) {
             dragging = false;
-            $("#phantom").fadeOut();
+            $(".card").removeClass("highlight");
             phantomDone();
             var card = $(event.currentTarget);
             card.css("zIndex", kDraggingZIndex);
@@ -619,10 +655,15 @@ $(document).ready(function() {
         });
 
         $(".card").mousedown(function(event) {
-            draggingCard = $(event.currentTarget);
+            var card = $(event.currentTarget);
+            draggingCard = card;
+            $(".card").removeClass("highlight");
+            if (!card.hasClass("inHand") || !$("#hand").hasClass("collapsed")) {
+                draggingCard.addClass("highlight");
+            }
         });
 
-        function showMenuForEvent(event) {
+        $(".card").mouseup(function(event) {
             var card = $(event.currentTarget);
             if (!dragging) {
                 if (card.hasClass("inHand")
@@ -630,43 +671,14 @@ $(document).ready(function() {
                     // Expands the hand if a card is clicked on in collapsed mode.
                     $("#hand").removeClass("collapsed");
                     redrawHand();
+                } else if (hoverCardId != card.prop("id")) {
+                    showHoverMenu(card);
                 } else {
-                    // Otherwise, shows a menu for the card.
-                    var offset = card.offset();
-                    if (card.hasClass("inHand")) {
-                        zoomCard(card);
-                        $(".boardonly").hide();
-                    } else {
-                        $(".boardonly").show();
-                    }
-                    $("#menu").hide();
-                    $("#menu li").removeClass("hover");
-                    // Ensures that the menu is visible onscreen.
-                    var vExcess = Math.max(0,
-                        offset.top + $("#menu").outerHeight() - window.innerHeight + 20
-                    );
-                    var hExcess = Math.max(0,
-                        offset.left + $("#menu").outerWidth() - window.innerWidth + 20
-                    );
-                    $("#menu").css("top", offset.top - vExcess);
-                    $("#menu").css("left", offset.left - hExcess);
-                    $("#menu").show();
-                    drawPhantom(card);
-                    menuActionsReady = false;
+                    removeHoverMenu();
                 }
             }
-            doNotCollapseHand = true;
+            disableArenaEvents = true;
             dragging = false;
-        }
-
-        $(".card").contextmenu(function(event) {
-            showMenuForEvent(event);
-            return false;
-        });
-
-        $(".card").mouseup(function(event) {
-            showMenuForEvent(event);
-            return true;
         });
     }
 
@@ -676,8 +688,6 @@ $(document).ready(function() {
         log("Reset all local state.");
         $(".uuid_phantom").remove();
         $(".card").remove();
-        $("#menu").hide();
-        $("#phantom").hide();
         resourcePrefix = state.resource_prefix;
         handCache = null;
 
@@ -744,7 +754,6 @@ $(document).ready(function() {
             connect_resp: function(e) {
                 hideSpinner();
                 log("Connected: " + e.data);
-                $("#connect").hide();
                 $(".connected").show();
                 reset(e.data[0]);
             },
@@ -828,6 +837,7 @@ $(document).ready(function() {
                         left: newX + (xChanged ? 0 : XXX_jitter),
                         top: newY + (yChanged ? 0 : XXX_jitter),
                         opacity: 1.0,
+                        avoidTransforms: target.hasClass("rotated"),
                     }, 'fast');
                     target.removeClass("inHand");
 
@@ -854,7 +864,7 @@ $(document).ready(function() {
                     case "phantomupdate":
                         var phantom = $("#" + e.data.uuid);
                         if (phantom.length == 0) {
-                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kDraggingZIndex + 100000000) + '; font-family: sans;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kPhantomZIndex) + '; font-family: sans;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
                             $("#arena").append(node);
                             phantom = $("#" + e.data.uuid);
                         }
@@ -894,10 +904,6 @@ $(document).ready(function() {
             connected = true;
         }
     }
-
-    $("#connect").mouseup(function(e) {
-        tryConnect();
-    });
 
     $("#sync").mouseup(function(e) {
         showSpinner();
@@ -941,61 +947,32 @@ $(document).ready(function() {
         tolerance: "touch",
     });
 
-    $("#menu").disableSelection();
     $("#arena").disableSelection();
     $("body").disableSelection();
     $("html").disableSelection();
     $("#hand").disableSelection();
 
     $("#arena").mouseup(function(event) {
-        if (doNotCollapseHand) {
-            log("arena mouseup: skipping collapse");
-            doNotCollapseHand = false;
+        if (disableArenaEvents) {
+            log("arena mouseup: skipping event");
+            disableArenaEvents = false;
         } else {
-            log("arena mouseup: collapse hand");
-            removeOldZoom();
+            log("arena mouseup");
+            removeHoverMenu();
             $("#hand").addClass("collapsed");
             redrawHand();
+            $(".card").removeClass("highlight");
         }
-    });
-
-    $("#menu li").mousedown(function(event) {
-        menuActionsReady = true;
-        event.stopPropagation();
-        $(event.currentTarget).addClass("hover");
-    });
-
-    $("#menu li").mouseup(function(event) {
-        if (!menuActionsReady) {
-            return;
-        }
-        var eventTable = {
-            'zoom': zoomCard,
-            'flip': flipCard,
-            'rotate': rotateCard,
-            'flipstack': flipStack,
-            'shufstack': shuffleStack,
-        };
-        eventTable[$(event.currentTarget).attr("id")](draggingCard);
-        $("#menu").hide();
-        $("#menu li").removeClass("hover");
-        $("#phantom").hide();
-        doNotCollapseHand = true;
-    });
-
-    $("#menu").mousedown(function(event) {
-        menuActionsReady = true;
     });
 
     $("#arena").mousedown(function(event) {
-        deactivateHand();
-        $("#menu").hide();
-        $("#phantom").hide();
-    });
-
-    $("#hand").mousedown(function(event) {
-        $("#menu").hide();
-        $("#phantom").hide();
+        if (disableArenaEvents) {
+            log("arena mousedown: skipping event");
+            disableArenaEvents = false;
+        } else {
+            log("arena mousedown");
+            deactivateHand();
+        }
     });
 
     $("#hand").mouseup(function(event) {
@@ -1004,6 +981,39 @@ $(document).ready(function() {
             $("#hand").removeClass("collapsed");
             redrawHand();
         }
+    });
+
+    $(".hovermenu li").live('mousedown', function(event) {
+        var target = $(event.currentTarget);
+        if (!target.hasClass("poisoned")) {
+            target.addClass("hover");
+        }
+    });
+
+    $(".hovermenu li").live('mouseup', function(event) {
+        var target = $(event.currentTarget);
+        if (target.hasClass("poisoned")) {
+            return;
+        }
+        disableArenaEvents = true;
+        var eventTable = {
+            'flip': flipCard,
+            'rotate': rotateCard,
+            'flipstack': flipStack,
+            'shufstack': shuffleStack,
+            'shufstackconfirm': shuffleStackConfirm,
+        };
+        var keepButton = eventTable[target.data("key")](draggingCard);
+        if (keepButton) {
+            $(".hovermenu li").not(target).addClass("disabled");
+        } else {
+            $(".hovermenu li").addClass("disabled");
+            target.addClass("poison-source");
+            $(".hovermenu").fadeOut();
+        }
+        hoverCardId = null;
+        $(".card").removeClass("highlight");
+        return false; /* Necessary for shufstackconfirm. */
     });
 
     $(window).resize(function() { redrawHand(); });

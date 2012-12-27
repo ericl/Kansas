@@ -378,6 +378,9 @@ def web_socket_transfer_data(request):
     currentHandler = initHandler
     while True:
         line = request.ws_stream.receive_message()
+        if not line:
+            logging.info("Socket closed")
+            return
         try:
             req = json.loads(line)
             logging.debug("Parsed json %s", req)
