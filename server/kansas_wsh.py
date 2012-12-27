@@ -93,6 +93,7 @@ class JSONOutput(object):
             json.dumps({
                 'type': self.reqtype + '_resp',
                 'data': datum,
+                'time': time.time(),
             }), binary=False)
 
 
@@ -163,7 +164,10 @@ class KansasGameState(object):
 
     def moveCard(self, card, dest_type, dest_key, dest_orient):
         assert dest_type in ['board', 'hands']
-        assert type(dest_key) in [int, str, unicode], type(dest_key)
+        if dest_type == 'board':
+            dest_key = int(dest_key)
+        else:
+            assert type(dest_key) in [str, unicode], type(dest_key)
         assert dest_orient in range(-4, 5)
 
         src_type, src_key = self.index[card]
@@ -181,6 +185,8 @@ class KansasGameState(object):
 
         self.data['orientations'][card] = dest_orient
         self.data['zIndex'][card] = max(self.data['zIndex'].values()) + 1
+
+        return src_type, src_key
 
 
 class KansasHandler(object):
@@ -293,7 +299,7 @@ class KansasGameHandler(KansasHandler):
                     move['dest_orient'] = 1
                 else:
                     move['dest_orient'] = -1
-            seqno = self.apply_move(move)
+            src_type, src_key, seqno = self.apply_move(move)
             logging.info("Accepted move request '%s'", req)
             self.broadcast(
                 set(self.streams.keys()),
@@ -307,6 +313,9 @@ class KansasGameHandler(KansasHandler):
                     'z_index': self._state.data['zIndex'][move['card']],
                     # seqno is a sanity check for the client
                     'seqno': seqno,
+                    # information about the origin of the move
+                    'old_type': src_type,
+                    'old_key': src_key,
                 })
 
     def handle_broadcast(self, req, output):
@@ -347,6 +356,7 @@ class KansasGameHandler(KansasHandler):
                     json.dumps({
                         'type': reqtype,
                         'data': data,
+                        'time': time.time(),
                     }),
                     binary=False)
             except Exception, e:
@@ -362,8 +372,9 @@ class KansasGameHandler(KansasHandler):
             dest_type = move['dest_type']
             dest_key = move['dest_key']
             dest_orient = move['dest_orient']
-            self._state.moveCard(card, dest_type, dest_key, dest_orient)
-            return self.nextseqno()
+            src_type, src_key = self._state.moveCard(
+                card, dest_type, dest_key, dest_orient)
+            return src_type, src_key, self.nextseqno()
 
 
 

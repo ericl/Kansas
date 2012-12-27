@@ -54,6 +54,10 @@
             border-top: 2px solid #33b5e5 !important;
         }
 
+        .dragging {
+            border-top: 2px solid #33b5e5 !important;
+        }
+
         li.confirm {
             background-color: #550000 !important;
         }
@@ -116,11 +120,17 @@
             text-align: left;
             border-bottom: 2px solid #2e2e30;
             margin-bottom: -9px;
+            margin-top: 10px;
             padding-left: 18px;
         }
 
         li.top {
             border-top: 3px solid #404144;
+        }
+
+        li.bottom {
+            border-bottom: none;
+            margin-bottom: 15px;
         }
         
         .header {
@@ -173,6 +183,10 @@
         .highlight {
             border: 4px solid #33b5e5;
         }
+
+        .snappoint {
+            border: 4px solid #33b5e5 !important;
+        }
     </style>
   </head>
   <body>
@@ -184,6 +198,7 @@
         <button id="reset">Reset Game</button>
     </div>
     <div id="spinner" style="font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding: 12px; background-color: #FFFBDF; font-size: 25pt;">Loading...</div>
+    <div id="warning" style="font-family: sans-serif; color: white; float: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; z-index: 2; padding: 12px; background-color: orange; font-size: 25pt; display: none;">Your screen height is too small. Consider zooming out.</div>
   </div>
   <div id="hand" class="collapsed"></div>
   </body>
