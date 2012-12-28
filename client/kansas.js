@@ -875,6 +875,7 @@ function animateToKey(card, key) {
             avoidTransforms: card.hasClass("rotated"),
         }, 'fast');
     } else {
+        card.css("opacity", 1);
         log("avoided animation");
     }
     card.removeClass("inHand");
@@ -1090,6 +1091,7 @@ $(document).ready(function() {
         close: function() { alert("Websocket closed (?)"); },
         events: {
             connect_resp: function(e) {
+                connected = true;
                 hideSpinner();
                 log("Connected: " + e.data);
                 $(".connected").show();
@@ -1107,7 +1109,6 @@ $(document).ready(function() {
 
             error: function(e) {
                 log("Server Error: " + e.msg);
-                alert("Server Error: " + e.msg);
             },
 
             reset: function(e) {
@@ -1504,7 +1505,10 @@ $(document).ready(function() {
         }
         redrawHand();
     });
+
     setTimeout(tryConnect, 1000);
+    setTimeout(tryConnect, 2000);
+    setTimeout(tryConnect, 5000);
 });
 
 // vim: et sw=4
