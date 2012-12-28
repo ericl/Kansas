@@ -488,7 +488,7 @@ function startDragProgress(target) {
  * can draw a frame box where the card is being dragged. If entireStack
  * is set to True, the frame box will encompass the entire stack.
  */
-function updateFocus(target, entireStack) {
+function updateFocus(target, entireStack, noSnap) {
     log("focusupdate")
     var isCard = target.hasClass("card");
     if (isCard) {
@@ -506,8 +506,8 @@ function updateFocus(target, entireStack) {
         var w = target.outerWidth() + stack_height;
         var h = target.outerHeight() + stack_height;
     } else {
-        var snap = findSnapPoint(target);
-        if (snap != null && hasDraggedOffStart) {
+        var snap = noSnap ? null : findSnapPoint(target);
+        if (snap != null) {
             setSnapPoint(snap);
             var snap_key = snap.data("dest_key");
             stack_height = heightOf(stackHeightCache[snap_key] - !hasDraggedOffStart);
@@ -1365,6 +1365,7 @@ $(document).ready(function() {
             boxAndArea.css("height", maxY - minY + kSelectionBoxPadding * 2);
             boxAndArea.show();
             $("#selectionbox span").text(selectedSet.length + " cards");
+            updateFocus($("#selectionbox"), false, true);
         },
         selecting: function(event, ui) {
             var elem = $(ui.selecting);
@@ -1391,26 +1392,29 @@ $(document).ready(function() {
     });
 
     $("#selectionbox").mouseup(function(event) {
-        if ($("#hand").hasClass("active")) {
-            return;
-        }
         var box = $("#selectionbox");
-        var outer = $("#arena");
-        var offset = box.offset();
-        var orig_offset = $("#selectionarea").offset();
-        var x = Math.max(0, offset.left);
-        var y = Math.max(0, offset.top);
-        x = Math.min(x, outer.width() - box.width());
-        y = Math.min(y, outer.height() - box.height());
-        if (selectedSet.hasClass("inHand")) {
-            handleSelectionMovedFromHand(selectedSet, x, y);
+        updateFocus(box);
+        if ($("#hand").hasClass("active")) {
+            deferDeactivateHand();
+            handleSelectionMovedToHand(selectedSet);
         } else {
-            var dx = x - offset.left;
-            var dy = y - offset.top;
-            if (dx == 0 && dy == 0) {
-                handleSelectionClicked(selectedSet);
+            var outer = $("#arena");
+            var offset = box.offset();
+            var orig_offset = $("#selectionarea").offset();
+            var x = Math.max(0, offset.left);
+            var y = Math.max(0, offset.top);
+            x = Math.min(x, outer.width() - box.width());
+            y = Math.min(y, outer.height() - box.height());
+            if (selectedSet.hasClass("inHand")) {
+                handleSelectionMovedFromHand(selectedSet, x, y);
             } else {
-                handleSelectionMoved(selectedSet, dx, dy);
+                var dx = x - offset.left;
+                var dy = y - offset.top;
+                if (dx == 0 && dy == 0) {
+                    handleSelectionClicked(selectedSet);
+                } else {
+                    handleSelectionMoved(selectedSet, dx, dy);
+                }
             }
         }
     });
@@ -1443,10 +1447,6 @@ $(document).ready(function() {
 
     $("#selectionbox").bind("dragstop", function(event, ui) {
         dragging = false;
-        if ($("#hand").hasClass("active")) {
-            deferDeactivateHand();
-            handleSelectionMovedToHand(selectedSet);
-        }
     });
 
     $("#arena").mouseup(function(event) {
