@@ -66,7 +66,7 @@ var disableArenaEvents = false;
 var dragging = false;
 
 // Workaround for https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
-var XXX_jitter = 0.1;
+var XXX_jitter = 1;
 
 // Set to kAnimationLength once initial load has completed.
 var animationLength = 0;
@@ -139,7 +139,7 @@ function topOf(stack) {
     return highest;
 }
 
-function handleSelectionMoved(selectedSet) {
+function handleSelectionMoved(selectedSet, dx, dy) {
     // TODO move the cards, snapping to target in the single stack case
 }
 
@@ -151,10 +151,14 @@ function handleSelectionClicked(selectedSet) {
 
 function handleSelectionMovedFromHand(selectedSet, x, y) {
     showSpinner();
+    var snap = findSnapPoint($("#selectionbox"));
+    if (snap != null) {
+        var fixedKey = parseInt(snap.data("dest_key"));
+    }
     selectedSet.each(function(i) {
         var card = $(this);
         var cardId = parseInt(card.prop("id").substr(5));
-        var key = gridKey(x, y);
+        var key = (snap != null) ? fixedKey : gridKey(x, y);
         ws.send("move", {move: {card: cardId,
                                 dest_prev_type: "hands",
                                 dest_type: "board",
@@ -390,25 +394,47 @@ function setSnapPoint(snap) {
 
 /* Returns card at top of stack to snap to or NULL. */
 function findSnapPoint(target) {
-    // TODO if target is a selection and has >1 stack, return null
+    // Enforces that selections with more than 1 stack do not snap.
+    if (target.prop("id") == "selectionbox") {
+        var seen = {};
+        var numStacks = 0;
+        $(".selecting").each(function(i) {
+            var key = $(this).data("dest_key");
+            if (!seen[key]) {
+                seen[key] = true;
+                numStacks += 1;
+            }
+        });
+        if (numStacks > 1) {
+            return null;
+        }
+    }
     var kSnapThresholdPixels = 100;
     var kAxisThresholdPixels = 20;
     var targetId = target.prop("id");
     var x = target.offset().left;
     var y = target.offset().top;
+    var w = target.width();
+    var h = target.height();
     var minDist = 9999999;
     var closest = null;
     $(".card").each(function(i) {
         var node = $(this);
         if (!node.hasClass("inHand") && node.prop("id") != targetId) {
-            var dx = Math.abs(node.offset().left - x);
-            var dy = Math.abs(node.offset().top - y);
+            var cx = node.offset().left;
+            var cy = node.offset().top;
+            var dx = Math.abs(cx - x);
+            var dy = Math.abs(cy - y);
             var dist = Math.sqrt(
                 Math.pow(dx, 2)
                 + Math.pow(dy, 2));
-            if (dist < kSnapThresholdPixels
-                    && (dx < kAxisThresholdPixels
-                     || dy < kAxisThresholdPixels)
+            if (((dist < kSnapThresholdPixels
+                    && (dx < kAxisThresholdPixels || dy < kAxisThresholdPixels))
+                    || ( // Checks if node is completely contained.
+                        cx + kCardWidth < x + w &&
+                        cy + kCardHeight < y + h &&
+                        x < cx && y < cy
+                    ))
                     && dist < minDist) {
                 minDist = dist;
                 closest = node;
@@ -733,37 +759,41 @@ function moveOffscreen(card) {
 /* Redraws user's hand given an array of cards present. */
 function renderHandStack(hand) {
     handCache = hand;
+
+    // Resets hand dimensions.
+    $("#hand").width("100%");
+    $("#hand").css("margin-left", 0);
+
     var kHandSpacing = 5;
     var kConsiderUnloaded = 20;
     var currentX = kHandSpacing;
     var handWidth = $("#hand").outerWidth();
     var cardWidth = kCardWidth + 8;
     var cardHeight = kCardHeight + 8;
-    var handHeight = cardHeight + 2 * kHandSpacing;
     var collapsedHandSpacing = Math.min(
         kHandSpacing + cardWidth,
         (handWidth - cardWidth - kHandSpacing * 2) / (hand.length - 1)
     );
 
-    // Computes and sets height of hand necessary to hold cards.
-    for (i in hand) {
-        if (i == hand.length - 1) {
-            break;
-        }
-        var cd = $("#card_" + hand[i]);
-        if (!$("#hand").hasClass("collapsed")) {
-            currentX += cardWidth + kHandSpacing;
-            if (currentX + cardWidth + 10 > handWidth) {
-                handHeight += cardHeight + kHandSpacing;
-                currentX = kHandSpacing;
-            }
-        }
-    }
+    // Computes dimensions of hand necessary and optimal spacing.
+    var requiredWidth = hand.length * (cardWidth + kHandSpacing);
+    var numRows = Math.ceil(requiredWidth / (handWidth - kHandSpacing));
+    var numCols = Math.floor((handWidth - kHandSpacing) / (cardWidth + kHandSpacing));
+    var excess = handWidth - (numCols * (cardWidth + kHandSpacing)) - kHandSpacing;
+    var spacing = kHandSpacing;
+
+    var handHeight = numRows * (cardHeight + kHandSpacing) + kHandSpacing;
     handHeight = Math.min(handHeight, $("#arena").outerHeight() - cardHeight * 1.2);
     $("#hand").height(handHeight);
-
-    var currentX = kHandSpacing;
-    var currentY = $("#hand").position().top - $(window).scrollTop() + kHandSpacing;
+    if (!$("#hand").hasClass("collapsed")) {
+        $("#hand").width(handWidth - excess);
+        $("#hand").css("margin-left", excess / 2);
+        var startX = excess / 2 + spacing + 2;
+    } else {
+        var startX = 0;
+    }
+    var currentX = startX;
+    var currentY = $("#hand").position().top - $(window).scrollTop() + spacing;
     var collapsed = $("#hand").hasClass("collapsed");
 
     XXX_jitter *= -1;
@@ -772,9 +802,9 @@ function renderHandStack(hand) {
     for (i in hand) {
         var cd = $("#card_" + hand[i]);
         if (!collapsed) {
-            if (currentX + cardWidth + 10 > handWidth) {
-                currentY += cardHeight + kHandSpacing;
-                currentX = kHandSpacing;
+            if (currentX + cardWidth > handWidth) {
+                currentY += cardHeight + spacing;
+                currentX = startX;
             }
         }
         cd.addClass("inHand");
@@ -794,7 +824,7 @@ function renderHandStack(hand) {
         if ($("#hand").hasClass("collapsed")) {
             currentX += collapsedHandSpacing;
         } else {
-            currentX += cardWidth + kHandSpacing;
+            currentX += cardWidth + spacing;
         }
     }
     log("hand animated with " + skips + " skips");
@@ -845,6 +875,7 @@ $(document).ready(function() {
             containment: $("#arena"),
             grid: kDraggingGrid,
             drag: kDraggingModifier,
+            refreshPositions: true,
         });
 
         $(".card").each(function(index, card) {
@@ -940,7 +971,8 @@ $(document).ready(function() {
             var card = $(event.currentTarget);
             if (!dragging) {
                 if (card.hasClass("inHand")
-                        && $("#hand").hasClass("collapsed")) {
+                        && $("#hand").hasClass("collapsed")
+                        && $(".selecting").length == 0) {
                     // Expands the hand if a card is clicked on in collapsed mode.
                     $("#hand").removeClass("collapsed");
                     redrawHand();
@@ -1325,7 +1357,7 @@ $(document).ready(function() {
             boxAndArea.css("width", maxX - minX + kSelectionBoxPadding * 2);
             boxAndArea.css("height", maxY - minY + kSelectionBoxPadding * 2);
             boxAndArea.show();
-            // TODO show a count of the number of cards selected
+            $("#selectionbox span").text(selectedSet.length + " cards");
         },
         selecting: function(event, ui) {
             var elem = $(ui.selecting);
@@ -1345,23 +1377,30 @@ $(document).ready(function() {
     });
 
     $("#selectionbox").draggable({
-        containment: $("#arena"),
+        /* Manual containment is used, since we manually resize the box. */
         delay: 300,
         grid: kDraggingGrid,
         drag: kDraggingModifier,
+        refreshPositions: true,
     });
 
     $("#selectionbox").mouseup(function(event) {
         if ($("#hand").hasClass("active")) {
             return;
         }
-        var offset = $("#selectionbox").offset();
+        var box = $("#selectionbox");
+        var outer = $("#arena");
+        var offset = box.offset();
         var orig_offset = $("#selectionarea").offset();
+        var x = Math.max(0, offset.left);
+        var y = Math.max(0, offset.top);
+        x = Math.min(x, outer.width() - box.width());
+        y = Math.min(y, outer.height() - box.height());
         if (selectedSet.hasClass("inHand")) {
-            handleSelectionMovedFromHand(selectedSet, offset.left, offset.top);
+            handleSelectionMovedFromHand(selectedSet, x, y);
         } else {
-            var dx = orig_offset.left - offset.left;
-            var dy = orig_offset.top - offset.top;
+            var dx = x - offset.left;
+            var dy = y - offset.top;
             if (dx == 0 && dy == 0) {
                 handleSelectionClicked(selectedSet);
             } else {
