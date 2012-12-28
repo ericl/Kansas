@@ -147,6 +147,7 @@ function handleSelectionClicked(selectedSet) {
     // TODO render hovermenu with the following features:
     // browse and bring to front a card
     // collapse selection into a single stack
+    // tap / untap all
 }
 
 function handleSelectionMovedFromHand(selectedSet, x, y) {
@@ -1311,12 +1312,12 @@ $(document).ready(function() {
     });
 
     $("#arena").selectable({
+        distance: 50,
         appendTo: "#arena",
         start: function(e,u) {
             hideSelectionBox();
         },
         stop: function(event, ui) {
-            dragging = false;
             selectedSet = $(".selecting");
             if (selectedSet.length < 2) {
                 hideSelectionBox();
@@ -1410,7 +1411,7 @@ $(document).ready(function() {
             var oldoffset = box.offset();
             box.width(kCardWidth + kSelectionBoxPadding * 2);
             box.height(kCardHeight + kSelectionBoxPadding * 2);
-            box.css("margin-left", event.pageX - oldoffset.left - kCardWidth);
+            box.css("margin-left", event.pageX - oldoffset.left - kCardWidth / 1.7);
             box.css("margin-top", event.pageY - oldoffset.top - kCardHeight);
         }
         startDragProgress(box);
