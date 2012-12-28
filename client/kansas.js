@@ -1352,6 +1352,8 @@ $(document).ready(function() {
         stop: function(event, ui) {
             selectedSet = $(".selecting");
             if (selectedSet.length < 2) {
+                updateFocus(selectedSet);
+                $(".selecting").removeClass("selecting");
                 hideSelectionBox();
                 return;
             }
