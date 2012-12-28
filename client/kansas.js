@@ -16,12 +16,13 @@
 // TODO implement users facing different directions
 // TODO allow dragging to other users hands + browsing hands as a selection
 // TODO implement creating/destroying cards on the board
-// TODO hide phantoms/fades after a period of no activity
+// TODO hide frames / unfade cards after a period of no activity
 // TODO better stack rendering, so that stacks of 2 are easily seen
 // TODO allow hand sorting, or autosorting by some property
 // TODO some way of choosing user id and game id
-// TODO different colors for different user phantoms
+// TODO different colors for different user frames
 // TODO don't do fancy animations for bulk moves on mobile - too slow
+// TODO save games in localstorage
 
 // Default settings for websocket connection.
 var kWSPort = 8080
@@ -41,25 +42,28 @@ var localMaxZ = 200;
 // Minimum zIndexes for various states.
 var kHandZIndex = 4000000;
 var kDraggingZIndex = 4500000;
-var kPhantomZIndex = 5500000;
+var kFrameZIndex = 5500000;
 
 // The URL prefix from which card images are downloaded from.
 var resourcePrefix = '';
 
-// Tracks the dragging card, phantom, hover menu, snappoint, etc.
+// Tracks the dragging card, hover menu, snappoint, etc.
 var activeCard = null;
 var draggingId = null;
 var dragStartKey = null;
 var hasDraggedOffStart = false;
 var hoverCardId = null;
-var lastPhantomLocation = 0;
-var lastPhantomUpdate = 0;
-var phantomHideQueued = {};
 var oldSnapCard = null;
 var selectedSet = [];
 
-// Limits phantom updates to 5fps.
-var kPhantomUpdatePeriod = 200;
+// Tracks the frame (dragging position) of the local user, which is broadcasted 
+// to other users to show them where this user is doing actions.
+var lastFrameLocation = 0;
+var lastFrameUpdate = 0;
+var frameHideQueued = {};
+
+// Limits frame updates to 5fps.
+var kFrameUpdatePeriod = 200;
 
 // Tracks mouseup/down state for correct event handling.
 var disableArenaEvents = false;
@@ -454,12 +458,12 @@ function findSnapPoint(target) {
  * Broadcasts location and highlights snap-to areas in a timely manner.
  */
 function updateDragProgress(target) {
-    if ($.now() - lastPhantomUpdate > kPhantomUpdatePeriod) {
-        lastPhantomUpdate = $.now();
+    if ($.now() - lastFrameUpdate > kFrameUpdatePeriod) {
+        lastFrameUpdate = $.now();
         var dest_key = gridKeyFromCardLocation(target);
-        if (dest_key != lastPhantomLocation) {
+        if (dest_key != lastFrameLocation) {
             hasDraggedOffStart = true;
-            lastPhantomLocation = dest_key;
+            lastFrameLocation = dest_key;
             updateFocus(target);
         }
     }
@@ -467,7 +471,7 @@ function updateDragProgress(target) {
 
 /* Call this before updateDragProgress() */
 function startDragProgress(target) {
-    lastPhantomLocation = gridKeyFromCardLocation(target);
+    lastFrameLocation = gridKeyFromCardLocation(target);
     if (target.hasClass("card")) {
         ws.send("broadcast", {"subtype": "dragstart", "card": target.prop("id")});
     } else if (target.prop("id") == "selectionbox") {
@@ -481,8 +485,8 @@ function startDragProgress(target) {
 
 /**
  * Broadcasts the location of target to other users, so that their clients
- * can draw a phantom box where the card is being dragged. If entireStack
- * is set to True, the phantom box will encompass the entire stack.
+ * can draw a frame box where the card is being dragged. If entireStack
+ * is set to True, the frame box will encompass the entire stack.
  */
 function updateFocus(target, entireStack) {
     log("focusupdate")
@@ -521,14 +525,14 @@ function updateFocus(target, entireStack) {
     if (target.hasClass("inHand")) {
         ws.send("broadcast",
             {
-                "subtype": "phantomupdate",
+                "subtype": "frameupdate",
                 "hide": true,
                 "uuid": uuid,
             });
     } else {
         ws.send("broadcast",
             {
-                "subtype": "phantomupdate",
+                "subtype": "frameupdate",
                 "hide": false,
                 "uuid": uuid,
                 "name": user,
@@ -563,7 +567,7 @@ function removeFocus(doAnimation) {
     if (gameReady) {
         ws.send("broadcast",
             {
-                "subtype": "phantomupdate",
+                "subtype": "frameupdate",
                 "hide": true,
                 "uuid": uuid,
             });
@@ -919,6 +923,12 @@ $(document).ready(function() {
                 deferDeactivateHand();
                 var dest_type = "hands";
                 var dest_key = user;
+                // The destination position in the hand can be guessed in this case.
+                if (dest_prev_type == "board") {
+                    handCache.push(cardId);
+                    setOrientProperties(card, 1)
+                    redrawHand();
+                }
             } else {
                 var dest_type = "board";
                 var snap = findSnapPoint(card);
@@ -988,7 +998,7 @@ $(document).ready(function() {
         gameReady = true;
         animationLength = 0;
         log("Reset all local state.");
-        $(".uuid_phantom").remove();
+        $(".uuid_frame").remove();
         $(".card").remove();
         resourcePrefix = state.resource_prefix;
         handCache = [];
@@ -1070,7 +1080,7 @@ $(document).ready(function() {
             },
 
             broadcast_resp: function(e) {
-                /* Ignores acks for the phantom update messages we broadcast. */
+                /* Ignores acks for the frame update messages we broadcast. */
             },
 
             error: function(e) {
@@ -1171,33 +1181,33 @@ $(document).ready(function() {
                     case "dragstart":
                         $("#" + e.data.card).css("opacity", "0.7");
                         break;
-                    case "phantomupdate":
-                        var phantom = $("#" + e.data.uuid);
-                        if (phantom.length == 0) {
-                            var node = '<div class="uuid_phantom" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kPhantomZIndex) + '; font-family: sans;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+                    case "frameupdate":
+                        var frame = $("#" + e.data.uuid);
+                        if (frame.length == 0) {
+                            var node = '<div class="uuid_frame" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kFrameZIndex) + '; font-family: sans;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
                             $("#arena").append(node);
-                            phantom = $("#" + e.data.uuid);
+                            frame = $("#" + e.data.uuid);
                         } else {
-                            phantom.children("span").text(e.data.name);
+                            frame.children("span").text(e.data.name);
                         }
                         if (e.data.hide) {
-                            phantomHideQueued[e.data.uuid] = true;
+                            frameHideQueued[e.data.uuid] = true;
                             setTimeout(function() {
-                                if (phantomHideQueued[e.data.uuid]) {
-                                    phantom.hide();
-                                    phantomHideQueued[e.data.uuid] = false;
+                                if (frameHideQueued[e.data.uuid]) {
+                                    frame.hide();
+                                    frameHideQueued[e.data.uuid] = false;
                                 }
                             }, 1500);
                         } else {
-                            phantomHideQueued[e.data.uuid] = false;
-                            phantom.stop();
-                            phantom.css('opacity', 1.0);
-                            setOrientProperties(phantom, e.data.orient);
-                            phantom.width(e.data.width - 6);
-                            phantom.height(e.data.height - 6);
-                            phantom.css("left", e.data.left);
-                            phantom.css("top", e.data.top);
-                            phantom.show();
+                            frameHideQueued[e.data.uuid] = false;
+                            frame.stop();
+                            frame.css('opacity', 1.0);
+                            setOrientProperties(frame, e.data.orient);
+                            frame.width(e.data.width - 6);
+                            frame.height(e.data.height - 6);
+                            frame.css("left", e.data.left);
+                            frame.css("top", e.data.top);
+                            frame.show();
                         }
                         break;
                 }
