@@ -990,7 +990,7 @@ $(document).ready(function() {
                 removeFocus();
             } else {
                 activeCard = card;
-                updateFocus(card);
+                updateFocus(card, false, true);
             }
         });
 
