@@ -457,8 +457,8 @@ function findSnapPoint(target) {
 /**
  * Broadcasts location and highlights snap-to areas in a timely manner.
  */
-function updateDragProgress(target) {
-    if ($.now() - lastFrameUpdate > kFrameUpdatePeriod) {
+function updateDragProgress(target, force) {
+    if ($.now() - lastFrameUpdate > kFrameUpdatePeriod || force) {
         lastFrameUpdate = $.now();
         var dest_key = gridKeyFromCardLocation(target);
         if (dest_key != lastFrameLocation) {
@@ -905,10 +905,11 @@ $(document).ready(function() {
         });
 
         $(".card").bind("dragstop", function(event, ui) {
+            var card = $(event.currentTarget);
+            updateDragProgress(card, true);
             $("#hand").removeClass("dragging");
             dragging = false;
             removeFocus();
-            var card = $(event.currentTarget);
             card.zIndex(kDraggingZIndex);
             log(JSON.stringify(card.offset()));
             var cardId = parseInt(card.prop("id").substr(5));
