@@ -1238,9 +1238,7 @@ $(document).ready(function() {
 
     $("#hand").mouseup(function(event) {
         log("hand click: show hand");
-        // TODO we need to do this check on arena mouseup, so selections starting
-        // with open hand and ending in arena don't collapse the hand
-        if (!dragging || $(".selecting").length == 0) {
+        if (!dragging && $(".selecting").length == 0) {
             if ($("#hand").hasClass("collapsed")) {
                 $("#hand").removeClass("collapsed");
                 redrawHand();
@@ -1289,7 +1287,6 @@ $(document).ready(function() {
         appendTo: "#arena",
         start: function(e,u) {
             hideSelectionBox();
-            dragging = true;
         },
         stop: function(event, ui) {
             dragging = false;
@@ -1405,7 +1402,9 @@ $(document).ready(function() {
             disableArenaEvents = false;
         } else {
             removeFocus();
-            $("#hand").addClass("collapsed");
+            if ($(".selecting").length == 0) {
+                $("#hand").addClass("collapsed");
+            }
             redrawHand();
         }
     });
