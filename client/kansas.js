@@ -689,6 +689,8 @@ function showHoverMenu(card) {
     var old = $(".hovermenu");
     var oldimg = $(".hovermenu img");
     var numCards = stackHeightCache[card.data("dest_key")];
+    var i = numCards - parseInt(card.data("stack_index"));
+    log("numCards: " + numCards + " i: "+ i);
     var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
     var src = toResource(url);
     var flipStr = getOrient(card) > 0 ? "Cover" : "Reveal";
@@ -712,14 +714,22 @@ function showHoverMenu(card) {
         + ' data-key=flip>' + flipStr + '</li>'
         + '<li style="margin-left: -190px"'
         + ' class="bottom boardonly" data-key="rotate">' + tapStr + '</li>'
+// TODO implement these
         + '<span class="header" style="margin-left: -190px">&nbsp;STACK</span>"'
-        + '<li style="margin-left: -190px" class="top boardonly bulk"'
-        + ' data-key="flipstack">Turn&nbsp;Over</li>'
+        + '<li style="margin-left: -190px" class="stackprev top boardonly bulk"'
+        + ' data-key="stackprev">Prev</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="bottom boardonly bulk shufstackconfirm"'
-        + ' data-key="shufstackconfirm">Shuffle</li>'
+        + ' class="stacknext bottom boardonly bulk"'
+        + ' data-key="stacknext">Next</li>'
+// TODO move these into hovermenu for selection
+//        + '<span class="header" style="margin-left: -190px">&nbsp;STACK</span>"'
+//        + '<li style="margin-left: -190px" class="top boardonly bulk"'
+//        + ' data-key="flipstack">Turn&nbsp;Over</li>'
+//        + '<li style="margin-left: -190px"'
+//        + ' class="bottom boardonly bulk shufstackconfirm"'
+//        + ' data-key="shufstackconfirm">Shuffle</li>'
         + '</ul>'
-        + '<div class="hovernote"><span>' + numCards + ' cards in stack</span></div>'
+        + '<div class="hovernote"><span>Card ' + i + ' of ' + numCards + '</span></div>'
         + '</div>');
     var newNode = $(html).appendTo("body");
     if (card.hasClass("inHand")) {
@@ -732,6 +742,17 @@ function showHoverMenu(card) {
         $(".hovernote").hide();
         $(".boardonly").removeClass("disabled");
         $(".bulk").addClass("disabled");
+    }
+    if (numCards == 1) {
+        log("sbd");
+        $(".stackprev").addClass("disabled");
+        $(".stacknext").addClass("disabled");
+    } else if (i == 1) {
+        log("spd");
+        $(".stackprev").addClass("disabled");
+    } else if (i == numCards) {
+        log("snd");
+        $(".stacknext").addClass("disabled");
     }
     var newImg = newNode.children("img");
     newNode.width(805);
@@ -964,11 +985,11 @@ $(document).ready(function() {
             var card = $(event.currentTarget);
             dragStartKey = card.data("dest_key");
             hasDraggedOffStart = false;
-            activeCard = card;
             if (card.hasClass("inHand")
                     && $("#hand").hasClass("collapsed")) {
                 removeFocus();
             } else {
+                activeCard = card;
                 updateFocus(card);
             }
         });
