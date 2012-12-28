@@ -760,10 +760,6 @@ function moveOffscreen(card) {
 function renderHandStack(hand) {
     handCache = hand;
 
-    // Resets hand dimensions.
-    $("#hand").width("100%");
-    $("#hand").css("margin-left", 0);
-
     var kHandSpacing = 5;
     var kConsiderUnloaded = 20;
     var currentX = kHandSpacing;
@@ -777,24 +773,22 @@ function renderHandStack(hand) {
 
     // Computes dimensions of hand necessary and optimal spacing.
     var requiredWidth = hand.length * (cardWidth + kHandSpacing);
-    var numRows = Math.ceil(requiredWidth / (handWidth - kHandSpacing));
+    var numRows = Math.max(1, Math.ceil(requiredWidth / (handWidth - kHandSpacing)));
     var numCols = Math.floor((handWidth - kHandSpacing) / (cardWidth + kHandSpacing));
     var excess = handWidth - (numCols * (cardWidth + kHandSpacing)) - kHandSpacing;
     var spacing = kHandSpacing;
 
     var handHeight = numRows * (cardHeight + kHandSpacing) + kHandSpacing;
-    handHeight = Math.min(handHeight, $("#arena").outerHeight() - cardHeight * 1.2);
+    handHeight = Math.min(handHeight, $("#arena").outerHeight() - cardHeight * 2);
     $("#hand").height(handHeight);
-    if (!$("#hand").hasClass("collapsed")) {
-        $("#hand").width(handWidth - excess);
-        $("#hand").css("margin-left", excess / 2);
-        var startX = excess / 2 + spacing + 2;
+    var collapsed = $("#hand").hasClass("collapsed");
+    if (!collapsed) {
+        var startX = spacing;
     } else {
         var startX = 0;
     }
     var currentX = startX;
     var currentY = $("#hand").position().top - $(window).scrollTop() + spacing;
-    var collapsed = $("#hand").hasClass("collapsed");
 
     XXX_jitter *= -1;
     var skips = 0;
@@ -821,7 +815,7 @@ function renderHandStack(hand) {
         } else {
             skips += 1;
         }
-        if ($("#hand").hasClass("collapsed")) {
+        if (collapsed) {
             currentX += collapsedHandSpacing;
         } else {
             currentX += cardWidth + spacing;
@@ -970,10 +964,11 @@ $(document).ready(function() {
         $(".card").mouseup(function(event) {
             var card = $(event.currentTarget);
             if (!dragging) {
-                if (card.hasClass("inHand")
-                        && $("#hand").hasClass("collapsed")
-                        && $(".selecting").length == 0) {
-                    // Expands the hand if a card is clicked on in collapsed mode.
+                if ($(".selecting").length != 0) {
+                    log("skipping mouseup when selecting");
+                } else if (card.hasClass("inHand")
+                        && $("#hand").hasClass("collapsed")) {
+                    // Expands hand if a card is clicked while collapsed.
                     $("#hand").removeClass("collapsed");
                     redrawHand();
                 } else if (hoverCardId != card.prop("id")) {
@@ -1240,13 +1235,13 @@ $(document).ready(function() {
 
     $("#hand").droppable({
         over: function(event, ui) {
-            activateHand();
             if (ui.draggable.hasClass("card")) {
                 var card = parseInt(activeCard.prop("id").substr(5));
                 removeFromArray(handCache, card);
                 if (!activeCard.hasClass("inHand")) {
                     redrawHand();
                 }
+                activateHand();
             }
         },
         out: function(event, ui) {
@@ -1381,7 +1376,6 @@ $(document).ready(function() {
         delay: 300,
         grid: kDraggingGrid,
         drag: kDraggingModifier,
-        refreshPositions: true,
     });
 
     $("#selectionbox").mouseup(function(event) {
@@ -1416,8 +1410,8 @@ $(document).ready(function() {
             var oldoffset = box.offset();
             box.width(kCardWidth + kSelectionBoxPadding * 2);
             box.height(kCardHeight + kSelectionBoxPadding * 2);
-            box.css("margin-left", event.pageX - oldoffset.left - kCardWidth / 2);
-            box.css("margin-top", event.pageY - oldoffset.top - kCardHeight / 2);
+            box.css("margin-left", event.pageX - oldoffset.left - kCardWidth);
+            box.css("margin-top", event.pageY - oldoffset.top - kCardHeight);
         }
         startDragProgress(box);
         dragging = true;
@@ -1426,6 +1420,13 @@ $(document).ready(function() {
     $("#selectionbox").bind("drag", function(event, ui) {
         var box = $("#selectionbox");
         updateDragProgress(box);
+        // Calculated manually because we sometimes resize the box.
+        if (box.offset().top + box.outerHeight() - 3 < $("#hand").offset().top) {
+            deactivateHand();
+        }
+        if (box.offset().top + box.outerHeight() > $("#hand").offset().top) {
+            activateHand();
+        }
     });
 
     $("#selectionbox").bind("dragstop", function(event, ui) {
