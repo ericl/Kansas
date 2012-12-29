@@ -76,7 +76,7 @@ var animationLength = 0;
 var kAnimationLength = 500;
 
 // Max index of discrete positions on one axis of the grid. Must be < 0xffff.
-var kMaxGridIndex = 0xfff;
+var kMaxGridIndex = 0x7ff;
 
 // Geometry of cards.
 var kCardWidth = 140;
@@ -1277,12 +1277,10 @@ $(document).ready(function() {
                 deferDeactivateHand();
                 var dest_type = "hands";
                 var dest_key = user;
-                // The destination position in the hand can be guessed in this case.
-                if (dest_prev_type == "board") {
-                    handCache.push(cardId);
-                    setOrientProperties(card, 1)
-                    redrawHand();
-                }
+                // Assumes the server will put the card at the end of the stack.
+                handCache.push(cardId);
+                setOrientProperties(card, 1)
+                redrawHand();
             } else {
                 var dest_type = "board";
                 var snap = findSnapPoint(card);

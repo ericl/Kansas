@@ -13,9 +13,9 @@ import time
 import urllib2
 import decks
 
-
 kSmallImageSize = (140, 200)
 kServingPrefix = ''
+kLocalServingAddress = 'http://localhost:8000/'
 kCachePath = '../cache'
 
 
@@ -75,6 +75,8 @@ class CachingLoader(dict):
              .save(small_path)
 
     def toResource(self, url):
+        if url.startswith('/'):
+            return kLocalServingAddress + url
         if url.startswith('http:'):
             return url
         else:
