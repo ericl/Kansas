@@ -1526,6 +1526,7 @@ $(document).ready(function() {
                         card.addClass("inHand");
                         renderHandStack(e.data.z_stack, true);
                     } else {
+                        setOrientProperties(card, -1);
                         moveOffscreen(card);
                     }
 
