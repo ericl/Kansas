@@ -41,7 +41,6 @@ var localMaxZ = 200;
 // Minimum zIndexes for various states.
 var kHandZIndex = 4000000;
 var kDraggingZIndex = 4500000;
-var kFrameZIndex = 5500000;
 
 // The URL prefix from which card images are downloaded from.
 var resourcePrefix = '';
@@ -76,7 +75,7 @@ var animationLength = 0;
 var kAnimationLength = 500;
 
 // Max index of discrete positions on one axis of the grid. Must be < 0xffff.
-var kMaxGridIndex = 0x7ff;
+var kMaxGridIndex = 0xfff;
 
 // Geometry of cards.
 var kCardWidth = 140;
@@ -330,8 +329,8 @@ function keyFromCoords(x, y) {
     var xRatio = Math.min(1, Math.max(0, x / $("#arena").outerWidth()));
     var yRatio = Math.min(1, Math.max(0,
         y / ($("#arena").outerHeight() - kMinHandHeight)));
-    return Math.floor(xRatio * kMaxGridIndex)
-        | Math.floor(yRatio * kMaxGridIndex) << 16;
+    return Math.ceil(xRatio * kMaxGridIndex)
+        | Math.ceil(yRatio * kMaxGridIndex) << 16;
 }
 
 /* Returns the x-key of the card in the client view. */
@@ -347,7 +346,7 @@ function xKeyComponent(target) {
     }
     // Normalize to grid width.
     var ratio = Math.min(1, Math.max(0, left / $("#arena").outerWidth()));
-    return Math.floor(ratio * kMaxGridIndex);
+    return Math.ceil(ratio * kMaxGridIndex);
 }
 
 /* Returns the y-key of the card in the client view. */
@@ -364,7 +363,7 @@ function yKeyComponent(target) {
     // Normalize to grid height.
     var ratio = Math.min(1, Math.max(0,
         tp / ($("#arena").outerHeight() - kMinHandHeight)));
-    return Math.floor(ratio * kMaxGridIndex);
+    return Math.ceil(ratio * kMaxGridIndex);
 }
 
 /**
@@ -562,11 +561,12 @@ function updateDragProgress(target, force) {
 function startDragProgress(target) {
     lastFrameLocation = keyFromTargetLocation(target);
     if (target.hasClass("card")) {
-        ws.send("broadcast", {"subtype": "dragstart", "card": target.prop("id")});
+        ws.send("broadcast",
+            {"subtype": "dragstart", "uuid": uuid, "card": target.prop("id")});
     } else if (target.prop("id") == "selectionbox") {
         selectedSet.each(function(i) {
             ws.send("broadcast",
-                {"subtype": "dragstart", "card": $(this).prop("id")});
+                {"subtype": "dragstart", "uuid": uuid, "card": $(this).prop("id")});
         });
     }
     updateFocus(target);
@@ -593,7 +593,8 @@ function updateFocus(target, entireStack, noSnap) {
         target.addClass("highlight");
     }
     var key = keyFromTargetLocation(target);
-    var stack_height = heightOf(stackHeightCache[key] - !hasDraggedOffStart);
+    var stack_height = heightOf(
+        stackHeightCache[target.data("dest_key")] - !hasDraggedOffStart);
     if (isCard && entireStack) {
         var w = target.outerWidth() + stack_height;
         var h = target.outerHeight() + stack_height;
@@ -602,13 +603,21 @@ function updateFocus(target, entireStack, noSnap) {
         if (snap != null) {
             setSnapPoint(snap);
             var snap_key = snap.data("dest_key");
-            stack_height = heightOf(stackHeightCache[snap_key] - !hasDraggedOffStart);
+            stack_height = heightOf(
+                stackHeightCache[snap_key] - !hasDraggedOffStart);
             key = snap_key;
         } else {
             setSnapPoint(null);
         }
         var w = target.outerWidth();
         var h = target.outerHeight();
+    }
+
+    // Captures scale-dependent component of the selection box.
+    if (!isCard) {
+        var box_s_key = keyFromCoords(
+            keyToX(key) + w - kCardWidth - 2 * kSelectionBoxPadding,
+            keyToY(key) + h - kCardHeight - 2 * kSelectionBoxPadding);
     }
 
     if (target.hasClass("inHand")) {
@@ -626,10 +635,12 @@ function updateFocus(target, entireStack, noSnap) {
                 "uuid": uuid,
                 "name": user,
                 "frame_key": toCanonicalKey(key),
+                "box_sizing_key": isCard ? null : toCanonicalKey(box_s_key),
+                "native_rotation": clientRotation,
                 "orient": isCard ? getOrient(target) : 1,
                 "stack_height": (isCard && !entireStack) ? stack_height : 0,
-                "width": w,
-                "height": h,
+                "width": isCard ? w : null,
+                "height": isCard ? h : null,
             });
     }
 }
@@ -1308,12 +1319,21 @@ $(document).ready(function() {
             broadcast_message: function(e) {
                 switch (e.data.subtype) {
                     case "dragstart":
-                        $("#" + e.data.card).css("opacity", "0.7");
+                        var card = $("#" + e.data.card);
+                        $.each(card.attr("class").split(" "), function(i, cls) {
+                            if (cls.substring(0,9) == "faded_by_") {
+                                card.removeClass(cls);
+                            }
+                        });
+                        card.addClass("faded_by_" + e.data.uuid);
+                        card.css("opacity", 0.6);
                         break;
                     case "frameupdate":
                         var frame = $("#" + e.data.uuid);
                         if (frame.length == 0 && !e.data.hide ) {
-                            var node = '<div class="uuid_frame" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kFrameZIndex) + '; font-family: sans;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
+                            var node = '<div class="uuid_frame" id="'
+                                + e.data.uuid + '"><span>'
+                                + e.data.name + '</span></div>';
                             $("#arena").append(node);
                             frame = $("#" + e.data.uuid);
                         } else {
@@ -1324,20 +1344,37 @@ $(document).ready(function() {
                             setTimeout(function() {
                                 if (frameHideQueued[e.data.uuid]) {
                                     frame.hide();
+                                    $(".faded_by_" + e.data.uuid).css("opacity", 1);
                                     frameHideQueued[e.data.uuid] = false;
                                 }
                             }, 1500);
                         } else {
                             var stack_height = e.data.stack_height;
                             var key = toClientKey(e.data.frame_key);
+                            var x = keyToX(key);
+                            var y = keyToY(key);
+                            var flipName = clientRotation != e.data.native_rotation;
                             frameHideQueued[e.data.uuid] = false;
                             frame.stop();
                             frame.css('opacity', 1.0);
                             setOrientProperties(frame, e.data.orient);
-                            frame.width(e.data.width - 6);
-                            frame.height(e.data.height - 6);
-                            frame.css("left", keyToX(key) + stack_height);
-                            frame.css("top", keyToY(key) + stack_height);
+                            if (e.data.box_sizing_key != null) {
+                                var sz = toClientKey(e.data.box_sizing_key);
+                                var mod = 2 * kSelectionBoxPadding;
+                                frame.width(Math.abs(keyToX(sz) - x) + kCardWidth + mod);
+                                frame.height(Math.abs(keyToY(sz) - y) + kCardHeight + mod);
+                            } else {
+                                frame.width(e.data.width - 3);
+                                frame.height(e.data.height - 3);
+                            }
+                            log("stackheight: " + stack_height);
+                            frame.css("left", x + stack_height);
+                            frame.css("top", y + stack_height);
+                            if (flipName) {
+                                frame.addClass("flipName");
+                            } else {
+                                frame.removeClass("flipName");
+                            }
                             frame.show();
                         }
                         break;
