@@ -171,17 +171,16 @@ class KansasGameState(object):
         assert dest_orient in range(-4, 5)
 
         src_type, src_key = self.index[card]
-        if (src_type, src_key) != (dest_type, dest_key):
-            # Removes card from where it was.
-            self.data[src_type][src_key].remove(card)
-            if len(self.data[src_type][src_key]) == 0:
-                del self.data[src_type][src_key]
+        # Removes card from where it was.
+        self.data[src_type][src_key].remove(card)
+        if len(self.data[src_type][src_key]) == 0:
+            del self.data[src_type][src_key]
 
-            # Places card into new position.
-            if dest_key not in self.data[dest_type]:
-                self.data[dest_type][dest_key] = []
-            self.data[dest_type][dest_key].append(card)
-            self.index[card] = (dest_type, dest_key)
+        # Places card into new position.
+        if dest_key not in self.data[dest_type]:
+            self.data[dest_type][dest_key] = []
+        self.data[dest_type][dest_key].append(card)
+        self.index[card] = (dest_type, dest_key)
 
         self.data['orientations'][card] = dest_orient
         self.data['zIndex'][card] = max(self.data['zIndex'].values()) + 1
