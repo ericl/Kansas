@@ -13,15 +13,14 @@
  * which again will be received by other clients in a globally consistent order.
  */
 
-// TODO implement users facing different directions
 // TODO allow dragging to other users hands + browsing hands as a selection
 // TODO implement creating/destroying cards on the board
-// TODO hide frames / unfade cards after a period of no activity
+// TODO garbage collect frames / unfade cards after a period of no activity
 // TODO better stack rendering, so that stacks of 2 are easily seen
 // TODO allow hand sorting, or autosorting by some property
 // TODO some way of choosing user id and game id
-// TODO different colors for different user frames
-// TODO don't do fancy animations for bulk moves on mobile - too slow
+// TODO different colors for different user frames & orient names correctly
+// TODO send moves in bulk requests when possible
 // TODO save games in localstorage
 
 // Default settings for websocket connection.
@@ -76,6 +75,9 @@ var XXX_jitter = 1;
 var animationLength = 0;
 var kAnimationLength = 500;
 
+// Max index of discrete positions on one axis of the grid. Must be < 0xffff.
+var kMaxGridIndex = 0x7ff;
+
 // Geometry of cards.
 var kCardWidth = 140;
 var kCardHeight = 200;
@@ -95,22 +97,6 @@ if (user == "#alice") {
 
 // Keeps mapping from key -> height
 var stackHeightCache = {};
-
-// Configuration constants for grid spacing and logging.
-var kGridX = 1;
-var kGridY = 1;
-//var kGridX = 37;
-//var kGridY = 26;
-if (kGridX > 1 || kGridY > 1) {
-    var kDraggingGrid = [kGridX, kGridY];
-    var kDraggingModifier = function(e, ui) {
-      ui.position.left = Math.floor(ui.position.left / kGridX) * kGridX;
-      ui.position.top = Math.floor(ui.position.top / kGridY) * kGridY;
-    }
-} else {
-    var kDraggingGrid = null;
-    var kDraggingModifier = null;
-}
 
 /**
  * When cards are stacked on each other we want to provide a 3d-illusion.
@@ -172,7 +158,7 @@ function handleSelectionMovedFromHand(selectedSet, x, y) {
     selectedSet.each(function(i) {
         var card = $(this);
         var cardId = parseInt(card.prop("id").substr(5));
-        var key = (snap != null) ? fixedKey : gridKey(x, y);
+        var key = (snap != null) ? fixedKey : keyFromCoords(x, y);
         ws.send("move", {move: {card: cardId,
                                 dest_prev_type: "hands",
                                 dest_type: "board",
@@ -340,8 +326,16 @@ function setOrientProperties(card, orient) {
     }
 }
 
-/* Returns the x position of the card snapped-to the grid. */
-function gridX(target) {
+function keyFromCoords(x, y) {
+    var xRatio = Math.min(1, Math.max(0, x / $("#arena").outerWidth()));
+    var yRatio = Math.min(1, Math.max(0,
+        y / ($("#arena").outerHeight() - kMinHandHeight)));
+    return Math.floor(xRatio * kMaxGridIndex)
+        | Math.floor(yRatio * kMaxGridIndex) << 16;
+}
+
+/* Returns the x-key of the card in the client view. */
+function xKeyComponent(target) {
     var offset = target.offset();
     var left = offset.left;
     if (target.prop("id") != draggingId) {
@@ -351,11 +345,13 @@ function gridX(target) {
     if (target.hasClass("card")) {
         left -= parseInt(target.css("margin-left"));
     }
-    return Math.round(left / kGridX) * kGridX;
+    // Normalize to grid width.
+    var ratio = Math.min(1, Math.max(0, left / $("#arena").outerWidth()));
+    return Math.floor(ratio * kMaxGridIndex);
 }
 
-/* Returns the y position of the card snapped-to the grid. */
-function gridY(target) {
+/* Returns the y-key of the card in the client view. */
+function yKeyComponent(target) {
     var offset = target.offset();
     var tp = offset.top;
     if (target.prop("id") != draggingId) {
@@ -365,26 +361,28 @@ function gridY(target) {
     if (target.hasClass("card")) {
         tp -= parseInt(target.css("margin-top"));
     }
-    return Math.round(tp / kGridY) * kGridY;
+    // Normalize to grid height.
+    var ratio = Math.min(1, Math.max(0,
+        tp / ($("#arena").outerHeight() - kMinHandHeight)));
+    return Math.floor(ratio * kMaxGridIndex);
 }
 
 /**
- * Produces the unique 32-bit identifier for an (x, y) tuple
+ * Packs the x-key and y-key into a single 32-bit tuple.
  * that the websocket server uses to specify a position.
  */
-function gridKey(x, y) {
-    return ((x + kGridX/2) / kGridX) |
-           ((y + kGridY/2) / kGridY) << 16;
+function packKey(x, y) {
+    return x | (y << 16);
 }
 
-/* Extracts x-value from key as produced by gridKey. */
+/* Extracts x-coord from key. */
 function keyToX(key) {
-    return (key & 0xffff) * kGridX;
+    return ((key & 0xffff) / kMaxGridIndex) * $("#arena").outerWidth();
 }
 
-/* Extracts y-value from key as produced by gridKey. */
+/* Extracts y-coord from key. */
 function keyToY(key) {
-    return (key >> 16) * kGridY;
+    return ((key >> 16) / kMaxGridIndex) * ($("#arena").outerHeight() - kMinHandHeight);
 }
 
 /* Translates x from server view to geometry on screen. */
@@ -398,18 +396,13 @@ function toClientY(y) {
 }
 
 /* Translates locations from server view to geometry on screen. */
-function toClientKey(keyOrX, optionalY) {
-    if (isNaN(keyOrX)) {
-        return keyOrX;
+function toClientKey(canonicalKey) {
+    if (isNaN(canonicalKey)) {
+        return canonicalKey;
     }
-    if (optionalY === undefined) {
-        var x = keyToX(keyOrX);
-        var y = keyToY(keyOrX);
-    } else {
-        var x = keyOrX;
-        var y = optionalY;
-    }
-    return gridKey(toClientX(x), toClientY(y));
+    var x = keyToX(canonicalKey);
+    var y = keyToY(canonicalKey);
+    return keyFromCoords(toClientX(x), toClientY(y));
 }
 
 /* Translates x from geometry on screen to server view. */
@@ -459,23 +452,18 @@ function toCanonicalY(y, invert) {
 }
 
 /* Translates locations from geometry on screen to server view. */
-function toCanonicalKey(keyOrX, optionalY) {
-    if (isNaN(keyOrX)) {
-        return keyOrX;
+function toCanonicalKey(clientKey) {
+    if (isNaN(clientKey)) {
+        return clientKey;
     }
-    if (optionalY === undefined) {
-        var x = keyToX(keyOrX);
-        var y = keyToY(keyOrX);
-    } else {
-        var x = keyOrX;
-        var y = optionalY;
-    }
-    return gridKey(toCanonicalX(x), toCanonicalY(y));
+    var x = keyToX(clientKey);
+    var y = keyToY(clientKey);
+    return keyFromCoords(toCanonicalX(x), toCanonicalY(y));
 }
 
-/* Identical to gridKey() but taking a jquery selection. */
-function gridKeyFromCardLocation(target) {
-    return gridKey(gridX(target), gridY(target));
+/* Produces a location key from a jquery selection. */
+function keyFromTargetLocation(target) {
+    return xKeyComponent(target) | (yKeyComponent(target) << 16);
 }
 
 /* Highlights new snap-to card, and unhighlights old one. */
@@ -561,7 +549,7 @@ function findSnapPoint(target) {
 function updateDragProgress(target, force) {
     if ($.now() - lastFrameUpdate > kFrameUpdatePeriod || force) {
         lastFrameUpdate = $.now();
-        var dest_key = gridKeyFromCardLocation(target);
+        var dest_key = keyFromTargetLocation(target);
         if (dest_key != lastFrameLocation) {
             hasDraggedOffStart = true;
             lastFrameLocation = dest_key;
@@ -572,7 +560,7 @@ function updateDragProgress(target, force) {
 
 /* Call this before updateDragProgress() */
 function startDragProgress(target) {
-    lastFrameLocation = gridKeyFromCardLocation(target);
+    lastFrameLocation = keyFromTargetLocation(target);
     if (target.hasClass("card")) {
         ws.send("broadcast", {"subtype": "dragstart", "card": target.prop("id")});
     } else if (target.prop("id") == "selectionbox") {
@@ -604,11 +592,9 @@ function updateFocus(target, entireStack, noSnap) {
         $(".card").removeClass("highlight");
         target.addClass("highlight");
     }
-    var key = gridKeyFromCardLocation(target);
+    var key = keyFromTargetLocation(target);
     var stack_height = heightOf(stackHeightCache[key] - !hasDraggedOffStart);
     if (isCard && entireStack) {
-        var x = gridX(target);
-        var y = gridY(target);
         var w = target.outerWidth() + stack_height;
         var h = target.outerHeight() + stack_height;
     } else {
@@ -617,12 +603,9 @@ function updateFocus(target, entireStack, noSnap) {
             setSnapPoint(snap);
             var snap_key = snap.data("dest_key");
             stack_height = heightOf(stackHeightCache[snap_key] - !hasDraggedOffStart);
-            var x = gridX(snap) + stack_height;
-            var y = gridY(snap) + stack_height;
+            key = snap_key;
         } else {
             setSnapPoint(null);
-            var x = gridX(target) + stack_height;
-            var y = gridY(target) + stack_height;
         }
         var w = target.outerWidth();
         var h = target.outerHeight();
@@ -642,9 +625,9 @@ function updateFocus(target, entireStack, noSnap) {
                 "hide": false,
                 "uuid": uuid,
                 "name": user,
-                "left": toCanonicalX(x),
-                "top": toCanonicalY(y),
+                "frame_key": toCanonicalKey(key),
                 "orient": isCard ? getOrient(target) : 1,
+                "stack_height": (isCard && !entireStack) ? stack_height : 0,
                 "width": w,
                 "height": h,
             });
@@ -964,6 +947,19 @@ function redrawHand() {
     }
 }
 
+/* Forces re-render of cards on board. */
+function redrawBoard() {
+    $(".card").each(function(i) {
+        var card = $(this);
+        var key = card.data("dest_key");
+        // Redraws cards that are not in some hand.
+        if (!isNaN(key)) {
+            card.css("left", keyToX(key));
+            card.css("top", keyToY(key));
+        }
+    });
+}
+
 /* Animates a card move to a destination on the board. */
 function animateToKey(card, key) {
     log("animating #" + card.prop("id") + " -> " + key);
@@ -1000,8 +996,6 @@ $(document).ready(function() {
 
         $(".card").draggable({
             containment: $("#arena"),
-            grid: kDraggingGrid,
-            drag: kDraggingModifier,
             refreshPositions: true,
         });
 
@@ -1064,7 +1058,9 @@ $(document).ready(function() {
                 if (snap != null) {
                     var dest_key = parseInt(findSnapPoint(card).data("dest_key"));
                 } else {
-                    var dest_key = gridKeyFromCardLocation(card);
+                    var dest_key = keyFromTargetLocation(card);
+                    log("offset: " + card.offset().left + "," + card.offset().top);
+                    log("dest key computed is : " + dest_key);
                     card.data("dest_key", dest_key);
                 }
                 if (dest_prev_type == "hands") {
@@ -1316,7 +1312,7 @@ $(document).ready(function() {
                         break;
                     case "frameupdate":
                         var frame = $("#" + e.data.uuid);
-                        if (frame.length == 0) {
+                        if (frame.length == 0 && !e.data.hide ) {
                             var node = '<div class="uuid_frame" id="' + e.data.uuid + '" style="position: fixed; border: 3px solid orange; pointer-events: none; border-radius: 5px; z-index: ' + (kFrameZIndex) + '; font-family: sans;"><span style="background-color: orange; padding-right: 2px; padding-bottom: 2px; border-radius: 2px; color: white; margin-top: -2px !important; margin-left: -1px;">' + e.data.name + '</span></div>';
                             $("#arena").append(node);
                             frame = $("#" + e.data.uuid);
@@ -1332,14 +1328,16 @@ $(document).ready(function() {
                                 }
                             }, 1500);
                         } else {
+                            var stack_height = e.data.stack_height;
+                            var key = toClientKey(e.data.frame_key);
                             frameHideQueued[e.data.uuid] = false;
                             frame.stop();
                             frame.css('opacity', 1.0);
                             setOrientProperties(frame, e.data.orient);
                             frame.width(e.data.width - 6);
                             frame.height(e.data.height - 6);
-                            frame.css("left", toClientX(e.data.left));
-                            frame.css("top", toClientY(e.data.top));
+                            frame.css("left", keyToX(key) + stack_height);
+                            frame.css("top", keyToY(key) + stack_height);
                             frame.show();
                         }
                         break;
@@ -1523,8 +1521,6 @@ $(document).ready(function() {
     $("#selectionbox").draggable({
         /* Manual containment is used, since we manually resize the box. */
         delay: 300,
-        grid: kDraggingGrid,
-        drag: kDraggingModifier,
     });
 
     $("#selectionbox").mouseup(function(event) {
@@ -1616,6 +1612,7 @@ $(document).ready(function() {
             $("#warning").hide();
         }
         redrawHand();
+        redrawBoard();
     });
 
     setTimeout(tryConnect, 1000);
