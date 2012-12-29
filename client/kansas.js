@@ -30,9 +30,9 @@ var gameid = "testgame1";
 var hostname = window.location.hostname || "localhost"
 var uuid = "p_" + Math.random().toString().substring(5);
 var user = window.location.hash || "#alice";
+var ws = null;
 var loggingEnabled = false;
 var gameReady = false;
-var ws = null;
 document.title = user + '@' + gameid;
 
 // Tracks local state of the hand and zIndex of the topmost card.
@@ -76,13 +76,22 @@ var XXX_jitter = 1;
 var animationLength = 0;
 var kAnimationLength = 500;
 
-
 // Geometry of cards.
 var kCardWidth = 140;
 var kCardHeight = 200;
+var kMinHandHeight = 100;
 var kHoverCardRatio = 4;
 var kHoverTapRatio = kHoverCardRatio * 0.875;
 var kSelectionBoxPadding = 15;
+
+// XXX testing geometry
+if (user == "#alice") {
+    var clientRotation = 0;
+    var clientTranslation = [0, 0];
+} else {
+    var clientRotation = 2;
+    var clientTranslation = [-kCardWidth, -kCardHeight];
+}
 
 // Keeps mapping from key -> height
 var stackHeightCache = {};
@@ -167,7 +176,7 @@ function handleSelectionMovedFromHand(selectedSet, x, y) {
         ws.send("move", {move: {card: cardId,
                                 dest_prev_type: "hands",
                                 dest_type: "board",
-                                dest_key: key,
+                                dest_key: toCanonicalKey(key),
                                 dest_orient: getOrient(card)}});
     });
 }
@@ -261,12 +270,18 @@ function removeFromArray(arr, item) {
 }
 
 /* Logs a message to the debug console */
-function log(msg) {
-    if (loggingEnabled) {
+function log(msg, force) {
+    if (loggingEnabled || force) {
         var console = $('#console');
         console.append(msg + "\n");
         console.scrollTop(console[0].scrollHeight - console.outerHeight());
     }
+}
+
+/* Logs warning to debug console */
+function warning(msg) {
+    log(msg, true);
+    alert("W: " + msg);
 }
 
 /**
@@ -370,6 +385,92 @@ function keyToX(key) {
 /* Extracts y-value from key as produced by gridKey. */
 function keyToY(key) {
     return (key >> 16) * kGridY;
+}
+
+/* Translates x from server view to geometry on screen. */
+function toClientX(x) {
+    return toCanonicalX(x, true);
+}
+
+/* Translates y from server view to geometry on screen. */
+function toClientY(y) {
+    return toCanonicalY(y, true);
+}
+
+/* Translates locations from server view to geometry on screen. */
+function toClientKey(keyOrX, optionalY) {
+    if (isNaN(keyOrX)) {
+        return keyOrX;
+    }
+    if (optionalY === undefined) {
+        var x = keyToX(keyOrX);
+        var y = keyToY(keyOrX);
+    } else {
+        var x = keyOrX;
+        var y = optionalY;
+    }
+    return gridKey(toClientX(x), toClientY(y));
+}
+
+/* Translates x from geometry on screen to server view. */
+function toCanonicalX(x, invert) {
+    if (invert) {
+        x -= clientTranslation[0];
+    }
+    switch (clientRotation) {
+        case 0:
+            /* no-op */
+            break;
+        case 2:
+            /* mirror X */
+            x = $("#arena").outerWidth() - x;
+            break;
+        default:
+            warning("Unsupported client rotation: " + clientRotation);
+            break;
+    }
+    if (!invert) {
+        x += clientTranslation[0];
+    }
+    return x;
+}
+
+/* Translates y from geometry on screen to server view. */
+function toCanonicalY(y, invert) {
+    if (invert) {
+        y -= clientTranslation[1];
+    }
+    switch (clientRotation) {
+        case 0:
+            /* no-op */
+            break;
+        case 2:
+            /* mirror Y */
+            y = $("#arena").outerHeight() - kMinHandHeight - y;
+            break;
+        default:
+            warning("Unsupported client rotation: " + clientRotation);
+            break;
+    }
+    if (!invert) {
+        y += clientTranslation[1];
+    }
+    return y;
+}
+
+/* Translates locations from geometry on screen to server view. */
+function toCanonicalKey(keyOrX, optionalY) {
+    if (isNaN(keyOrX)) {
+        return keyOrX;
+    }
+    if (optionalY === undefined) {
+        var x = keyToX(keyOrX);
+        var y = keyToY(keyOrX);
+    } else {
+        var x = keyOrX;
+        var y = optionalY;
+    }
+    return gridKey(toCanonicalX(x), toCanonicalY(y));
 }
 
 /* Identical to gridKey() but taking a jquery selection. */
@@ -536,8 +637,8 @@ function updateFocus(target, entireStack, noSnap) {
                 "hide": false,
                 "uuid": uuid,
                 "name": user,
-                "left": x,
-                "top": y,
+                "left": toCanonicalX(x),
+                "top": toCanonicalY(y),
                 "orient": isCard ? getOrient(target) : 1,
                 "width": w,
                 "height": h,
@@ -592,7 +693,7 @@ function changeOrient(card, orient) {
     showSpinner();
     ws.send("move", {move: {card: cardId,
                             dest_type: dest_type,
-                            dest_key: dest_key,
+                            dest_key: toCanonicalKey(dest_key),
                             dest_prev_type: dest_type,
                             dest_orient: orient}});
 }
@@ -638,7 +739,7 @@ function flipStack(memberCard) {
     showSpinner();
     ws.send("stackop", {op_type: "reverse",
                         dest_type: "board",
-                        dest_key: dest_key});
+                        dest_key: toCanonicalKey(dest_key)});
 }
 
 function shuffleStackConfirm() {
@@ -661,7 +762,7 @@ function shuffleStack(memberCard) {
     showSpinner();
     ws.send("stackop", {op_type: "shuffle",
                         dest_type: "board",
-                        dest_key: dest_key});
+                        dest_key: toCanonicalKey(dest_key)});
     removeFocus();
 }
 
@@ -772,12 +873,13 @@ function showHoverMenu(card) {
 
 /* Moves a card offscreen - used for hiding hands of other players. */
 function moveOffscreen(card) {
-    var kOffscreenY = 2000;
+    var kOffscreenY = -300;
+    var destX = 100;
     if (parseInt(card.css("top")) != kOffscreenY) {
         card.animate({
-            left: card.css("left"),
+            left: (destX != parseInt(card.css("left"))) ? destX : destX + XXX_jitter,
             top: kOffscreenY,
-            opacity: 0,
+            opacity: 1.0,
         }, animationLength);
     }
 }
@@ -875,7 +977,6 @@ function animateToKey(card, key) {
             avoidTransforms: card.hasClass("rotated"),
         }, 'fast');
     } else {
-        card.css("opacity", 1);
         log("avoided animation");
     }
     card.removeClass("inHand");
@@ -975,7 +1076,7 @@ $(document).ready(function() {
             ws.send("move", {move: {card: cardId,
                                     dest_prev_type: dest_prev_type,
                                     dest_type: dest_type,
-                                    dest_key: dest_key,
+                                    dest_key: toCanonicalKey(dest_key),
                                     dest_orient: orient}});
             draggingId = null;
             dragStartKey = null;
@@ -1049,13 +1150,14 @@ $(document).ready(function() {
 
         // Recreates the board.
         stackHeightCache = {};
-        for (pos in state.board) {
-            var stack = state.board[pos];
+        for (canonicalKey in state.board) {
+            var stack = state.board[canonicalKey];
+            var pos = toClientKey(canonicalKey);
+            var x = keyToX(pos);
+            var y = keyToY(pos);
             stackHeightCache[pos] = stack.length;
             for (z in stack) {
                 var cid = stack[z];
-                var x = keyToX(pos);
-                var y = keyToY(pos);
                 var card = createImageNode(state, cid, z);
                 card.data("dest_key", pos);
                 card.animate({
@@ -1087,8 +1189,8 @@ $(document).ready(function() {
     }
 
     ws = $.websocket("ws:///" + hostname + ":" + kWSPort + "/kansas", {
-        open: function() { alert("Websocket open (?)"); },
-        close: function() { alert("Websocket closed (?)"); },
+        open: function() { warning("Websocket open (?)"); },
+        close: function() { warning("Websocket closed (?)"); },
         events: {
             connect_resp: function(e) {
                 connected = true;
@@ -1119,8 +1221,9 @@ $(document).ready(function() {
             stackupdate: function(e) {
                 hideSpinner();
                 log("Stack update: " + JSON.stringify(e.data));
-                var x = keyToX(e.data.op.dest_key);
-                var y = keyToY(e.data.op.dest_key);
+                var clientKey = toClientKey(e.data.op.dest_key);
+                var x = keyToX(clientKey);
+                var y = keyToY(clientKey);
 
                 /* Temporarily hides each card in the stack. */
                 for (i in e.data.z_stack) {
@@ -1145,27 +1248,29 @@ $(document).ready(function() {
                 hideSpinner();
                 log("Update: " + JSON.stringify(e.data));
                 var card = $("#card_" + e.data.move.card);
-                card.data("dest_key", e.data.move.dest_key);
+                var clientKey = toClientKey(e.data.move.dest_key);
+                var oldClientKey = toClientKey(e.data.old_key);
+                card.data("dest_key", clientKey);
 
                 if (e.data.old_type == "board") {
-                    stackHeightCache[e.data.old_key] -= 1;
-                    if (stackHeightCache[e.data.old_key] <= 0) {
-                        if (stackHeightCache[e.data.old_key] < 0) {
-                            alert("Count cache is corrupted.");
+                    stackHeightCache[oldClientKey] -= 1;
+                    if (stackHeightCache[oldClientKey] <= 0) {
+                        if (stackHeightCache[oldClientKey] < 0) {
+                            warning("Count cache is corrupted.");
                         } else {
-                            delete stackHeightCache[e.data.old_key];
+                            delete stackHeightCache[oldClientKey];
                         }
                     }
                 }
 
                 if (e.data.move.dest_type == "board") {
-                    stackHeightCache[e.data.move.dest_key] = e.data.z_stack.length;
+                    stackHeightCache[clientKey] = e.data.z_stack.length;
                     log("stackHeightCache: " + JSON.stringify(stackHeightCache));
 
                     setOrientProperties(card, e.data.move.dest_orient);
                     var lastindex = e.data.z_stack.length - 1;
-                    var x = keyToX(e.data.move.dest_key);
-                    var y = keyToY(e.data.move.dest_key);
+                    var x = keyToX(clientKey);
+                    var y = keyToY(clientKey);
                     if (removeFromArray(handCache, e.data.move.card)) {
                         redrawHand();
                     }
@@ -1183,11 +1288,11 @@ $(document).ready(function() {
                     card.data("stack_index", lastindex);
                     card.zIndex(e.data.z_index);
                     localMaxZ = Math.max(localMaxZ, e.data.z_index);
-                    animateToKey(card, e.data.move.dest_key);
+                    animateToKey(card, clientKey);
                 } else if (e.data.move.dest_type == "hands") {
 
                     setOrientProperties(card, e.data.move.dest_orient);
-                    if (e.data.move.dest_key == user) {
+                    if (clientKey == user) {
                         card.addClass("inHand");
                         renderHandStack(e.data.z_stack, true);
                     } else {
@@ -1195,7 +1300,7 @@ $(document).ready(function() {
                     }
 
                 } else {
-                    log("WARN: unknown dest type: " + e.data.move.dest_type);
+                    warning("unknown dest type: " + e.data.move.dest_type);
                 }
             },
 
@@ -1228,8 +1333,8 @@ $(document).ready(function() {
                             setOrientProperties(frame, e.data.orient);
                             frame.width(e.data.width - 6);
                             frame.height(e.data.height - 6);
-                            frame.css("left", e.data.left);
-                            frame.css("top", e.data.top);
+                            frame.css("left", toClientX(e.data.left));
+                            frame.css("top", toClientY(e.data.top));
                             frame.show();
                         }
                         break;
@@ -1245,8 +1350,10 @@ $(document).ready(function() {
     function tryConnect() {
         if (!connected) {
             showSpinner();
-            ws.send("connect", {user: user, gameid: gameid});
-            connected = true;
+            ws.send("connect", {
+                user: user,
+                gameid: gameid,
+            });
         }
     }
 
