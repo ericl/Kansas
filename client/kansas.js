@@ -591,6 +591,11 @@ function startDragProgress(target) {
  */
 function updateFocus(target, entireStack, noSnap) {
     log("focusupdate")
+    if (target.length == 0) {
+        log("whoops, no focus");
+        removeFocus();
+        return;
+    }
     var isCard = target.hasClass("card");
     if (isCard) {
         hideSelectionBox();
