@@ -52,6 +52,7 @@ var dragStartKey = null;
 var hasDraggedOffStart = false;
 var hoverCardId = null;
 var oldSnapCard = null;
+var containmentHint = null;
 var selectedSet = [];
 
 // Tracks the frame (dragging position) of the local user, which is broadcasted 
@@ -80,10 +81,14 @@ var kMaxGridIndex = 0xfff;
 // Geometry of cards.
 var kCardWidth = 140;
 var kCardHeight = 200;
+var kCardBorder = 4;
+var kRotatedOffsetLeft = -10;
+var kRotatedOffsetTop = 25;
 var kMinHandHeight = 100;
 var kHoverCardRatio = 4;
 var kHoverTapRatio = kHoverCardRatio * 0.875;
 var kSelectionBoxPadding = 15;
+var kMinSupportedHeight = 1000;
 
 // XXX testing geometry
 if (user == "#alice") {
@@ -135,6 +140,80 @@ function topOf(stack) {
         }
     });
     return highest;
+}
+
+/* Invoked on receipt of a drag_start broadcast. */
+function handleDragStartBroadcast(e) {
+    var card = $("#" + e.data.card);
+    $.each(card.attr("class").split(" "), function(i, cls) {
+        if (cls.substring(0,9) == "faded_by_") {
+            card.removeClass(cls);
+        }
+    });
+    card.addClass("faded_by_" + e.data.uuid);
+    card.css("opacity", 0.6);
+}
+
+/* Invoked on receipt of a frame_update broadcast. */
+function handleFrameUpdateBroadcast(e) {
+    var frame = $("#" + e.data.uuid);
+    if (frame.length == 0 && !e.data.hide ) {
+        var node = '<div class="uuid_frame" id="'
+            + e.data.uuid + '"><span>'
+            + e.data.name + '</span></div>';
+        $("#arena").append(node);
+        frame = $("#" + e.data.uuid);
+    } else {
+        frame.children("span").text(e.data.name);
+    }
+    if (e.data.hide) {
+        frameHideQueued[e.data.uuid] = true;
+        setTimeout(function() {
+            if (frameHideQueued[e.data.uuid]) {
+                frame.hide();
+                $(".faded_by_" + e.data.uuid).css("opacity", 1);
+                frameHideQueued[e.data.uuid] = false;
+            }
+        }, 1500);
+    } else {
+        frameHideQueued[e.data.uuid] = false;
+        var flipName = clientRotation != e.data.native_rotation;
+        var init = e.data.sizing_info.pop();
+        var initKey = toClientKey(init[1]);
+        var minX = keyToX(initKey) + init[2] + (init[0] ? kRotatedOffsetLeft : 0);
+        var minY = keyToY(initKey) + init[2] + (init[0] ? kRotatedOffsetTop : 0);
+        function getW(info) {
+            return (info[0] ? kCardHeight : kCardWidth);
+        }
+        function getH(info) {
+            return (info[0] ? kCardWidth : kCardHeight);
+        }
+        var maxX = minX + 2 * kCardBorder + getW(init);
+        var maxY = minY + 2 * kCardBorder + getH(init);
+        $.each(e.data.sizing_info, function(i, val) {
+            var key = toClientKey(val[1]);
+            var x = keyToX(key) + val[2];
+            var y = keyToY(key) + val[2];
+            var dx = val[0] ? kRotatedOffsetLeft : 0;
+            var dy = val[0] ? kRotatedOffsetTop : 0;
+            minX = Math.min(minX, x + dx);
+            minY = Math.min(minY, y + dy);
+            var w = 2 * kCardBorder + getW(val);
+            var h = 2 * kCardBorder + getH(val);
+            maxX = Math.max(maxX, x + dx + w);
+            maxY = Math.max(maxY, y + dy + h);
+        });
+        frame.width(maxX - minX - 6 + 2 * e.data.border);
+        frame.height(maxY - minY - 6 + 2 * e.data.border);
+        frame.css("left", minX - e.data.border);
+        frame.css("top", minY - e.data.border);
+        if (flipName) {
+            frame.addClass("flipName");
+        } else {
+            frame.removeClass("flipName");
+        }
+        frame.show();
+    }
 }
 
 function handleSelectionMoved(selectedSet, dx, dy) {
@@ -542,6 +621,16 @@ function findSnapPoint(target) {
     }
 }
 
+/* Flips cards that are on the other side of the board. */
+function updateCardFlipState(card, newY) {
+    var y = (newY !== undefined) ? newY : card.offset().top
+    if (y + card.height() < $("#divider").offset().top) {
+        card.addClass("flipped");
+    } else {
+        card.removeClass("flipped");
+    }
+}
+
 /**
  * Broadcasts location and highlights snap-to areas in a timely manner.
  */
@@ -574,75 +663,93 @@ function startDragProgress(target) {
 
 /**
  * Broadcasts the location of target to other users, so that their clients
- * can draw a frame box where the card is being dragged. If entireStack
- * is set to True, the frame box will encompass the entire stack.
+ * can draw a frame box where the card is being dragged.
  */
-function updateFocus(target, entireStack, noSnap) {
-    log("focusupdate")
+function updateFocus(target, noSnap) {
     if (target.length == 0) {
-        log("whoops, no focus");
+        log("Whoops, no focus.");
         removeFocus();
         return;
     }
+
     var isCard = target.hasClass("card");
     if (isCard) {
         hideSelectionBox();
     }
+
     if (isCard && !target.hasClass("highlight")) {
         $(".card").removeClass("highlight");
         target.addClass("highlight");
     }
-    var key = keyFromTargetLocation(target);
-    var stack_height = heightOf(
-        stackHeightCache[target.data("dest_key")] - !hasDraggedOffStart);
-    if (isCard && entireStack) {
-        var w = target.outerWidth() + stack_height;
-        var h = target.outerHeight() + stack_height;
-    } else {
-        var snap = noSnap ? null : findSnapPoint(target);
-        if (snap != null) {
-            setSnapPoint(snap);
-            var snap_key = snap.data("dest_key");
-            stack_height = heightOf(
-                stackHeightCache[snap_key] - !hasDraggedOffStart);
-            key = snap_key;
-        } else {
-            setSnapPoint(null);
-        }
-        var w = target.outerWidth();
-        var h = target.outerHeight();
-    }
-
-    // Captures scale-dependent component of the selection box.
-    if (!isCard) {
-        var box_s_key = keyFromCoords(
-            keyToX(key) + w - kCardWidth - 2 * kSelectionBoxPadding,
-            keyToY(key) + h - kCardHeight - 2 * kSelectionBoxPadding);
-    }
 
     if (target.hasClass("inHand")) {
+        log("Target in hand - removing focus.");
         ws.send("broadcast",
             {
                 "subtype": "frameupdate",
                 "hide": true,
                 "uuid": uuid,
             });
-    } else {
-        ws.send("broadcast",
-            {
-                "subtype": "frameupdate",
-                "hide": false,
-                "uuid": uuid,
-                "name": user,
-                "frame_key": toCanonicalKey(key),
-                "box_sizing_key": isCard ? null : toCanonicalKey(box_s_key),
-                "native_rotation": clientRotation,
-                "orient": isCard ? getOrient(target) : 1,
-                "stack_height": (isCard && !entireStack) ? stack_height : 0,
-                "width": isCard ? w : null,
-                "height": isCard ? h : null,
-            });
+        return;
     }
+
+    var snap = noSnap ? null : findSnapPoint(target);
+    setSnapPoint(snap);
+
+    // By default renders the fixed selection.
+    var sizingInfo = containmentHint;
+    if (isCard) {
+        if (snap == null) {
+            if (hasDraggedOffStart) {
+                log("Rendering free-dragging card.");
+                sizingInfo = [[
+                    target.hasClass("rotated"),
+                    toCanonicalKey(keyFromTargetLocation(target)), 0]];
+            } else {
+                log("Rendering just-selected card on stack.");
+                sizingInfo = [[
+                    target.hasClass("rotated"),
+                    toCanonicalKey(target.data("dest_key")),
+                    heightOf(stackHeightCache[target.data("dest_key")] - 1)]];
+            }
+        } else {
+            log("Rendering card snapping to stack");
+            sizingInfo = [[
+                snap.hasClass("rotated"),
+                toCanonicalKey(snap.data("dest_key")),
+                heightOf(stackHeightCache[snap.data("dest_key")])]];
+        }
+    } else if (snap != null) {
+        log("Rendering selection snapped to stack");
+        sizingInfo = [[
+            snap.hasClass("rotated"),
+            toCanonicalKey(snap.data("dest_key")),
+            heightOf(stackHeightCache[snap.data("dest_key")])]];
+    } else if (hasDraggedOffStart && sizingInfo != null) {
+        log("Rendering free-dragging selection");
+        var delta = selectionBoxOffset();
+        var dx = delta[2];
+        var dy = delta[3];
+        sizingInfo = $.map(sizingInfo, function(info) {
+            var orig = toClientKey(info[1]);
+            var current = keyFromCoords(keyToX(orig) + dx, keyToY(orig) + dy);
+            return [[info[0], toCanonicalKey(current), info[2]]];
+        });
+    } else {
+        log("Not rendering selection in hand.");
+        return;
+    }
+
+    ws.send("broadcast",
+        {
+            "subtype": "frameupdate",
+            "hide": false,
+            "uuid": uuid,
+            "name": user,
+            "border": isCard ? 0 : kSelectionBoxPadding,
+            "sizing_info": sizingInfo,
+            "native_rotation": clientRotation,
+        });
 }
 
 /* Hides bounding box and associated selection objects. */
@@ -654,6 +761,21 @@ function hideSelectionBox() {
         $("#selectionbox").css("margin-top", 0);
         $(".selecting").removeClass("selecting");
     }
+}
+
+/* Returns [x, y, dx, dy] of selection box relative to selection area. */
+function selectionBoxOffset() {
+    var box = $("#selectionbox");
+    var outer = $("#arena");
+    var offset = box.offset();
+    var orig_offset = $("#selectionarea").offset();
+    var x = Math.max(0, offset.left);
+    var y = Math.max(0, offset.top);
+    x = Math.min(x, outer.width() - box.width());
+    y = Math.min(y, outer.height() - box.height());
+    var dx = x - orig_offset.left;
+    var dy = y - orig_offset.top;
+    return [x, y, dx, dy];
 }
 
 /* Unselects all selected items, and hides hover menu. */
@@ -734,7 +856,7 @@ function flipCard(card) {
 /* Requests a stack flip from the server. */
 function flipStack(memberCard) {
     var dest_key = parseInt(memberCard.data("dest_key"));
-    updateFocus(memberCard, true);
+    updateFocus(memberCard);
     showSpinner();
     ws.send("stackop", {op_type: "reverse",
                         dest_type: "board",
@@ -757,7 +879,7 @@ function shuffleStack(memberCard) {
         return;
     }
     var dest_key = parseInt(memberCard.data("dest_key"));
-    updateFocus(memberCard, true);
+    updateFocus(memberCard);
     showSpinner();
     ws.send("stackop", {op_type: "shuffle",
                         dest_type: "board",
@@ -790,7 +912,6 @@ function showHoverMenu(card) {
     var oldimg = $(".hovermenu img");
     var numCards = stackHeightCache[card.data("dest_key")];
     var i = numCards - parseInt(card.data("stack_index"));
-    log("numCards: " + numCards + " i: "+ i);
     var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
     var src = toResource(url);
     var flipStr = getOrient(card) > 0 ? "Cover" : "Reveal";
@@ -819,15 +940,14 @@ function showHoverMenu(card) {
         + '<li style="margin-left: -190px" class="stackprev top boardonly bulk"'
         + ' data-key="stackprev">Prev</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="stacknext bottom boardonly bulk"'
+        + ' class="stacknext boardonly bulk"'
         + ' data-key="stacknext">Next</li>'
 // TODO move these into hovermenu for selection
-//        + '<span class="header" style="margin-left: -190px">&nbsp;STACK</span>"'
-//        + '<li style="margin-left: -190px" class="top boardonly bulk"'
+//        + '<li style="margin-left: -190px" class="boardonly bulk"'
 //        + ' data-key="flipstack">Turn&nbsp;Over</li>'
-//        + '<li style="margin-left: -190px"'
-//        + ' class="bottom boardonly bulk shufstackconfirm"'
-//        + ' data-key="shufstackconfirm">Shuffle</li>'
+        + '<li style="margin-left: -190px"'
+        + ' class="bottom boardonly bulk shufstackconfirm"'
+        + ' data-key="shufstackconfirm">Shuffle</li>'
         + '</ul>'
         + '<div class="hovernote"><span>Card ' + i + ' of ' + numCards + '</span></div>'
         + '</div>');
@@ -844,14 +964,11 @@ function showHoverMenu(card) {
         $(".bulk").addClass("disabled");
     }
     if (numCards == 1) {
-        log("sbd");
         $(".stackprev").addClass("disabled");
         $(".stacknext").addClass("disabled");
     } else if (i == 1) {
-        log("spd");
         $(".stackprev").addClass("disabled");
     } else if (i == numCards) {
-        log("snd");
         $(".stacknext").addClass("disabled");
     }
     var newImg = newNode.children("img");
@@ -866,6 +983,10 @@ function showHoverMenu(card) {
         newNode.fadeIn();
     } else {
         newNode.show();
+    }
+    if (newNode.offset().top < 0) {
+        newNode.css("margin-top", 0);
+        newNode.css("top", 0);
     }
     setTimeout(function() { old.remove(); }, 1200);
 }
@@ -922,6 +1043,7 @@ function renderHandStack(hand) {
 
     for (i in hand) {
         var cd = $("#card_" + hand[i]);
+        updateCardFlipState(cd, 999999);
         if (!collapsed) {
             if (currentX + cardWidth > handWidth) {
                 currentY += cardHeight + spacing;
@@ -965,10 +1087,17 @@ function redrawBoard() {
         var key = card.data("dest_key");
         // Redraws cards that are not in some hand.
         if (!isNaN(key)) {
-            card.css("left", keyToX(key));
-            card.css("top", keyToY(key));
+            var ds = heightOf(card.data("stack_index"));
+            card.css("left", keyToX(key) + ds);
+            card.css("top", keyToY(key) + ds);
         }
     });
+    redrawDivider();
+}
+
+/* Sets position of center divider. */
+function redrawDivider() {
+    $("#divider").css("top", keyToY((kMaxGridIndex / 2) << 16));
 }
 
 /* Animates a card move to a destination on the board. */
@@ -978,6 +1107,7 @@ function animateToKey(card, key) {
     var y = keyToY(key);
     var newX = x + heightOf(stackHeightCache[key] - 1);
     var newY = y + heightOf(stackHeightCache[key] - 1);
+    updateCardFlipState(card, newY);
     var xChanged = parseInt(newX) != parseInt(card.css('left'));
     var yChanged = parseInt(newY) != parseInt(card.css('top'));
     XXX_jitter *= -1;
@@ -986,7 +1116,7 @@ function animateToKey(card, key) {
             left: newX + (xChanged ? 0 : XXX_jitter),
             top: newY + (yChanged ? 0 : XXX_jitter),
             opacity: 1.0,
-            avoidTransforms: card.hasClass("rotated"),
+            avoidTransforms: card.hasClass("rotated") || card.hasClass("flipped"),
         }, 'fast');
     } else {
         log("avoided animation");
@@ -1047,7 +1177,6 @@ $(document).ready(function() {
             log(JSON.stringify(card.offset()));
             var cardId = parseInt(card.prop("id").substr(5));
             var orient = card.data("orient");
-            var completelyLocal = false;
             if (card.hasClass("inHand")) {
                 var dest_prev_type = "hands";
             } else {
@@ -1104,7 +1233,7 @@ $(document).ready(function() {
                 removeFocus();
             } else {
                 activeCard = card;
-                updateFocus(card, false, true);
+                updateFocus(card, true);
             }
         });
 
@@ -1172,6 +1301,7 @@ $(document).ready(function() {
                 var cid = stack[z];
                 var card = createImageNode(state, cid, z);
                 card.data("dest_key", pos);
+                updateCardFlipState(card, y);
                 card.animate({
                     left: x + heightOf(z),
                     top: y + heightOf(z),
@@ -1317,69 +1447,15 @@ $(document).ready(function() {
             },
 
             broadcast_message: function(e) {
+                log("Recv broadcast: " + JSON.stringify(e));
                 switch (e.data.subtype) {
                     case "dragstart":
-                        var card = $("#" + e.data.card);
-                        $.each(card.attr("class").split(" "), function(i, cls) {
-                            if (cls.substring(0,9) == "faded_by_") {
-                                card.removeClass(cls);
-                            }
-                        });
-                        card.addClass("faded_by_" + e.data.uuid);
-                        card.css("opacity", 0.6);
+                        handleDragStartBroadcast(e);
                         break;
                     case "frameupdate":
-                        var frame = $("#" + e.data.uuid);
-                        if (frame.length == 0 && !e.data.hide ) {
-                            var node = '<div class="uuid_frame" id="'
-                                + e.data.uuid + '"><span>'
-                                + e.data.name + '</span></div>';
-                            $("#arena").append(node);
-                            frame = $("#" + e.data.uuid);
-                        } else {
-                            frame.children("span").text(e.data.name);
-                        }
-                        if (e.data.hide) {
-                            frameHideQueued[e.data.uuid] = true;
-                            setTimeout(function() {
-                                if (frameHideQueued[e.data.uuid]) {
-                                    frame.hide();
-                                    $(".faded_by_" + e.data.uuid).css("opacity", 1);
-                                    frameHideQueued[e.data.uuid] = false;
-                                }
-                            }, 1500);
-                        } else {
-                            var stack_height = e.data.stack_height;
-                            var key = toClientKey(e.data.frame_key);
-                            var x = keyToX(key);
-                            var y = keyToY(key);
-                            var flipName = clientRotation != e.data.native_rotation;
-                            frameHideQueued[e.data.uuid] = false;
-                            frame.stop();
-                            frame.css('opacity', 1.0);
-                            setOrientProperties(frame, e.data.orient);
-                            if (e.data.box_sizing_key != null) {
-                                var sz = toClientKey(e.data.box_sizing_key);
-                                var mod = 2 * kSelectionBoxPadding;
-                                frame.width(Math.abs(keyToX(sz) - x) + kCardWidth + mod);
-                                frame.height(Math.abs(keyToY(sz) - y) + kCardHeight + mod);
-                            } else {
-                                frame.width(e.data.width - 3);
-                                frame.height(e.data.height - 3);
-                            }
-                            log("stackheight: " + stack_height);
-                            frame.css("left", x + stack_height);
-                            frame.css("top", y + stack_height);
-                            if (flipName) {
-                                frame.addClass("flipName");
-                            } else {
-                                frame.removeClass("flipName");
-                            }
-                            frame.show();
-                        }
+                        handleFrameUpdateBroadcast(e);
                         break;
                 }
-                log("Recv broadcast: " + JSON.stringify(e));
             },
             _default: function(e) {
                 log("Unknown response: " + JSON.stringify(e));
@@ -1505,6 +1581,15 @@ $(document).ready(function() {
                 hideSelectionBox();
                 return;
             }
+            if (selectedSet.hasClass("inHand")) {
+                containmentHint = null;
+            } else {
+                containmentHint = $.map(selectedSet, function(t) {
+                    return [[$(t).hasClass("rotated"),
+                            toCanonicalKey($(t).data("dest_key")),
+                            heightOf($(t).data("stack_index"))]];
+                });
+            }
             var xVals = selectedSet.map(function(i) {
                 return $(this).offset().left;
             });
@@ -1536,7 +1621,7 @@ $(document).ready(function() {
             boxAndArea.css("height", maxY - minY + kSelectionBoxPadding * 2);
             boxAndArea.show();
             $("#selectionbox span").text(selectedSet.length + " cards");
-            updateFocus($("#selectionbox"), false, true);
+            updateFocus($("#selectionbox"), true);
         },
         selecting: function(event, ui) {
             var elem = $(ui.selecting);
@@ -1567,18 +1652,14 @@ $(document).ready(function() {
             deferDeactivateHand();
             handleSelectionMovedToHand(selectedSet);
         } else {
-            var outer = $("#arena");
-            var offset = box.offset();
-            var orig_offset = $("#selectionarea").offset();
-            var x = Math.max(0, offset.left);
-            var y = Math.max(0, offset.top);
-            x = Math.min(x, outer.width() - box.width());
-            y = Math.min(y, outer.height() - box.height());
+            var delta = selectionBoxOffset();
+            var x = delta[0];
+            var y = delta[1];
+            var dx = delta[2];
+            var dy = delta[3];
             if (selectedSet.hasClass("inHand")) {
                 handleSelectionMovedFromHand(selectedSet, x, y);
             } else {
-                var dx = x - offset.left;
-                var dy = y - offset.top;
                 if (dx == 0 && dy == 0) {
                     handleSelectionClicked(selectedSet);
                 } else {
@@ -1638,12 +1719,12 @@ $(document).ready(function() {
         }
     });
 
-    if (window.innerHeight < 1200) {
+    if (window.innerHeight < kMinSupportedHeight) {
         $("#warning").show();
     }
 
     $(window).resize(function() {
-        if (window.innerHeight < 1200) {
+        if (window.innerHeight < kMinSupportedHeight) {
             $("#warning").show();
         } else {
             $("#warning").hide();
@@ -1652,6 +1733,7 @@ $(document).ready(function() {
         redrawBoard();
     });
 
+    redrawDivider();
     setTimeout(tryConnect, 1000);
     setTimeout(tryConnect, 2000);
     setTimeout(tryConnect, 5000);

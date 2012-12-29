@@ -105,6 +105,24 @@
             margin-bottom: 80px;
         }
 
+        .flipped {
+            transform: rotate(180deg);
+            -moz-transform: rotate(180deg);
+            -ms-transform: rotate(180deg);
+            -o-transform: rotate(180deg);
+            -webkit-transform: rotate(180deg);
+        }
+
+        .rotated.flipped {
+            margin-top: 25px;
+            margin-left: -10px;
+            transform: rotate(-90deg) translate(20%, 14%);
+            -moz-transform: rotate(-90deg) translate(20%, 14%);
+            -ms-transform: rotate(-90deg) translate(20%, 14%);
+            -o-transform: rotate(-90deg) translate(20%, 14%);
+            -webkit-transform: rotate(-90deg) translate(20%, 14%);
+        }
+
         .rotated {
             margin-top: 25px;
             margin-left: -10px;
@@ -153,13 +171,13 @@
             bottom: 75%;
             border: 8px solid black;
             position: absolute;
-            z-index: 99900000 !important;
+            z-index: 90000000 !important;
             display: none;
             background-color: black;
         }
 
         .hovermenu img {
-            z-index: 99900009 !important;
+            z-index: 90000005 !important;
         }
 
         .disabled {
@@ -237,13 +255,32 @@
         }
 
         .uuid_frame span {
+            position: absolute;
+            padding: 4px 4px 0px 0px;
             background-color: orange;
-            padding-right: 2px;
-            padding-bottom: 2px;
             border-radius: 2px;
             color: white;
-            margin-top: -2px !important;
-            margin-left: -1px;
+        }
+
+        .flipName span {
+            padding: 4px 4px 0px 0px !important;
+            bottom: -2px !important;
+            right: 0px !important;
+            transform: rotate(180deg);
+            -moz-transform: rotate(180deg);
+            -ms-transform: rotate(180deg);
+            -o-transform: rotate(180deg);
+            -webkit-transform: rotate(180deg);
+        }
+
+        #divider {
+            position: absolute;
+            border-top: 1px solid #333;
+            left: 4%;
+            width: 90%;
+            height: 0px;
+            padding: 0;
+            margin: 10px;
         }
     </style>
   </head>
@@ -256,11 +293,12 @@
         <button id="reset">Reset Game</button>
     </div>
     <div id="spinner" style="font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding: 12px; background-color: #FFFBDF; font-size: 25pt;">Loading...</div>
-    <div id="warning" style="font-family: sans-serif; color: white; float: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; z-index: 2; padding: 12px; background-color: orange; font-size: 25pt; display: none;">Your screen height is too small. Consider zooming out.</div>
+    <div id="warning" style="font-family: sans-serif; color: white; float: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; z-index: 90000010 !important; padding: 12px; background-color: orange; font-size: 25pt; display: none;">Your screen height is too small. Consider zooming out.</div>
     <div id="selectionbox"><span></span></div>
     <div id="selectionarea"></div>
     <div id="hand" class="collapsed"></div>
   </div>
+  <div id="divider"></div>
   </body>
 </html>
 
