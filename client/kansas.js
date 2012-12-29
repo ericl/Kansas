@@ -13,7 +13,7 @@
  * which again will be received by other clients in a globally consistent order.
  */
 
-// TODO consider queueing up z-order changes until dragging is finished
+// TODO consider changing images / reusing nodes to impl fast z-index changes
 // TODO "compress" the opponent's side so that you can have more vertical space
 // TODO have decks on opponent's side stack the opposite direction?
 // TODO make it so that two "untaps" or "taps" don't result in a no-op
@@ -1272,8 +1272,6 @@ $(document).ready(function() {
             $("#hand").removeClass("dragging");
             dragging = false;
             removeFocus();
-            card.zIndex(kDraggingZIndex);
-            log(JSON.stringify(card.offset()));
             var cardId = parseInt(card.prop("id").substr(5));
             var orient = card.data("orient");
             if (card.hasClass("inHand")) {
