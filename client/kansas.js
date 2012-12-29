@@ -13,23 +13,28 @@
  * which again will be received by other clients in a globally consistent order.
  */
 
+// High prio, perf:
 // TODO consider changing images / reusing nodes to impl fast z-index changes
+// TODO investigate patching jquery ui to speed up selects (reuse the helper?)
+// TODO send moves in bulk requests when possible
+
+// High prio, ui:
+// TODO better stack rendering, so that cards in 2/3/4 stacks are easily seen
+// TODO make it so that two "untaps" or "taps" don't result in a no-op
+// TODO make sure that toCanonicalKey and toClientKey implement a bijection
+
+// Low prio, ui:
 // TODO "compress" the opponent's side so that you can have more vertical space
 // TODO have decks on opponent's side stack the opposite direction?
-// TODO make it so that two "untaps" or "taps" don't result in a no-op
 // TODO bind frames to cards so that when cards move the frame still is correct
 // TODO allow dragging to other users hands + browsing hands as a selection
 // TODO implement creating/destroying cards on the board
 // TODO garbage collect frames / unfade cards after a period of no activity
-// TODO better stack rendering, so that cards in 2/3/4 stacks are easily seen
 // TODO allow hand sorting, or autosorting by some property
 // TODO some way of choosing user id and game id
-// TODO different colors for different user frames & orient names correctly
-// TODO send moves in bulk requests when possible
+// TODO different colors for different user frames
 // TODO save games in localstorage
-// TODO investigate patching jquery ui to speed up selects (reuse the helper?)
 // TODO investigate using phonegap - can have back button close hovermenu?
-// TODO make sure that toCanonicalKey and toClientKey implement a bijection
 
 // Default settings for websocket connection.
 var kWSPort = 8080
