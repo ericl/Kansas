@@ -1396,7 +1396,12 @@ function computeContainmentHint(selectedSet, bb) {
     }
     var containmentHint = selectedSet.map(function(t) {
         var card = $(this);
-        if (stackDepthCache[card.data("dest_key")] > 1) {
+        var loc = card.data("dest_key");
+        if (has[loc]) {
+            return [];
+        }
+        has[loc] = true;
+        if (stackDepthCache[loc] > 1) {
             /* Includes top and bottom of each stack in selection. */
             var ext = extremes(stackOf(card));
             var result = [];
@@ -1925,7 +1930,7 @@ $(document).ready(function() {
 
     $("#selectionbox").draggable({
         /* Manual containment is used, since we manually resize the box. */
-        delay: 300,
+        distance: 50,
     });
 
     $("#selectionbox").mouseup(function(event) {
