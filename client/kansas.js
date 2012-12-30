@@ -892,23 +892,27 @@ function changeOrient(card, orient) {
 /* Rotates card to 90deg. */
 function rotateCard(card) {
     var orient = getOrient(card);
-    changeOrient(card, Math.abs(orient) / orient * 2);
-    $(".hovermenu")
-        .children("img")
-        .height(kCardHeight * kHoverTapRatio)
-        .width(kCardWidth * kHoverTapRatio)
-        .addClass("hoverRotate");
+    if (Math.abs(orient) == 1) {
+        changeOrient(card, Math.abs(orient) / orient * 2);
+        $(".hovermenu")
+            .children("img")
+            .height(kCardHeight * kHoverTapRatio)
+            .width(kCardWidth * kHoverTapRatio)
+            .addClass("hoverRotate");
+    }
 }
 
 /* Rotates card to 0deg. */
 function unrotateCard(card) {
     var orient = getOrient(card);
-    changeOrient(card, Math.abs(orient) / orient);
-    $(".hovermenu")
-        .children("img")
-        .removeClass("hoverRotate")
-        .height(kCardHeight * kHoverCardRatio)
-        .width(kCardWidth * kHoverCardRatio);
+    if (Math.abs(orient) != 1) {
+        changeOrient(card, Math.abs(orient) / orient);
+        $(".hovermenu")
+            .children("img")
+            .removeClass("hoverRotate")
+            .height(kCardHeight * kHoverCardRatio)
+            .width(kCardWidth * kHoverCardRatio);
+    }
 }
 
 /* Shows back of card. */
@@ -1118,6 +1122,9 @@ function menuForSelection(selectedSet) {
     var width = kCardWidth * kHoverCardRatio;
 
     var html = ('<div class="hovermenu">'
+        + '<img class="blueglow" style="height: '
+        + height + 'px; width: ' + width + 'px;"'
+        + '></img>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
         + '<span class="header" style="margin-left: -190px">&nbsp;SELECTION</span>"'
         + cardContextMenu
@@ -1662,7 +1669,7 @@ $(document).ready(function() {
             });
         },
         close: function() {
-            warning("Connection Error.");
+            warning("Connection Error");
             disconnected = true;
             connected = false;
             hideSpinner();

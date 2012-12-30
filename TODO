@@ -7,7 +7,6 @@ High prio, ui:
 * make sure that toCanonicalKey and toClientKey implement a bijection
 * better stack rendering, so that cards in 2/3/4 stacks are easily seen
 * enforce stack height consistency in source and destination
-* implement hover menu for selections
 
 Low prio, ui:
 * "compress" the opponent's side so that you can have more vertical space
