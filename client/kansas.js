@@ -809,31 +809,26 @@ function changeOrient(card, orient) {
                             dest_orient: orient}});
 }
 
-/* Toggles and broadcasts card rotation. */
+/* Rotates card to 90deg. */
 function rotateCard(card) {
     var orient = getOrient(card);
-    if (Math.abs(orient) == 1) {
-        orient *= 2;
-    } else if (Math.abs(orient) == 2) {
-        orient /= 2;
-    } else {
-        log("Card is not in supported orientation: at " + orient);
-        return;
-    }
-    changeOrient(card, orient);
-    if (Math.abs(orient) > 1) {
-        $(".hovermenu")
-            .children("img")
-            .height(kCardHeight * kHoverTapRatio)
-            .width(kCardWidth * kHoverTapRatio)
-            .addClass("hoverRotate");
-    } else {
-        $(".hovermenu")
-            .children("img")
-            .removeClass("hoverRotate")
-            .height(kCardHeight * kHoverCardRatio)
-            .width(kCardWidth * kHoverCardRatio);
-    }
+    changeOrient(card, Math.abs(orient) / orient * 2);
+    $(".hovermenu")
+        .children("img")
+        .height(kCardHeight * kHoverTapRatio)
+        .width(kCardWidth * kHoverTapRatio)
+        .addClass("hoverRotate");
+}
+
+/* Rotates card to 0deg. */
+function unrotateCard(card) {
+    var orient = getOrient(card);
+    changeOrient(card, Math.abs(orient) / orient);
+    $(".hovermenu")
+        .children("img")
+        .removeClass("hoverRotate")
+        .height(kCardHeight * kHoverCardRatio)
+        .width(kCardWidth * kHoverCardRatio);
 }
 
 /* Toggles and broadcasts card face up/down. */
@@ -940,13 +935,16 @@ function showHoverMenu(card) {
     var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
     var src = toResource(url);
     var flipStr = getOrient(card) > 0 ? "Cover" : "Reveal";
-    var tapStr = card.hasClass("rotated") ? "Untap" : "Tap";
     var imgCls = '';
     if (card.hasClass("rotated")) {
+        var tapFn =  '<li style="margin-left: -190px" class="boardonly"'
+            + ' data-key="unrotate">Untap</li>'
         var height = kCardHeight * kHoverTapRatio;
         var width = kCardWidth * kHoverTapRatio;
         imgCls = "hoverRotate";
     } else {
+        var tapFn =  '<li style="margin-left: -190px" class="boardonly"'
+            + ' data-key="rotate">Tap</li>'
         var height = kCardHeight * kHoverCardRatio;
         var width = kCardWidth * kHoverCardRatio;
     }
@@ -954,8 +952,7 @@ function showHoverMenu(card) {
     var cardContextMenu = (''
         + '<li class="top" style="margin-left: -190px"'
         + ' data-key=flip>' + flipStr + '</li>'
-        + '<li style="margin-left: -190px"'
-        + ' class="boardonly" data-key="rotate">' + tapStr
+        + tapFn
         + '<li style="margin-left: -190px"'
         + ' class="bottom nobulk peek boardonly" data-key="peek">Peek'
         + '</li>');
@@ -1629,6 +1626,7 @@ $(document).ready(function() {
         var eventTable = {
             'flip': flipCard,
             'rotate': rotateCard,
+            'unrotate': unrotateCard,
             'flipstack': flipStack,
             'shufstack': shuffleStack,
             'shufstackconfirm': shuffleStackConfirm,

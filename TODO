@@ -4,7 +4,6 @@ High prio, perf:
 * send moves in bulk requests when possible
 
 High prio, ui:
-* make it so that two "untaps" or "taps" don't result in a no-op
 * make sure that toCanonicalKey and toClientKey implement a bijection
 * better stack rendering, so that cards in 2/3/4 stacks are easily seen
 * enforce stack height consistency in source and destination
