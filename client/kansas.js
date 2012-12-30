@@ -386,7 +386,7 @@ function log(msg, force) {
 /* Logs warning to debug console */
 function warning(msg) {
     log(msg, true);
-    alert("W: " + msg);
+    $("#error").text(msg).show();
 }
 
 /**
@@ -882,11 +882,22 @@ function unrotateCard(card) {
         .width(kCardWidth * kHoverCardRatio);
 }
 
-/* Toggles and broadcasts card face up/down. */
+/* Shows back of card. */
 function flipCard(card) {
-    changeOrient(card, -getOrient(card));
-    var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
-    $(".hovermenu").children("img").prop("src", url);
+    var orient = getOrient(card);
+    if (orient > 0) {
+        changeOrient(card, -getOrient(card));
+        $(".hovermenu").children("img").prop("src", card.data("back"));
+    }
+}
+
+/* Shows front of card. */
+function unflipCard(card) {
+    var orient = getOrient(card);
+    if (orient < 0) {
+        changeOrient(card, -getOrient(card));
+        $(".hovermenu").children("img").prop("src", card.data("front_full"));
+    }
 }
 
 /* Moves card to top of stack. */
@@ -981,7 +992,7 @@ function showHoverMenu(card) {
     var oldimg = $(".hovermenu img");
     if (card.length > 1) {
         var newNode = menuForSelection(card);
-        hoverCardId = "#selectedbox";
+        hoverCardId = "#selectionbox";
     } else {
         var newNode = menuForCard(card);
         hoverCardId = card.prop("id");
@@ -1011,9 +1022,6 @@ function menuForSelection(selectedSet) {
     log("Hover menu for selection of size " + selectedSet.length);
     hoverCardId = "#selectionbox";
 
-    var url = $(selectedSet[0]).data("back");
-    var src = toResource(url);
-
     var cardContextMenu = (''
         + '<li class="top boardonly" style="margin-left: -190px"'
         + ' data-key="rotate">Tap All</li>'
@@ -1035,9 +1043,6 @@ function menuForSelection(selectedSet) {
     var width = kCardWidth * kHoverCardRatio;
 
     var html = ('<div class="hovermenu">'
-        + '<img style="height: '
-        + height + 'px; width: ' + width + 'px;"'
-        + ' src="' + src + '"></img>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
         + '<span class="header" style="margin-left: -190px">&nbsp;SELECTION</span>"'
         + cardContextMenu
@@ -1059,8 +1064,6 @@ function menuForCard(card) {
     var i = numCards - parseInt(card.data("stack_index"));
     var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
     var src = toResource(url);
-    // TODO make flipstsr idempotent
-    var flipStr = getOrient(card) > 0 ? "Cover" : "Reveal";
     var imgCls = '';
     if (card.hasClass("rotated")) {
         var tapFn =  '<li style="margin-left: -190px" class="boardonly"'
@@ -1075,10 +1078,15 @@ function menuForCard(card) {
         var width = kCardWidth * kHoverCardRatio;
     }
 
-    var cardContextMenu = (''
-        + '<li class="top" style="margin-left: -190px"'
-        + ' data-key=flip>' + flipStr + '</li>'
-        + tapFn
+    if (getOrient(card) > 0) {
+        var flipFn = '<li class="top" style="margin-left: -190px"'
+            + ' data-key=flip>Cover</li>';
+    } else {
+        var flipFn = '<li class="top" style="margin-left: -190px"'
+            + ' data-key=unflip>Reveal</li>';
+    }
+
+    var cardContextMenu = (flipFn + tapFn
         + '<li style="margin-left: -190px"'
         + ' class="bottom nobulk peek boardonly" data-key="peek">Peek'
         + '</li>');
@@ -1380,6 +1388,7 @@ $(document).ready(function() {
     document.addEventListener("touchcancel", touchHandler, true);
     document.addEventListener("touchleave", touchHandler, true);
     var connected = false;
+    showSpinner();
 
     function initCards() {
         $(".card").disableSelection();
@@ -1578,8 +1587,13 @@ $(document).ready(function() {
     }
 
     ws = $.websocket("ws:///" + hostname + ":" + kWSPort + "/kansas", {
-        open: function() { warning("Websocket open (?)"); },
-        close: function() { warning("Websocket closed (?)"); },
+        open: function() {
+            ws.send("connect", {
+                user: user,
+                gameid: gameid,
+            });
+        },
+        close: function() { warning("Disconnected."); },
         events: {
             connect_resp: function(e) {
                 connected = true;
@@ -1710,16 +1724,6 @@ $(document).ready(function() {
         },
     });
 
-    function tryConnect() {
-        if (!connected) {
-            showSpinner();
-            ws.send("connect", {
-                user: user,
-                gameid: gameid,
-            });
-        }
-    }
-
     $("#sync").mouseup(function(e) {
         showSpinner();
         ws.send("resync");
@@ -1798,6 +1802,7 @@ $(document).ready(function() {
         disableArenaEvents = true;
         var eventTable = {
             'flip': flipCard,
+            'unflip': unflipCard,
             'rotate': rotateCard,
             'unrotate': unrotateCard,
             'flipstack': flipStack,
@@ -1869,7 +1874,11 @@ $(document).ready(function() {
             var dx = delta[2];
             var dy = delta[3];
             if (selectedSet.hasClass("inHand")) {
-                handleSelectionMovedFromHand(selectedSet, x, y);
+                if (dragging) {
+                    handleSelectionMovedFromHand(selectedSet, x, y);
+                } else {
+                    handleSelectionClicked(selectedSet);
+                }
             } else {
                 if (dx == 0 && dy == 0) {
                     handleSelectionClicked(selectedSet);
@@ -1931,23 +1940,20 @@ $(document).ready(function() {
     });
 
     if (window.innerHeight < kMinSupportedHeight) {
-        $("#warning").show();
+        $("#screenSizeWarning").show();
     }
 
     $(window).resize(function() {
         if (window.innerHeight < kMinSupportedHeight) {
-            $("#warning").show();
+            $("#screenSizeWarning").show();
         } else {
-            $("#warning").hide();
+            $("#screenSizeWarning").hide();
         }
         redrawHand();
         redrawBoard();
     });
 
     redrawDivider();
-    setTimeout(tryConnect, 1000);
-    setTimeout(tryConnect, 2000);
-    setTimeout(tryConnect, 5000);
 });
 
 // vim: et sw=4

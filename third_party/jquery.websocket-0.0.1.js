@@ -21,6 +21,7 @@ $.extend({
 			send: function(m){ return false },
 			close: function(){}
 		};
+		ws._settings = $.extend($.websocketSettings, s);
 		$(ws)
 			.bind('open', $.websocketSettings.open)
 			.bind('close', $.websocketSettings.close)
@@ -34,7 +35,6 @@ $.extend({
                 else if (def)
                     def.call(this, m)
 			});
-		ws._settings = $.extend($.websocketSettings, s);
 		ws._send = ws.send;
 		ws.send = function(type, data) {
 			var m = {type: type};
