@@ -260,11 +260,12 @@ function handleSelectionMoved(selectedSet, dx, dy) {
 }
 
 function handleSelectionClicked(selectedSet) {
-    // TODO render hovermenu with the following features:
-    // browse and bring to front a card
-    // collapse selection into a single stack
-    // tap / untap all
-    warning("NOTIMPLEMENTED");
+    if (hoverCardId != "#selectionbox") {
+        disableArenaEvents = true;
+        showHoverMenu(selectedSet);
+    } else {
+        removeFocus();
+    }
 }
 
 function handleSelectionMovedFromHand(selectedSet, x, y) {
@@ -976,14 +977,89 @@ function removeHoverMenu(doAnimation) {
  * along with controls for the stack.
  */
 function showHoverMenu(card) {
-    hoverCardId = card.prop("id");
-    log("Hover menu for #" + hoverCardId + "@" + card.data("dest_key"));
     var old = $(".hovermenu");
     var oldimg = $(".hovermenu img");
-    var numCards = stackHeightCache[card.data("dest_key")];
+    if (card.length > 1) {
+        var newNode = menuForSelection(card);
+        hoverCardId = "#selectedbox";
+    } else {
+        var newNode = menuForCard(card);
+        hoverCardId = card.prop("id");
+    }
+
+    var newImg = newNode.children("img");
+    newNode.width(805);
+    newNode.height(kCardHeight * kHoverCardRatio);
+    newNode.css("margin-left", - ($(".hovermenu").outerWidth() / 2));
+    newNode.css("margin-top", - ($(".hovermenu").outerHeight() / 2));
+    if (old.filter(':visible').length > 0) {
+        if (oldimg.prop("src") == newImg.prop("src")) {
+            oldimg.fadeOut();
+        }
+        newNode.fadeIn();
+    } else {
+        newNode.show();
+    }
+    if (newNode.offset().top < 0) {
+        newNode.css("margin-top", 0);
+        newNode.css("top", 0);
+    }
+    setTimeout(function() { old.remove(); }, 1200);
+}
+
+function menuForSelection(selectedSet) {
+    log("Hover menu for selection of size " + selectedSet.length);
+    hoverCardId = "#selectionbox";
+
+    var url = $(selectedSet[0]).data("back");
+    var src = toResource(url);
+
+    var cardContextMenu = (''
+        + '<li class="top boardonly" style="margin-left: -190px"'
+        + ' data-key="rotate">Tap All</li>'
+        + '<li style="margin-left: -190px"'
+        + ' class="boardonly" data-key="unrotate">Untap All'
+        + '</li>'
+        + '<li style="margin-left: -190px"'
+        + ' class="boardonly" data-key="unrotate">Cover All'
+        + '</li>'
+        + '<li style="margin-left: -190px"'
+        + ' class="boardonly" data-key="unrotate">Reveal All'
+        + '</li>'
+        + '<li style="margin-left: -190px"'
+        + ' class="bottom boardonly" data-key="shufstackconfirm">Shuffle'
+        + '</li>'
+        );
+
+    var height = kCardHeight * kHoverCardRatio;
+    var width = kCardWidth * kHoverCardRatio;
+
+    var html = ('<div class="hovermenu">'
+        + '<img style="height: '
+        + height + 'px; width: ' + width + 'px;"'
+        + ' src="' + src + '"></img>'
+        + '<ul class="hovermenu" style="float: right; width: 50px;">'
+        + '<span class="header" style="margin-left: -190px">&nbsp;SELECTION</span>"'
+        + cardContextMenu
+        + '</ul>'
+        + '<div class="hovernote"><span>' + selectedSet.length
+        + ' cards selected</span></div>'
+        + '</div>');
+
+    var newNode = $(html).appendTo("body");
+    if (selectedSet.hasClass("inHand")) {
+        $(".boardonly").addClass("disabled");
+    }
+    return newNode;
+}
+
+function menuForCard(card) {
+    log("Hover menu for #" + hoverCardId + "@" + card.data("dest_key"));
+    var numCards = stackDepthCache[card.data("dest_key")];
     var i = numCards - parseInt(card.data("stack_index"));
     var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
     var src = toResource(url);
+    // TODO make flipstsr idempotent
     var flipStr = getOrient(card) > 0 ? "Cover" : "Reveal";
     var imgCls = '';
     if (card.hasClass("rotated")) {
@@ -1046,24 +1122,7 @@ function showHoverMenu(card) {
     if (getOrient(card) > 0 || card.hasClass("flipped")) {
         $(".peek").addClass("disabled");
     }
-    var newImg = newNode.children("img");
-    newNode.width(805);
-    newNode.height(kCardHeight * kHoverCardRatio);
-    newNode.css("margin-left", - ($(".hovermenu").outerWidth() / 2));
-    newNode.css("margin-top", - ($(".hovermenu").outerHeight() / 2));
-    if (old.filter(':visible').length > 0) {
-        if (oldimg.prop("src") == newImg.prop("src")) {
-            oldimg.fadeOut();
-        }
-        newNode.fadeIn();
-    } else {
-        newNode.show();
-    }
-    if (newNode.offset().top < 0) {
-        newNode.css("margin-top", 0);
-        newNode.css("top", 0);
-    }
-    setTimeout(function() { old.remove(); }, 1200);
+    return newNode;
 }
 
 /* Moves a card offscreen - used for hiding hands of other players. */
@@ -1244,7 +1303,6 @@ function createSelection(items) {
             if (has[card.prop("id")] !== undefined) {
                 return [];
             }
-            log("has: " + card.prop("id"));
             has[card.prop("id")] = true;
             return [[card.hasClass("rotated"),
                      toCanonicalKey(card.data("dest_key")),
