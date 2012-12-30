@@ -5,11 +5,17 @@ High prio, perf & ui:
 
 High prio, perf:
 * send moves in bulk requests when possible
+* stacks should skew in the other direction on the other side of the board
 * replace autoRefresh in selectable
 * implement fast z-changes using a node pool
 
 High prio, ui:
+* disable zooming!
+* get rid of "turn over", add a "move" option to STACK menu
+* move card menu below stack menu - so that peek is aligned with deck
+* auto show hovermenu on select - and have a "move" option
 * make sure that toClientKey(toCanonicalKey(x)) == x for all x
+* when crossing the midpoint, keep old orientation until completely crossed over
 
 Low prio, ui:
 * "compress" the opponent's side so that you can have more vertical space
