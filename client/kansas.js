@@ -21,6 +21,8 @@ var uuid = "p_" + Math.random().toString().substring(5);
 var user = window.location.hash || "#alice";
 var ws = null;
 var loggingEnabled = false;
+var connected = false;
+var disconnected = false;
 var gameReady = false;
 document.title = user + '@' + gameid;
 
@@ -341,14 +343,14 @@ function _reallyDeactivateHand() {
 /* Shows the "Loading..." spinner. */
 var spinnerShowQueued = false;
 function showSpinner() {
-    if (!spinnerShowQueued) {
+    if (!spinnerShowQueued && !disconnected) {
         spinnerShowQueued = true;
         setTimeout(_reallyShowSpinner, 500);
     }
 }
 
 function _reallyShowSpinner() {
-    if (spinnerShowQueued) {
+    if (spinnerShowQueued && !disconnected) {
         $("#spinner").show();
         spinnerShowQueued = false;
     }
@@ -1387,7 +1389,6 @@ $(document).ready(function() {
     document.addEventListener("touchend", touchHandler, true);
     document.addEventListener("touchcancel", touchHandler, true);
     document.addEventListener("touchleave", touchHandler, true);
-    var connected = false;
     showSpinner();
 
     function initCards() {
@@ -1593,7 +1594,12 @@ $(document).ready(function() {
                 gameid: gameid,
             });
         },
-        close: function() { warning("Disconnected."); },
+        close: function() {
+            warning("Connection Error.");
+            disconnected = true;
+            connected = false;
+            hideSpinner();
+        },
         events: {
             connect_resp: function(e) {
                 connected = true;
