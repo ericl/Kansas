@@ -262,17 +262,31 @@ function handleFrameUpdateBroadcast(e) {
 
 function handleSelectionMoved(selectedSet, dx, dy) {
     showSpinner();
-    selectedSet.each(function(i) {
-        var card = $(this);
-        var cardId = parseInt(card.prop("id").substr(5));
-        var dest = card.data("dest_key");
-        var key = keyFromCoords(keyToX(dest) + dx, keyToY(dest) + dy);
-        ws.send("move", {move: {card: cardId,
-                                dest_prev_type: "board",
-                                dest_type: "board",
-                                dest_key: toCanonicalKey(key),
-                                dest_orient: getOrient(card)}});
-    });
+    var snap = findSnapPoint($("#selectionbox"));
+    if (snap != null) {
+        var dest_key = toCanonicalKey(parseInt(snap.data("dest_key")));
+        selectedSet.each(function(i) {
+            var card = $(this);
+            var cardId = parseInt(card.prop("id").substr(5));
+            ws.send("move", {move: {card: cardId,
+                                    dest_prev_type: "board",
+                                    dest_type: "board",
+                                    dest_key: dest_key,
+                                    dest_orient: getOrient(card)}});
+        });
+    } else {
+        selectedSet.each(function(i) {
+            var card = $(this);
+            var cardId = parseInt(card.prop("id").substr(5));
+            var dest = card.data("dest_key");
+            var key = keyFromCoords(keyToX(dest) + dx, keyToY(dest) + dy);
+            ws.send("move", {move: {card: cardId,
+                                    dest_prev_type: "board",
+                                    dest_type: "board",
+                                    dest_key: toCanonicalKey(key),
+                                    dest_orient: getOrient(card)}});
+        });
+    }
 }
 
 function handleSelectionClicked(selectedSet) {
@@ -410,6 +424,7 @@ function warning(msg) {
  * http://stackoverflow.com/questions/5186441/javascript-drag-and-drop-for-touch-devices
  */
 function touchHandler(event) {
+    event.preventDefault();
     var touches = event.changedTouches,
     first = touches[0],
     type = "";
@@ -429,7 +444,6 @@ function touchHandler(event) {
                                   false, false, false, 0, null);
 
     first.target.dispatchEvent(simulatedEvent);
-    event.preventDefault();
 }
 
 /**
@@ -694,9 +708,10 @@ function findSnapPoint(target) {
 /* Flips cards that are on the other side of the board. */
 function updateCardFlipState(card, newY) {
     var y = (newY !== undefined) ? newY : card.offset().top
-    if (y + card.height() < $("#divider").offset().top) {
+    var div = $("#divider").offset().top;
+    if (y + card.height() < div) {
         card.addClass("flipped");
-    } else {
+    } else if (y > div) {
         card.removeClass("flipped");
     }
 }
@@ -790,7 +805,7 @@ function updateFocus(target, noSnap) {
                 heightOf(stackDepthCache[snap.data("dest_key")])]];
         }
     } else if (snap != null) {
-        log("Rendering selection snapped to stack");
+        log("Rendering selection snapped to stack @ " + snap.data("dest_key"));
         sizingInfo = [[
             snap.hasClass("rotated"),
             toCanonicalKey(snap.data("dest_key")),
@@ -1023,6 +1038,13 @@ function shuffleSelection() {
     });
 }
 
+/* Goes from a single card to selecting the entire stack. */
+function cardToSelection(memberCard) {
+    createSelection(stackOf(memberCard).addClass("highlight"));
+    $("#selectionbox span").css("opacity", 1);
+    return "keepselection";
+}
+
 function forSelected(fn) {
     return function() {
         selectedSet.each(function() {
@@ -1045,6 +1067,11 @@ var eventTable = {
     'shufsel': shuffleSelection,
     'shufselconfirm': shuffleSelectionConfirm,
     'peek': peekCard,
+    'move': cardToSelection,
+    'trivialmove': function() {
+        $("#selectionbox span").css("opacity", 1);
+         return "keepselection";
+    },
 }
 
 /* Garbage collects older hovermenu image. */
@@ -1101,16 +1128,19 @@ function menuForSelection(selectedSet) {
     hoverCardId = "#selectionbox";
 
     var cardContextMenu = (''
-        + '<li class="tapall top boardonly" style="margin-left: -190px"'
+        + '<li style="margin-left: -190px"'
+        + ' class="bulk top"'
+        + ' data-key="trivialmove">Move</li>'
+        + '<li class="tapall boardonly" style="margin-left: -190px"'
         + ' data-key="rotateall">Tap All</li>'
         + '<li style="margin-left: -190px"'
         + ' class="untapall boardonly" data-key="unrotateall">Untap All'
         + '</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="flipall" data-key="flipall">Flip All'
+        + ' class="unflipall" data-key="unflipall">Reveal All'
         + '</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="unflipall" data-key="unflipall">Reveal All'
+        + ' class="flipall" data-key="flipall">Hide All'
         + '</li>'
         + '<li style="margin-left: -190px"'
         + ' class="bottom boardonly shufselconfirm"'
@@ -1168,6 +1198,13 @@ function menuForSelection(selectedSet) {
     if (selectedSet.hasClass("inHand")) {
         $(".boardonly").addClass("disabled");
     }
+    if (!allUntapped) {
+        newNode
+            .children("img")
+            .height(kCardHeight * kHoverTapRatio)
+            .width(kCardWidth * kHoverTapRatio)
+            .addClass("hoverRotate");
+    }
     return newNode;
 }
 
@@ -1192,7 +1229,7 @@ function menuForCard(card) {
 
     if (getOrient(card) > 0) {
         var flipFn = '<li class="top" style="margin-left: -190px"'
-            + ' data-key=flip>Flip</li>';
+            + ' data-key=flip>Hide</li>';
     } else {
         var flipFn = '<li class="top" style="margin-left: -190px"'
             + ' data-key=unflip>Reveal</li>';
@@ -1208,15 +1245,16 @@ function menuForCard(card) {
         + height + 'px; width: ' + width + 'px;"'
         + ' src="' + src + '"></img>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
-        + '<span class="header" style="margin-left: -190px">&nbsp;CARD</span>"'
-        + cardContextMenu
         + '<span class="header" style="margin-left: -190px">&nbsp;STACK</span>"'
         + '<li style="margin-left: -190px" class="stackprev top boardonly bulk"'
-        + '<li style="margin-left: -190px" class="top boardonly bulk"'
-        + ' data-key="flipstack">Turn Over</li>'
+        + '<li style="margin-left: -190px"'
+        + ' class="top bulk boardonly"'
+        + ' data-key="move">Move</li>'
         + '<li style="margin-left: -190px"'
         + ' class="bottom boardonly bulk"'
-        + ' data-key="reversestack">Reverse</li>'
+        + ' data-key="reversestack">Invert</li>'
+        + '<span class="header" style="margin-left: -190px">&nbsp;CARD</span>"'
+        + cardContextMenu
         + '</ul>'
         + '<div class="hovernote"><span>Card ' + i + ' of ' + numCards + '</span></div>'
         + '</div>');
@@ -1366,7 +1404,7 @@ function animateToKey(card, key) {
             top: newY + (yChanged ? 0 : XXX_jitter),
             opacity: 1.0,
             avoidTransforms: card.hasClass("rotated") || card.hasClass("flipped"),
-        }, 'fast');
+        }, animationLength);
     } else {
         log("avoided animation");
     }
@@ -1468,12 +1506,16 @@ function computeContainmentHint(selectedSet, bb) {
 }
 
 /* Draws selection box about items. */
-function createSelection(items) {
+function createSelection(items, popupMenu) {
     selectedSet = items;
     if (selectedSet.length < 2) {
         updateFocus(selectedSet);
         $(".selecting").removeClass("selecting");
         hideSelectionBox();
+        if (selectedSet.length == 1) {
+            activeCard = selectedSet;
+            showHoverMenu(selectedSet);
+        }
         return;
     }
     var bb = computeBoundingBox(selectedSet);
@@ -1489,8 +1531,13 @@ function createSelection(items) {
     boxAndArea.css("width", maxX - minX + kSelectionBoxPadding * 2);
     boxAndArea.css("height", maxY - minY + kSelectionBoxPadding * 2);
     boxAndArea.show();
-    $("#selectionbox span").text(selectedSet.length + " cards");
+    $("#selectionbox span")
+        .text(selectedSet.length + " cards")
+        .css("opacity", 0);
     updateFocus($("#selectionbox"), true);
+    if (popupMenu) {
+        showHoverMenu(selectedSet);
+    }
 }
 
 $(document).ready(function() {
@@ -1705,7 +1752,7 @@ $(document).ready(function() {
             });
         },
         close: function() {
-            warning("Connection Error");
+            warning("Connection Error.");
             disconnected = true;
             connected = false;
             hideSpinner();
@@ -1925,6 +1972,9 @@ $(document).ready(function() {
             case "disablethis":
                 target.addClass("disabled");
                 break;
+            case "keepselection":
+                removeHoverMenu(true);
+                break;
             default:
                 oldButtons.addClass("disabled");
                 target.addClass("poison-source");
@@ -1940,7 +1990,7 @@ $(document).ready(function() {
             hideSelectionBox();
         },
         stop: function(event, ui) {
-            createSelection($(".selecting"));
+            createSelection($(".selecting"), true);
         },
         selecting: function(event, ui) {
             var elem = $(ui.selecting);
@@ -1993,6 +2043,8 @@ $(document).ready(function() {
     });
 
     $("#selectionbox").bind("dragstart", function(event, ui) {
+        removeHoverMenu();
+        $("#selectionbox span").css("opacity", 1);
         var box = $("#selectionbox");
         if (selectedSet.hasClass("inHand")) {
             $("#selectionarea").hide();
