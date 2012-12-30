@@ -90,7 +90,7 @@ if (user == "#alice") {
 }
 
 // Keeps mapping from key -> height
-var stackHeightCache = {};
+var stackDepthCache = {};
 
 /**
  * When cards are stacked on each other we want to provide a 3d-illusion.
@@ -130,6 +130,44 @@ function topOf(stack) {
         }
     });
     return highest;
+}
+
+/* Returns [topmost, lowermost, toprot, lowrot, topunrot, lowunrot] */
+function extremes(stack) {
+    var result = [null, null, null, null, null, null];
+    var prevZ = [0, Infinity, 0, Infinity, 0, Infinity];
+    stack.each(function(i) {
+        var t = $(this);
+        var z = $(this).zIndex();
+        if (t.hasClass("rotated")) {
+            if (z > prevZ[2]) {
+                prevZ[2] = z;
+                result[2] = t;
+            }
+            if (z < prevZ[3]) {
+                prevZ[3] = z;
+                result[3] = t;
+            }
+        } else {
+            if (z > prevZ[4]) {
+                prevZ[4] = z;
+                result[4] = t;
+            }
+            if (z < prevZ[5]) {
+                prevZ[5] = z;
+                result[5] = t;
+            }
+        }
+        if (z > prevZ[0]) {
+            prevZ[0] = z;
+            result[0] = t;
+        }
+        if (z < prevZ[1]) {
+            prevZ[1] = z;
+            result[1] = t;
+        }
+    });
+    return result;
 }
 
 /* Invoked on receipt of a drag_start broadcast. */
@@ -712,21 +750,21 @@ function updateFocus(target, noSnap) {
                 sizingInfo = [[
                     target.hasClass("rotated"),
                     toCanonicalKey(target.data("dest_key")),
-                    heightOf(stackHeightCache[target.data("dest_key")] - 1)]];
+                    heightOf(stackDepthCache[target.data("dest_key")] - 1)]];
             }
         } else {
             log("Rendering card snapping to stack");
             sizingInfo = [[
                 snap.hasClass("rotated"),
                 toCanonicalKey(snap.data("dest_key")),
-                heightOf(stackHeightCache[snap.data("dest_key")])]];
+                heightOf(stackDepthCache[snap.data("dest_key")])]];
         }
     } else if (snap != null) {
         log("Rendering selection snapped to stack");
         sizingInfo = [[
             snap.hasClass("rotated"),
             toCanonicalKey(snap.data("dest_key")),
-            heightOf(stackHeightCache[snap.data("dest_key")])]];
+            heightOf(stackDepthCache[snap.data("dest_key")])]];
     } else if (sizingInfo != null) {
         log("Rendering free-dragging selection");
         var delta = selectionBoxOffset();
@@ -991,6 +1029,7 @@ function showHoverMenu(card) {
         + '</ul>'
         + '<div class="hovernote"><span>Card ' + i + ' of ' + numCards + '</span></div>'
         + '</div>');
+
     var newNode = $(html).appendTo("body");
     if (card.hasClass("inHand")) {
         $(".boardonly").addClass("disabled");
@@ -1141,8 +1180,8 @@ function animateToKey(card, key) {
     log("animating #" + card.prop("id") + " -> " + key);
     var x = keyToX(key);
     var y = keyToY(key);
-    var newX = x + heightOf(stackHeightCache[key] - 1);
-    var newY = y + heightOf(stackHeightCache[key] - 1);
+    var newX = x + heightOf(stackDepthCache[key] - 1);
+    var newY = y + heightOf(stackDepthCache[key] - 1);
     updateCardFlipState(card, newY);
     var xChanged = parseInt(newX) != parseInt(card.css('left'));
     var yChanged = parseInt(newY) != parseInt(card.css('top'));
@@ -1169,15 +1208,6 @@ function createSelection(items) {
         hideSelectionBox();
         return;
     }
-    if (selectedSet.hasClass("inHand")) {
-        containmentHint = null;
-    } else {
-        containmentHint = $.map(selectedSet, function(t) {
-            return [[$(t).hasClass("rotated"),
-                    toCanonicalKey($(t).data("dest_key")),
-                    heightOf($(t).data("stack_index"))]];
-        });
-    }
     var xVals = selectedSet.map(function(i) {
         return $(this).offset().left;
     });
@@ -1185,23 +1215,84 @@ function createSelection(items) {
         return $(this).offset().top;
     });
     var xValsWithCard = selectedSet.map(function(i) {
-        if ($(this).hasClass("rotated")) {
-            return $(this).offset().left + kCardHeight;
+        var card = $(this);
+        if (card.hasClass("rotated")) {
+            return card.offset().left + kCardHeight;
         } else {
-            return $(this).offset().left + kCardWidth;
+            return card.offset().left + kCardWidth;
         }
     });
     var yValsWithCard = selectedSet.map(function(i) {
-        if ($(this).hasClass("rotated")) {
-            return $(this).offset().top + kCardWidth;
+        var card = $(this);
+        if (card.hasClass("rotated")) {
+            return card.offset().top + kCardWidth;
         } else {
-            return $(this).offset().top + kCardHeight;
+            return card.offset().top + kCardHeight;
         }
     });
     var maxX = Math.max.apply(Math, xValsWithCard);
     var minX = Math.min.apply(Math, xVals);
     var maxY = Math.max.apply(Math, yValsWithCard);
     var minY = Math.min.apply(Math, yVals);
+
+    if (selectedSet.hasClass("inHand")) {
+        containmentHint = null;
+    } else {
+        // Produces hint with as small size as possible.
+        var has = {};
+        function genHint(card) {
+            if (has[card.prop("id")] !== undefined) {
+                return [];
+            }
+            log("has: " + card.prop("id"));
+            has[card.prop("id")] = true;
+            return [[card.hasClass("rotated"),
+                     toCanonicalKey(card.data("dest_key")),
+                     heightOf(card.data("stack_index"))]];
+        }
+        function extend(result, option) {
+            if (option) {
+                var hint = genHint(option);
+                if (hint[0]) {
+                    result.push(hint[0]);
+                }
+            }
+        }
+        containmentHint = selectedSet.map(function(t) {
+            var card = $(this);
+            if (stackDepthCache[card.data("dest_key")] > 1) {
+                /* Includes top and bottom of each stack in selection. */
+                var ext = extremes(stackOf(card));
+                var result = [];
+                extend(result, ext[2]);
+                extend(result, ext[3]);
+                extend(result, ext[4]);
+                extend(result, ext[5]);
+                return result;
+            } else {
+                var offset = card.offset();
+                if (offset.left == minX) {
+                    return genHint(card);
+                }
+                if (offset.top == minY) {
+                    return genHint(card);
+                }
+                var rot = card.hasClass("rotated");
+                var bottom = offset.top + (rot ? kCardWidth : kCardHeight);
+                if (bottom == maxY) {
+                    return genHint(card);
+                }
+                var right = offset.left + (rot ? kCardHeight : kCardWidth);
+                if (right == maxX) {
+                    return genHint(card);
+                }
+            }
+            return [];
+        });
+        log("Containment hint size: "
+            + containmentHint.length
+            + ", total was " + selectedSet.length);
+    }
     var boxAndArea = $("#selectionbox, #selectionarea");
     boxAndArea.css("left", minX - kSelectionBoxPadding);
     boxAndArea.css("top", minY - kSelectionBoxPadding);
@@ -1376,13 +1467,13 @@ $(document).ready(function() {
         }
 
         // Recreates the board.
-        stackHeightCache = {};
+        stackDepthCache = {};
         for (canonicalKey in state.board) {
             var stack = state.board[canonicalKey];
             var pos = toClientKey(canonicalKey);
             var x = keyToX(pos);
             var y = keyToY(pos);
-            stackHeightCache[pos] = stack.length;
+            stackDepthCache[pos] = stack.length;
             for (z in stack) {
                 var cid = stack[z];
                 var card = createImageNode(state, cid, z);
@@ -1394,7 +1485,7 @@ $(document).ready(function() {
                 }, animationLength);
             }
         }
-        log("height cache: " + JSON.stringify(stackHeightCache));
+        log("height cache: " + JSON.stringify(stackDepthCache));
 
         // Recreates the hand.
         for (player in state.hands) {
@@ -1481,19 +1572,19 @@ $(document).ready(function() {
                 card.data("dest_key", clientKey);
 
                 if (e.data.old_type == "board") {
-                    stackHeightCache[oldClientKey] -= 1;
-                    if (stackHeightCache[oldClientKey] <= 0) {
-                        if (stackHeightCache[oldClientKey] < 0) {
+                    stackDepthCache[oldClientKey] -= 1;
+                    if (stackDepthCache[oldClientKey] <= 0) {
+                        if (stackDepthCache[oldClientKey] < 0) {
                             warning("Count cache is corrupted.");
                         } else {
-                            delete stackHeightCache[oldClientKey];
+                            delete stackDepthCache[oldClientKey];
                         }
                     }
                 }
 
                 if (e.data.move.dest_type == "board") {
-                    stackHeightCache[clientKey] = e.data.z_stack.length;
-                    log("stackHeightCache: " + JSON.stringify(stackHeightCache));
+                    stackDepthCache[clientKey] = e.data.z_stack.length;
+                    log("stackDepthCache: " + JSON.stringify(stackDepthCache));
 
                     setOrientProperties(card, e.data.move.dest_orient);
                     var lastindex = e.data.z_stack.length - 1;
