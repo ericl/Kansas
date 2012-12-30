@@ -1258,15 +1258,8 @@ function animateToKey(card, key) {
     card.removeClass("inHand");
 }
 
-/* Draws selection box about items. */
-function createSelection(items) {
-    selectedSet = items;
-    if (selectedSet.length < 2) {
-        updateFocus(selectedSet);
-        $(".selecting").removeClass("selecting");
-        hideSelectionBox();
-        return;
-    }
+/* Returns bounding box around selectedSet. */
+function computeBoundingBox(selectedSet) {
     var xVals = selectedSet.map(function(i) {
         return $(this).offset().left;
     });
@@ -1289,67 +1282,86 @@ function createSelection(items) {
             return card.offset().top + kCardHeight;
         }
     });
-    var maxX = Math.max.apply(Math, xValsWithCard);
     var minX = Math.min.apply(Math, xVals);
-    var maxY = Math.max.apply(Math, yValsWithCard);
     var minY = Math.min.apply(Math, yVals);
+    var maxX = Math.max.apply(Math, xValsWithCard);
+    var maxY = Math.max.apply(Math, yValsWithCard);
+    return [minX, minY, maxX, maxY];
+}
 
+/* Chooses minimum set from selectedSet that can recreate boundingBox. */
+function computeContainmentHint(selectedSet, bb) {
+    var minX = bb[0], minY = bb[1], maxX = bb[2], maxY = bb[3];
+    var has = {};
+    function genHint(card) {
+        if (has[card.prop("id")] !== undefined) {
+            return [];
+        }
+        has[card.prop("id")] = true;
+        return [[card.hasClass("rotated"),
+                 toCanonicalKey(card.data("dest_key")),
+                 heightOf(card.data("stack_index"))]];
+    }
+    function extend(result, option) {
+        if (option) {
+            var hint = genHint(option);
+            if (hint[0]) {
+                result.push(hint[0]);
+            }
+        }
+    }
+    var containmentHint = selectedSet.map(function(t) {
+        var card = $(this);
+        if (stackDepthCache[card.data("dest_key")] > 1) {
+            /* Includes top and bottom of each stack in selection. */
+            var ext = extremes(stackOf(card));
+            var result = [];
+            extend(result, ext[2]);
+            extend(result, ext[3]);
+            extend(result, ext[4]);
+            extend(result, ext[5]);
+            return result;
+        } else {
+            var offset = card.offset();
+            if (offset.left == minX) {
+                return genHint(card);
+            }
+            if (offset.top == minY) {
+                return genHint(card);
+            }
+            var rot = card.hasClass("rotated");
+            var bottom = offset.top + (rot ? kCardWidth : kCardHeight);
+            if (bottom == maxY) {
+                return genHint(card);
+            }
+            var right = offset.left + (rot ? kCardHeight : kCardWidth);
+            if (right == maxX) {
+                return genHint(card);
+            }
+        }
+        return [];
+    });
+    log("Containment hint size: "
+        + containmentHint.length
+        + ", total was " + selectedSet.length);
+    return containmentHint;
+}
+
+/* Draws selection box about items. */
+function createSelection(items) {
+    selectedSet = items;
+    if (selectedSet.length < 2) {
+        updateFocus(selectedSet);
+        $(".selecting").removeClass("selecting");
+        hideSelectionBox();
+        return;
+    }
+    var bb = computeBoundingBox(selectedSet);
+    var minX = bb[0], minY = bb[1], maxX = bb[2], maxY = bb[3];
     if (selectedSet.hasClass("inHand")) {
         containmentHint = null;
     } else {
-        // Produces hint with as small size as possible.
-        var has = {};
-        function genHint(card) {
-            if (has[card.prop("id")] !== undefined) {
-                return [];
-            }
-            has[card.prop("id")] = true;
-            return [[card.hasClass("rotated"),
-                     toCanonicalKey(card.data("dest_key")),
-                     heightOf(card.data("stack_index"))]];
-        }
-        function extend(result, option) {
-            if (option) {
-                var hint = genHint(option);
-                if (hint[0]) {
-                    result.push(hint[0]);
-                }
-            }
-        }
-        containmentHint = selectedSet.map(function(t) {
-            var card = $(this);
-            if (stackDepthCache[card.data("dest_key")] > 1) {
-                /* Includes top and bottom of each stack in selection. */
-                var ext = extremes(stackOf(card));
-                var result = [];
-                extend(result, ext[2]);
-                extend(result, ext[3]);
-                extend(result, ext[4]);
-                extend(result, ext[5]);
-                return result;
-            } else {
-                var offset = card.offset();
-                if (offset.left == minX) {
-                    return genHint(card);
-                }
-                if (offset.top == minY) {
-                    return genHint(card);
-                }
-                var rot = card.hasClass("rotated");
-                var bottom = offset.top + (rot ? kCardWidth : kCardHeight);
-                if (bottom == maxY) {
-                    return genHint(card);
-                }
-                var right = offset.left + (rot ? kCardHeight : kCardWidth);
-                if (right == maxX) {
-                    return genHint(card);
-                }
-            }
-            return [];
-        });
-        log("Containment hint size: "
-            + containmentHint.length
-            + ", total was " + selectedSet.length);
+        containmentHint = computeContainmentHint(selectedSet, bb);
     }
     var boxAndArea = $("#selectionbox, #selectionarea");
     boxAndArea.css("left", minX - kSelectionBoxPadding);
