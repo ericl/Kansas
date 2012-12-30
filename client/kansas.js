@@ -112,9 +112,9 @@ function heightOf(stackHeight) {
     return stackHeight * kStackDelta;
 }
 
-/* Returns all cards in the same stack as memberCard. */
-function stackOf(memberCard) {
-    var key = memberCard.data("dest_key");
+/* Returns all cards in the same stack as memberCard or optKey. */
+function stackOf(memberCard, optKey) {
+    var key = (optKey === undefined) ? memberCard.data("dest_key") : optKey;
     return $(".card").filter(function(index) {
         return $(this).data("dest_key") == key;
     });
@@ -132,6 +132,20 @@ function topOf(stack) {
         }
     });
     return highest;
+}
+
+/* Returns topmost card in stack. */
+function bottomOf(stack) {
+    var minZ = Infinity;
+    var lowest = null;
+    stack.each(function(i) {
+        var z = $(this).zIndex();
+        if (parseInt(z) < minZ) {
+            minZ = z;
+            lowest = $(this);
+        }
+    });
+    return lowest;
 }
 
 /* Returns [topmost, lowermost, toprot, lowrot, topunrot, lowunrot] */
@@ -429,6 +443,19 @@ function getOrient(card) {
         orient = 1;
     }
     return orient;
+}
+
+/* Returns highest resolution image to display for card. */
+function highRes(card, reverse) {
+    var orient = getOrient(card);
+    if (reverse) {
+        orient *= -1;
+    }
+    if (orient > 0) {
+        return card.data("front_full");
+    } else {
+        return card.data("back");
+    }
 }
 
 /* Changes the visible orientation the card */
@@ -902,11 +929,6 @@ function unflipCard(card) {
     }
 }
 
-/* Moves card to top of stack. */
-function raiseCard(card) {
-    changeOrient(card, getOrient(card));
-}
-
 /* No-op that shows card privately in hovermenu. */
 function peekCard(card) {
     var url = activeCard.data("front_full");
@@ -915,60 +937,110 @@ function peekCard(card) {
     return "disablethis";
 }
 
-/* Requests a stack flip from the server. */
-function flipStack(memberCard) {
+/* Requests a stack inversion from the server. */
+function invertStack(memberCard) {
     var dest_key = parseInt(memberCard.data("dest_key"));
-    createSelection(stackOf(memberCard));
+    var stack = stackOf(memberCard);
+    var bottom = bottomOf(stack);
+    $(".hovermenu").children("img").prop("src", highRes(bottom, true));
+    createSelection(stack);
+    showSpinner();
+    ws.send("stackop", {op_type: "invert",
+                        dest_type: "board",
+                        dest_key: toCanonicalKey(dest_key)});
+}
+
+/* Requests a stack reverse from the server. */
+function reverseStack(memberCard) {
+    var dest_key = parseInt(memberCard.data("dest_key"));
+    var stack = stackOf(memberCard);
+    var bottom = bottomOf(stack);
+    $(".hovermenu").children("img").prop("src", highRes(bottom));
+    createSelection(stack);
     showSpinner();
     ws.send("stackop", {op_type: "reverse",
                         dest_type: "board",
                         dest_key: toCanonicalKey(dest_key)});
 }
 
-function shuffleStackConfirm() {
-    var node = $(".shufstackconfirm");
-    node.removeClass("shufstackconfirm");
+function shuffleSelectionConfirm() {
+    var node = $(".shufselconfirm");
+    node.removeClass("shufselconfirm");
     node.removeClass("hover");
     node.addClass("confirm");
-    node.data("key", "shufstack");
+    node.data("key", "shufsel");
     node.html("You&nbsp;sure?");
     return "keepmenu";
 }
 
-/* Requests a stack shuffle from the server. */
-function shuffleStack(memberCard) {
-    if (memberCard.hasClass("inHand")) {
-        return;
-    }
-    var dest_key = parseInt(memberCard.data("dest_key"));
-    createSelection(stackOf(memberCard));
+/* Will return majority value in stream if there is one. */
+function majority(stream, keyFn) {
+    var majority = undefined;
+    var ctr = 1;
+    $.each(stream, function() {
+        var item = keyFn(this);
+        if (majority === undefined) {
+            majority = item;
+        } else {
+            if (majority == item) {
+                ctr += 1;
+            } else if (ctr == 0) {
+                majority = item;
+                ctr = 1;
+            } else {
+                ctr -= 1;
+            }
+        }
+    });
+    return majority;
+}
+
+/* Shuffles majority if there is one, and puts leftover cards on top. */
+function shuffleSelection() {
     showSpinner();
+    var majorityKey = majority(selectedSet, function(x) {
+        return parseInt($(x).data("dest_key"));
+    });
+    var canonicalKey = toCanonicalKey(majorityKey);
+    var canonicalOrient = getOrient(topOf(stackOf(null, majorityKey)));
     ws.send("stackop", {op_type: "shuffle",
                         dest_type: "board",
-                        dest_key: toCanonicalKey(dest_key)});
-    removeFocus();
+                        dest_key: canonicalKey});
+    selectedSet.each(function() {
+        var card = $(this);
+        if (parseInt(card.data("dest_key")) != majorityKey) {
+            var cardId = parseInt(card.prop("id").substr(5));
+            ws.send("move", {move: {card: cardId,
+                                    dest_prev_type: "board",
+                                    dest_type: "board",
+                                    dest_key: canonicalKey,
+                                    dest_orient: canonicalOrient}});
+        }
+    });
 }
 
-/* Shows hovermenu of prev card in stack. */
-function stackNext(memberCard) {
-    var idx = parseInt(memberCard.data("stack_index")) - 1;
-    var next = stackOf(memberCard).filter(function() {
-        return $(this).data("stack_index") == idx;
-    });
-    activeCard = next;
-    showHoverMenu(next);
-    return "keepmenu";
+function forSelected(fn) {
+    return function() {
+        selectedSet.each(function() {
+            fn($(this));
+        });
+    }
 }
 
-/* Shows hovermenu of prev card in stack. */
-function stackPrev(memberCard) {
-    var idx = parseInt(memberCard.data("stack_index")) + 1;
-    var prev = stackOf(memberCard).filter(function() {
-        return $(this).data("stack_index") == idx;
-    });
-    activeCard = prev;
-    showHoverMenu(prev);
-    return "keepmenu";
+var eventTable = {
+    'flip': flipCard,
+    'unflip': unflipCard,
+    'flipall': forSelected(flipCard),
+    'unflipall': forSelected(unflipCard),
+    'rotate': rotateCard,
+    'unrotate': unrotateCard,
+    'rotateall': forSelected(rotateCard),
+    'unrotateall': forSelected(unrotateCard),
+    'flipstack': invertStack,
+    'reversestack': reverseStack,
+    'shufsel': shuffleSelection,
+    'shufselconfirm': shuffleSelectionConfirm,
+    'peek': peekCard,
 }
 
 /* Garbage collects older hovermenu image. */
@@ -1026,18 +1098,19 @@ function menuForSelection(selectedSet) {
 
     var cardContextMenu = (''
         + '<li class="top boardonly" style="margin-left: -190px"'
-        + ' data-key="rotate">Tap All</li>'
+        + ' data-key="rotateall">Tap All</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="boardonly" data-key="unrotate">Untap All'
+        + ' class="boardonly" data-key="unrotateall">Untap All'
         + '</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="boardonly" data-key="unrotate">Cover All'
+        + ' class="boardonly" data-key="flipall">Cover All'
         + '</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="boardonly" data-key="unrotate">Reveal All'
+        + ' class="boardonly" data-key="unflipall">Reveal All'
         + '</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="bottom boardonly" data-key="shufstackconfirm">Shuffle'
+        + ' class="bottom boardonly shufselconfirm"'
+        + ' data-key="shufselconfirm">Shuffle'
         + '</li>'
         );
 
@@ -1064,8 +1137,7 @@ function menuForCard(card) {
     log("Hover menu for #" + hoverCardId + "@" + card.data("dest_key"));
     var numCards = stackDepthCache[card.data("dest_key")];
     var i = numCards - parseInt(card.data("stack_index"));
-    var url = getOrient(card) > 0 ? card.data("front_full") : card.data("back");
-    var src = toResource(url);
+    var src = toResource(highRes(card));
     var imgCls = '';
     if (card.hasClass("rotated")) {
         var tapFn =  '<li style="margin-left: -190px" class="boardonly"'
@@ -1102,16 +1174,11 @@ function menuForCard(card) {
         + cardContextMenu
         + '<span class="header" style="margin-left: -190px">&nbsp;STACK</span>"'
         + '<li style="margin-left: -190px" class="stackprev top boardonly bulk"'
-// TODO figure out what goes here, and what in hovermenu for selection
-//        + ' data-key="stackprev">Prev</li>'
-//        + '<li style="margin-left: -190px"'
-//        + ' class="stacknext boardonly bulk"'
-//        + ' data-key="stacknext">Next</li>'
         + '<li style="margin-left: -190px" class="top boardonly bulk"'
-        + ' data-key="flipstack">Invert</li>'
+        + ' data-key="flipstack">Turn Over</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="bottom boardonly bulk shufstackconfirm"'
-        + ' data-key="shufstackconfirm">Shuffle</li>'
+        + ' class="bottom boardonly bulk"'
+        + ' data-key="reversestack">Reverse</li>'
         + '</ul>'
         + '<div class="hovernote"><span>Card ' + i + ' of ' + numCards + '</span></div>'
         + '</div>');
@@ -1619,7 +1686,7 @@ $(document).ready(function() {
             },
 
             error: function(e) {
-                log("Server Error: " + e.msg);
+                warning("Server Error: " + e.msg);
             },
 
             reset: function(e) {
@@ -1806,19 +1873,6 @@ $(document).ready(function() {
             return;
         }
         disableArenaEvents = true;
-        var eventTable = {
-            'flip': flipCard,
-            'unflip': unflipCard,
-            'rotate': rotateCard,
-            'unrotate': unrotateCard,
-            'flipstack': flipStack,
-            'shufstack': shuffleStack,
-            'shufstackconfirm': shuffleStackConfirm,
-            'stacknext': stackNext,
-            'stackprev': stackPrev,
-            'raise': raiseCard,
-            'peek': peekCard,
-        };
         var oldButtons = $(".hovermenu li");
         var action = eventTable[target.data("key")](activeCard);
         switch (action) {
@@ -1833,7 +1887,7 @@ $(document).ready(function() {
                 target.addClass("poison-source");
                 removeFocus(true);
         }
-        return false; /* Necessary for shufstackconfirm. */
+        return false; /* Necessary for shufselconfirm. */
     });
 
     $("#arena").selectable({
