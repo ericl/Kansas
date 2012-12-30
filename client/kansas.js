@@ -207,7 +207,18 @@ function handleFrameUpdateBroadcast(e) {
 }
 
 function handleSelectionMoved(selectedSet, dx, dy) {
-    // TODO move the cards, snapping to target in the single stack case
+    showSpinner();
+    selectedSet.each(function(i) {
+        var card = $(this);
+        var cardId = parseInt(card.prop("id").substr(5));
+        var dest = card.data("dest_key");
+        var key = keyFromCoords(keyToX(dest) + dx, keyToY(dest) + dy);
+        ws.send("move", {move: {card: cardId,
+                                dest_prev_type: "board",
+                                dest_type: "board",
+                                dest_key: toCanonicalKey(key),
+                                dest_orient: getOrient(card)}});
+    });
 }
 
 function handleSelectionClicked(selectedSet) {
@@ -215,6 +226,7 @@ function handleSelectionClicked(selectedSet) {
     // browse and bring to front a card
     // collapse selection into a single stack
     // tap / untap all
+    warning("NOTIMPLEMENTED");
 }
 
 function handleSelectionMovedFromHand(selectedSet, x, y) {
