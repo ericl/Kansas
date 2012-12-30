@@ -13,6 +13,8 @@ High prio, ui:
 * make sure that toClientKey(toCanonicalKey(x)) == x for all x
 
 Low prio, ui:
+* hovering hand?
+* preview selected cards in hover menu
 * "compress" the opponent's side so that you can have more vertical space
 * allow dragging to other users hands + browsing hands as a selection
 * allow hand sorting, or autosorting by some property
