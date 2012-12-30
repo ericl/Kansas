@@ -1069,11 +1069,11 @@ function showHoverMenu(card) {
     var old = $(".hovermenu");
     var oldimg = $(".hovermenu img");
     if (card.length > 1) {
-        var newNode = menuForSelection(card);
         hoverCardId = "#selectionbox";
+        var newNode = menuForSelection(card);
     } else {
-        var newNode = menuForCard(card);
         hoverCardId = card.prop("id");
+        var newNode = menuForCard(card);
     }
 
     var newImg = newNode.children("img");
@@ -1101,16 +1101,16 @@ function menuForSelection(selectedSet) {
     hoverCardId = "#selectionbox";
 
     var cardContextMenu = (''
-        + '<li class="top boardonly" style="margin-left: -190px"'
+        + '<li class="tapall top boardonly" style="margin-left: -190px"'
         + ' data-key="rotateall">Tap All</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="boardonly" data-key="unrotateall">Untap All'
+        + ' class="untapall boardonly" data-key="unrotateall">Untap All'
         + '</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="boardonly" data-key="flipall">Cover All'
+        + ' class="flipall" data-key="flipall">Flip All'
         + '</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="boardonly" data-key="unflipall">Reveal All'
+        + ' class="unflipall" data-key="unflipall">Reveal All'
         + '</li>'
         + '<li style="margin-left: -190px"'
         + ' class="bottom boardonly shufselconfirm"'
@@ -1120,6 +1120,25 @@ function menuForSelection(selectedSet) {
 
     var height = kCardHeight * kHoverCardRatio;
     var width = kCardWidth * kHoverCardRatio;
+
+    var allTapped = true;
+    var allUntapped = true;
+    var allFlipped = true;
+    var allUnflipped = true;
+
+    selectedSet.each(function() {
+        var t = $(this);
+        if (t.hasClass("rotated")) {
+            allUntapped = false;
+        } else {
+            allTapped = false;
+        }
+        if (getOrient(t) > 0) {
+            allFlipped = false;
+        } else {
+            allUnflipped = false;
+        }
+    });
 
     var html = ('<div class="hovermenu">'
         + '<img class="blueglow" style="height: '
@@ -1134,6 +1153,18 @@ function menuForSelection(selectedSet) {
         + '</div>');
 
     var newNode = $(html).appendTo("body");
+    if (allTapped) {
+        $(".tapall").addClass("disabled");
+    }
+    if (allUntapped) {
+        $(".untapall").addClass("disabled");
+    }
+    if (allFlipped) {
+        $(".flipall").addClass("disabled");
+    }
+    if (allUnflipped) {
+        $(".unflipall").addClass("disabled");
+    }
     if (selectedSet.hasClass("inHand")) {
         $(".boardonly").addClass("disabled");
     }
@@ -1161,7 +1192,7 @@ function menuForCard(card) {
 
     if (getOrient(card) > 0) {
         var flipFn = '<li class="top" style="margin-left: -190px"'
-            + ' data-key=flip>Cover</li>';
+            + ' data-key=flip>Flip</li>';
     } else {
         var flipFn = '<li class="top" style="margin-left: -190px"'
             + ' data-key=unflip>Reveal</li>';
@@ -1621,7 +1652,7 @@ $(document).ready(function() {
                 + ' data-front_full="' + state.urls[cid] + '"'
                 + ' data-back="' + back_url + '"'
                 + ' data-stack_index="' + stack_index + '"'
-                + ' class="card" src="' + toResource(url) + '">'
+                + ' class="accelerated card" src="' + toResource(url) + '">'
             return $(img).appendTo("#arena");
         }
 
