@@ -11,6 +11,7 @@ High prio, perf:
 
 High prio, ui:
 * make sure that toClientKey(toCanonicalKey(x)) == x for all x
+* hand->hand moves should be completely local... and gap left when rendering handCache
 
 Low prio, ui:
 * hovering hand?
@@ -25,3 +26,4 @@ Low prio, ui:
 * save games in localstorage
 * some way of choosing user id and game id
 * update frames once the card has been tapped/untapped/moved
+* config language to more easily specify initial game state

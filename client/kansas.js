@@ -65,7 +65,7 @@ var XXX_jitter = 1;
 
 // Set to kAnimationLength once initial load has completed.
 var animationLength = 0;
-var kAnimationLength = 500;
+var kAnimationLength = 400;
 
 // Max index of discrete positions on one axis of the grid. Must be < 0xffff.
 var kMaxGridIndex = 0x7ff;
@@ -1404,7 +1404,7 @@ function animateToKey(card, key) {
             top: newY + (yChanged ? 0 : XXX_jitter),
             opacity: 1.0,
             avoidTransforms: card.hasClass("rotated") || card.hasClass("flipped"),
-        }, animationLength);
+        }, animationLength / 2);
     } else {
         log("avoided animation");
     }
