@@ -1015,6 +1015,9 @@ function reverseStack(memberCard) {
 }
 
 function shuffleSelectionConfirm() {
+    if (selectedSet.length < 5) {
+        return shuffleSelection();
+    }
     var node = $(".shufselconfirm");
     node.removeClass("shufselconfirm");
     node.removeClass("hover");
@@ -1713,7 +1716,7 @@ $(document).ready(function() {
                 card = fastZRaise(card, localMaxZ);
                 card.data("stack_index", stackDepthCache[dest_key] || 0);
                 card.data("dest_key", dest_key);
-                redrawStack(oldKey, false);
+                redrawStack(oldKey, true);
                 redrawCard(card);
             }
             log("Sending card move to " + dest_key);

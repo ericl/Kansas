@@ -1,13 +1,10 @@
 High prio, perf & ui:
 * render large stacks using less images
-* cards in 2/3/4 stacks should be easily seen, so that stacking is useful
-* make stacks re-renderable on the client-side only
-
-High prio, perf:
-* investigate when animations are occuring, and try to avoid them when possible
-* send moves in bulk requests when possible
 * stacks should skew in the other direction on the other side of the board
 * replace autoRefresh in selectable
+
+High prio, perf:
+* send moves in bulk requests when possible
 * implement fast z-changes using a node pool
 
 High prio, ui:
