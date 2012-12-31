@@ -7,43 +7,48 @@
  * 
  * Copyright (c) 2010 by shootaroo (Shotaro Tsubouchi).
  */
+
 (function($){
 $.extend({
-	websocketSettings: {
-		open: function(){},
-		close: function(){},
-		message: function(){},
-		options: {},
-		events: {}
-	},
-	websocket: function(url, s) {
-		var ws = WebSocket ? new WebSocket( url ) : {
-			send: function(m){ return false },
-			close: function(){}
-		};
-		ws._settings = $.extend($.websocketSettings, s);
-		$(ws)
-			.bind('open', $.websocketSettings.open)
-			.bind('close', $.websocketSettings.close)
-			.bind('message', $.websocketSettings.message)
-			.bind('message', function(e){
-				var m = JSON.parse(e.originalEvent.data);
-				var h = $.websocketSettings.events[m.type];
-				var def = $.websocketSettings.events['_default'];
-				if (h)
+    websocketSettings: {
+        open: function(){},
+        close: function(){},
+        message: function(){},
+        options: {},
+        events: {}
+    },
+    websocket: function(url, s) {
+        var ws = WebSocket ? new WebSocket( url ) : {
+            send: function(m){ return false },
+            close: function(){}
+        };
+        ws.sendCount = 0;
+        ws.recvCount = 0;
+        ws._settings = $.extend($.websocketSettings, s);
+        $(ws)
+            .bind('open', $.websocketSettings.open)
+            .bind('close', $.websocketSettings.close)
+            .bind('message', $.websocketSettings.message)
+            .bind('message', function(e){
+                var m = JSON.parse(e.originalEvent.data);
+                var h = $.websocketSettings.events[m.type];
+                var def = $.websocketSettings.events['_default'];
+                ws.recvCount += 1;
+                if (h)
                     h.call(this, m)
                 else if (def)
                     def.call(this, m)
-			});
-		ws._send = ws.send;
-		ws.send = function(type, data) {
-			var m = {type: type};
-			m = $.extend(true, m, $.extend(true, {}, $.websocketSettings.options, m));
-			if (data) m['data'] = data;
-			return this._send(JSON.stringify(m));
-		}
-		$(window).unload(function(){ ws.close(); ws = null });
-		return ws;
-	}
+            });
+        ws._send = ws.send;
+        ws.send = function(type, data) {
+            ws.sendCount += 1;
+            var m = {type: type};
+            m = $.extend(true, m, $.extend(true, {}, $.websocketSettings.options, m));
+            if (data) m['data'] = data;
+            return this._send(JSON.stringify(m));
+        }
+        $(window).unload(function(){ ws.close(); ws = null });
+        return ws;
+    }
 });
 })(jQuery);

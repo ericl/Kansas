@@ -4,6 +4,7 @@ High prio, perf & ui:
 * make stacks re-renderable on the client-side only
 
 High prio, perf:
+* investigate when animations are occuring, and try to avoid them when possible
 * send moves in bulk requests when possible
 * stacks should skew in the other direction on the other side of the board
 * replace autoRefresh in selectable

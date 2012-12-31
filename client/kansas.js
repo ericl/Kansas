@@ -94,6 +94,21 @@ if (user == "#alice") {
 // Keeps mapping from key -> height
 var stackDepthCache = {};
 
+// Tracks perf statistics.
+var animationCount = 0;
+var updateCount = 0;
+var sentCount = 0;
+var recvCount = 0;
+var zChanges = 0;
+
+var originalZIndex = jQuery.fn.zIndex;
+jQuery.fn.zIndex = function() {
+    if (arguments.length > 0) {
+        zChanges += 1;
+    }
+    return originalZIndex.apply(this, arguments);
+};
+
 /**
  * When cards are stacked on each other we want to provide a 3d-illusion.
  * heightOf() returns the proper x, y offset for cards in the stack.
@@ -415,8 +430,8 @@ function removeFromArray(arr, item) {
 }
 
 /* Logs a message to the debug console */
-function log(msg, force) {
-    if (loggingEnabled || force) {
+function log(msg) {
+    if (loggingEnabled) {
         var console = $('#console');
         console.append(msg + "\n");
         console.scrollTop(console[0].scrollHeight - console.outerHeight());
@@ -425,7 +440,7 @@ function log(msg, force) {
 
 /* Logs warning to debug console */
 function warning(msg) {
-    log(msg, true);
+    log(msg);
     $("#error").text(msg).show();
 }
 
@@ -512,7 +527,7 @@ function xKeyComponent(target) {
     var left = offset.left;
     if (target.prop("id") != draggingId) {
       left -= heightOf(target.data("stack_index"),
-        stackDepthCache[target.data("dest_key")]);
+        stackDepthCache[target.data("dest_key")] || 0);
     }
     // Compensates for rotated targets.
     if (target.hasClass("card")) {
@@ -529,7 +544,7 @@ function yKeyComponent(target) {
     var tp = offset.top;
     if (target.prop("id") != draggingId) {
         tp -= heightOf(target.data("stack_index"),
-            stackDepthCache[target.data("dest_key")]);
+            stackDepthCache[target.data("dest_key")] || 0);
     }
     // Compensates for rotated targets.
     if (target.hasClass("card")) {
@@ -804,7 +819,7 @@ function updateFocus(target, noSnap) {
                     toCanonicalKey(keyFromTargetLocation(target)), 0]];
             } else {
                 log("Rendering just-selected card on stack.");
-                var count = stackDepthCache[target.data("dest_key")];
+                var count = stackDepthCache[target.data("dest_key")] || 0;
                 sizingInfo = [[
                     target.hasClass("rotated"),
                     toCanonicalKey(target.data("dest_key")),
@@ -812,7 +827,7 @@ function updateFocus(target, noSnap) {
             }
         } else {
             log("Rendering card snapping to stack");
-            var count = stackDepthCache[snap.data("dest_key")];
+            var count = stackDepthCache[snap.data("dest_key")] || 0;
             sizingInfo = [[
                 snap.hasClass("rotated"),
                 toCanonicalKey(snap.data("dest_key")),
@@ -820,7 +835,7 @@ function updateFocus(target, noSnap) {
         }
     } else if (snap != null) {
         log("Rendering selection snapped to stack @ " + snap.data("dest_key"));
-        var count = stackDepthCache[snap.data("dest_key")];
+        var count = stackDepthCache[snap.data("dest_key")] || 0;
         sizingInfo = [[
             snap.hasClass("rotated"),
             toCanonicalKey(snap.data("dest_key")),
@@ -1055,9 +1070,8 @@ function shuffleSelection() {
 
 /* Goes from a single card to selecting the entire stack. */
 function cardToSelection(memberCard) {
-    createSelection(stackOf(memberCard).addClass("highlight"));
-    $("#selectionbox span").css("opacity", 1);
-    return "keepselection";
+    createSelection(stackOf(memberCard).addClass("highlight"), true);
+    return "keepmenu";
 }
 
 function forSelected(fn) {
@@ -1082,7 +1096,7 @@ var eventTable = {
     'shufsel': shuffleSelection,
     'shufselconfirm': shuffleSelectionConfirm,
     'peek': peekCard,
-    'move': cardToSelection,
+    'toselection': cardToSelection,
     'trivialmove': function() {
         $("#selectionbox span").css("opacity", 1);
          return "keepselection";
@@ -1225,7 +1239,7 @@ function menuForSelection(selectedSet) {
 
 function menuForCard(card) {
     log("Hover menu for #" + hoverCardId + "@" + card.data("dest_key"));
-    var numCards = stackDepthCache[card.data("dest_key")];
+    var numCards = stackDepthCache[card.data("dest_key")] || 0;
     var i = numCards - parseInt(card.data("stack_index"));
     var src = toResource(highRes(card));
     var imgCls = '';
@@ -1263,11 +1277,11 @@ function menuForCard(card) {
         + '<span class="header" style="margin-left: -190px">&nbsp;STACK</span>"'
         + '<li style="margin-left: -190px" class="stackprev top boardonly bulk"'
         + '<li style="margin-left: -190px"'
-        + ' class="top bulk boardonly"'
-        + ' data-key="move">Move</li>'
-        + '<li style="margin-left: -190px"'
-        + ' class="bottom boardonly bulk"'
+        + ' class="top boardonly bulk"'
         + ' data-key="reversestack">Invert</li>'
+        + '<li style="margin-left: -190px"'
+        + ' class="bottom bulk boardonly"'
+        + ' data-key="toselection"><i>More...</i></li>'
         + '<span class="header" style="margin-left: -190px">&nbsp;CARD</span>"'
         + cardContextMenu
         + '</ul>'
@@ -1298,11 +1312,43 @@ function moveOffscreen(card) {
     var kOffscreenY = -300;
     var destX = 200;
     if (parseInt(card.css("top")) != kOffscreenY) {
+        animationCount += 1;
+        updateCount += 1;
         card.animate({
             left: (destX != parseInt(card.css("left"))) ? destX : destX + XXX_jitter,
             top: kOffscreenY,
             opacity: 1.0,
         }, animationLength);
+    }
+}
+
+/* Guarantees that card will have z-index at least zRequired, and
+ * furthermore sets localZIndex > zRequired. Returns the new jquery
+ * selection that represents card. Furthermore, successive calls to
+ * fastZRaise with the same or greater zRequired value can be guaranteed
+ * to result in assignments of increasing z-indexes. */
+var raises = 0;
+function fastZRaise(card, zRequired) {
+    zRequired = parseInt(zRequired);
+    raises += 1;
+    /* TODO fast mobile impl using DOM node pool */
+    localMaxZ = Math.max(zRequired + 1, localMaxZ);
+    card.zIndex(zRequired);
+    return card;
+}
+
+/* Guarantees that cards will have z-indexes in increasing order as provided,
+ * all of which are greater than zRequired. */
+var shuffles = 0;
+function fastZShuffle(cardIds, zRequired) {
+    zRequired = parseInt(zRequired);
+    shuffles += 1;
+    /* TODO fast mobile impl by reassigning z-indexes within cards. */
+    for (i in cardIds) {
+        i = parseInt(i)
+        var cd = $("#card_" + cardIds[i]);
+        localMaxZ = Math.max(zRequired + i + 1, localMaxZ);
+        cd.zIndex(zRequired + i);
     }
 }
 
@@ -1343,6 +1389,7 @@ function renderHandStack(hand) {
     XXX_jitter *= -1;
     var skips = 0;
 
+    fastZShuffle(hand, kHandZIndex);
     for (i in hand) {
         var cd = $("#card_" + hand[i]);
         updateCardFlipState(cd, 999999);
@@ -1353,11 +1400,12 @@ function renderHandStack(hand) {
             }
         }
         cd.addClass("inHand");
-        cd.zIndex(kHandZIndex + parseInt(i));
         cd.data("stack_index", kHandZIndex + i);
         var xChanged = parseInt(currentX) != parseInt(cd.css('left'));
         var yChanged = parseInt(currentY) != parseInt(cd.css('top'));
         if (xChanged || yChanged) {
+            animationCount += 1;
+            updateCount += 1;
             cd.animate({
                 left: currentX + (xChanged ? 0 : XXX_jitter),
                 top: currentY + (yChanged ? 0 : XXX_jitter),
@@ -1389,6 +1437,7 @@ function redrawStack(clientKey, fixIndexes) {
         redrawHand();
         return;
     }
+
     var stack = stackOf(null, clientKey);
     if (fixIndexes) {
         stack.sort(function(a, b) {
@@ -1404,7 +1453,7 @@ function redrawStack(clientKey, fixIndexes) {
             cd.data("stack_index", i);
             i += 1;
         }
-        animateToKey(cd, clientKey);
+        redrawCard(cd);
     });
 }
 
@@ -1422,12 +1471,14 @@ function redrawDivider() {
 }
 
 /* Animates a card move to a destination on the board. */
-function animateToKey(card, key) {
+function redrawCard(card) {
+    updateCount += 1;
+    var key = card.data("dest_key");
     log("animating #" + card.prop("id") + " -> " + key);
     var x = keyToX(key);
     var y = keyToY(key);
     var idx = card.data("stack_index");
-    var count = stackDepthCache[key];
+    var count = stackDepthCache[key] || 0;
     var newX = x + heightOf(idx, count);
     var newY = y + heightOf(idx, count);
     updateCardFlipState(card, newY);
@@ -1435,6 +1486,7 @@ function animateToKey(card, key) {
     var yChanged = parseInt(newY) != parseInt(card.css('top'));
     XXX_jitter *= -1;
     if (xChanged || yChanged) {
+        animationCount += 1;
         log("changed: " + (newX - parseInt(card.css("left"))));
         log("changed: " + (newY - parseInt(card.css("top"))));
         log("new: " + newX + "," + newY);
@@ -1494,7 +1546,7 @@ function computeContainmentHint(selectedSet, bb) {
                  toCanonicalKey(card.data("dest_key")),
                  heightOf(
                     card.data("stack_index"),
-                    stackDepthCache[card.data("dest_key")])]];
+                    stackDepthCache[card.data("dest_key")] || 0)]];
     }
     function extend(result, option) {
         if (option) {
@@ -1650,23 +1702,23 @@ $(document).ready(function() {
             } else {
                 var dest_type = "board";
                 var snap = findSnapPoint(card);
+                var oldKey = card.data("dest_key");
                 if (snap != null) {
                     var dest_key = parseInt(findSnapPoint(card).data("dest_key"));
                 } else {
                     var dest_key = keyFromTargetLocation(card);
                     log("offset: " + card.offset().left + "," + card.offset().top);
                     log("dest key computed is : " + dest_key);
-                    card.data("dest_key", dest_key);
                 }
                 if (dest_prev_type == "hands") {
                     removeFromArray(handCache, cardId);
                     log("hand: " + JSON.stringify(handCache));
                 }
-                card.zIndex(localMaxZ);
-                card.data("stack_index", stackDepthCache[dest_key]);
-                localMaxZ += 1;
-                redrawStack(card.data("dest_key"), false);
-                animateToKey(card, dest_key);
+                card = fastZRaise(card, localMaxZ);
+                card.data("stack_index", stackDepthCache[dest_key] || 0);
+                card.data("dest_key", dest_key);
+                redrawStack(oldKey, false);
+                redrawCard(card);
             }
             log("Sending card move to " + dest_key);
             showSpinner();
@@ -1827,13 +1879,11 @@ $(document).ready(function() {
                 hideSpinner();
                 log("Stack update: " + JSON.stringify(e.data));
                 var clientKey = toClientKey(e.data.op.dest_key);
-                /* Reassigns z-indexes for the stack. */
+                fastZShuffle(e.data.z_stack, e.data.z_min);
                 for (i in e.data.z_stack) {
                     var cd = $("#card_" + e.data.z_stack[i]);
-                    cd.zIndex(e.data.z_index[i]);
                     setOrientProperties(cd, e.data.orient[i]);
                     cd.data("stack_index", i);
-                    localMaxZ = Math.max(localMaxZ, e.data.z_index[i]);
                 }
                 redrawStack(clientKey, false);
             },
@@ -1861,6 +1911,7 @@ $(document).ready(function() {
                     stackDepthCache[clientKey] = e.data.z_stack.length;
                     log("stackDepthCache: " + JSON.stringify(stackDepthCache));
 
+                    var oldOrient = getOrient(card);
                     setOrientProperties(card, e.data.move.dest_orient);
                     if (removeFromArray(handCache, e.data.move.card)) {
                         redrawHand();
@@ -1870,8 +1921,7 @@ $(document).ready(function() {
                       var cd = $("#card_" + e.data.z_stack[i]);
                       cd.data("stack_index", i);
                     }
-                    card.zIndex(e.data.z_index);
-                    localMaxZ = Math.max(localMaxZ, e.data.z_index);
+                    card = fastZRaise(card, e.data.z_index);
                     redrawStack(oldClientKey, true);
                     redrawStack(clientKey, false);
                 } else if (e.data.move.dest_type == "hands") {
@@ -2100,9 +2150,12 @@ $(document).ready(function() {
         } else {
             removeFocus();
             if ($(".selecting").length == 0) {
-                $("#hand").addClass("collapsed");
+                var h = $("#hand");
+                if (!h.hasClass("collapsed")) {
+                    h.addClass("collapsed");
+                    redrawHand();
+                }
             }
-            redrawHand();
         }
     });
 
@@ -2127,6 +2180,18 @@ $(document).ready(function() {
         redrawHand();
         redrawBoard();
     });
+
+    setInterval(function() {
+        $("#stats")
+            .show()
+            .text("animations: " + animationCount
+              + ", updates: " + updateCount
+              + ", sent: " + ws.sendCount
+              + ", recv: " + ws.recvCount
+              + ", zChanges: " + zChanges
+              + ", zRaises: " + raises
+              + ", zShuffles: " + shuffles);
+    }, 500);
 
     redrawDivider();
 });

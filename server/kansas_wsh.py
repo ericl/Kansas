@@ -138,7 +138,7 @@ class KansasGameState(object):
             self.data['orientations'][card] = canonicalOrient
 
     def reassignZ(self, stack):
-        i = max(self.data['zIndex'].values()) + 1
+        i = min([self.data['zIndex'][s] for s in stack])
         for card in stack:
             self.data['zIndex'][card] = i
             i += 1
@@ -173,9 +173,9 @@ class KansasGameState(object):
         assert dest_orient in range(-4, 5)
 
         src_type, src_key = self.index[card]
-        # Bottom line: something must change, but we minimize it.
+        # Implements Z-change on any action except pure orientation changes.
         if ((src_type, src_key) != (dest_type, dest_key)
-            or dest_orient == self.data['orientations'][card]):
+                or self.data['orientations'][card] == dest_orient):
             # Removes card from where it was.
             self.data[src_type][src_key].remove(card)
             if len(self.data[src_type][src_key]) == 0:
@@ -186,9 +186,9 @@ class KansasGameState(object):
                 self.data[dest_type][dest_key] = []
             self.data[dest_type][dest_key].append(card)
             self.index[card] = (dest_type, dest_key)
+            self.data['zIndex'][card] = max(self.data['zIndex'].values()) + 1
 
         self.data['orientations'][card] = dest_orient
-        self.data['zIndex'][card] = max(self.data['zIndex'].values()) + 1
 
         return src_type, src_key
 
@@ -288,7 +288,7 @@ class KansasGameHandler(KansasHandler):
                 {
                     'op': req,
                     'z_stack': stack,
-                    'z_index': [self._state.data['zIndex'][c] for c in stack],
+                    'z_min': self._state.data['zIndex'][stack[0]],
                     'orient': [self._state.data['orientations'][c] for c in stack],
                     'seqno': self.nextseqno(),
                 })
