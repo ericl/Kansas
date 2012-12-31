@@ -98,24 +98,34 @@ var stackDepthCache = {};
  * When cards are stacked on each other we want to provide a 3d-illusion.
  * heightOf() returns the proper x, y offset for cards in the stack.
  */
-function heightOf(stackHeight) {
-    if (stackHeight === undefined
-            || isNaN(stackHeight)
-            || stackHeight >= kHandZIndex) {
+function heightOf(stackIndex, stackCount) {
+    if (stackCount === undefined) {
+        stackCount = 0;
+    }
+    if (stackIndex === undefined
+            || isNaN(stackIndex)
+            || stackIndex >= kHandZIndex) {
         return 0;
     }
     var kStackDelta = 2;
-    var kMaxVisibleStackHeight = 9;
-    if (stackHeight > kMaxVisibleStackHeight) {
-        stackHeight = kMaxVisibleStackHeight;
+    if (stackCount == 2) {
+        kStackDelta = 20;
+    } else if (stackCount == 3) {
+        kStackDelta = 14;
+    } else if (stackCount == 4) {
+        kStackDelta = 8;
     }
-    return stackHeight * kStackDelta;
+    var kMaxVisibleStackHeight = 9;
+    if (stackIndex > kMaxVisibleStackHeight) {
+        stackIndex = kMaxVisibleStackHeight;
+    }
+    return stackIndex * kStackDelta;
 }
 
 /* Returns all cards in the same stack as memberCard or optKey. */
 function stackOf(memberCard, optKey) {
     var key = (optKey === undefined) ? memberCard.data("dest_key") : optKey;
-    return $(".card").filter(function(index) {
+    return $(".card").filter(function() {
         return $(this).data("dest_key") == key;
     });
 }
@@ -501,7 +511,8 @@ function xKeyComponent(target) {
     var offset = target.offset();
     var left = offset.left;
     if (target.prop("id") != draggingId) {
-      left -= heightOf(target.data("stack_index"));
+      left -= heightOf(target.data("stack_index"),
+        stackDepthCache[target.data("dest_key")]);
     }
     // Compensates for rotated targets.
     if (target.hasClass("card")) {
@@ -517,7 +528,8 @@ function yKeyComponent(target) {
     var offset = target.offset();
     var tp = offset.top;
     if (target.prop("id") != draggingId) {
-        tp -= heightOf(target.data("stack_index"));
+        tp -= heightOf(target.data("stack_index"),
+            stackDepthCache[target.data("dest_key")]);
     }
     // Compensates for rotated targets.
     if (target.hasClass("card")) {
@@ -666,7 +678,7 @@ function findSnapPoint(target) {
         }
     }
     var kSnapThresholdPixels = 100;
-    var kAxisThresholdPixels = 20;
+    var kAxisThresholdPixels = 50;
     var targetId = target.prop("id");
     var x = target.offset().left;
     var y = target.offset().top;
@@ -792,24 +804,27 @@ function updateFocus(target, noSnap) {
                     toCanonicalKey(keyFromTargetLocation(target)), 0]];
             } else {
                 log("Rendering just-selected card on stack.");
+                var count = stackDepthCache[target.data("dest_key")];
                 sizingInfo = [[
                     target.hasClass("rotated"),
                     toCanonicalKey(target.data("dest_key")),
-                    heightOf(stackDepthCache[target.data("dest_key")] - 1)]];
+                    heightOf(count - 1, count)]];
             }
         } else {
             log("Rendering card snapping to stack");
+            var count = stackDepthCache[snap.data("dest_key")];
             sizingInfo = [[
                 snap.hasClass("rotated"),
                 toCanonicalKey(snap.data("dest_key")),
-                heightOf(stackDepthCache[snap.data("dest_key")])]];
+                heightOf(count, count + 1)]];
         }
     } else if (snap != null) {
         log("Rendering selection snapped to stack @ " + snap.data("dest_key"));
+        var count = stackDepthCache[snap.data("dest_key")];
         sizingInfo = [[
             snap.hasClass("rotated"),
             toCanonicalKey(snap.data("dest_key")),
-            heightOf(stackDepthCache[snap.data("dest_key")])]];
+            heightOf(count, count + 1)]];
     } else if (sizingInfo != null) {
         log("Rendering free-dragging selection");
         var delta = selectionBoxOffset();
@@ -1281,7 +1296,7 @@ function menuForCard(card) {
 /* Moves a card offscreen - used for hiding hands of other players. */
 function moveOffscreen(card) {
     var kOffscreenY = -300;
-    var destX = 100;
+    var destX = 200;
     if (parseInt(card.css("top")) != kOffscreenY) {
         card.animate({
             left: (destX != parseInt(card.css("left"))) ? destX : destX + XXX_jitter,
@@ -1367,18 +1382,37 @@ function redrawHand() {
     }
 }
 
+/* Forces a re-render of the entire stack at the location. */
+function redrawStack(clientKey, fixIndexes) {
+    if (isNaN(clientKey)) {
+        log("convert redrawStack - redrawHand");
+        redrawHand();
+        return;
+    }
+    var stack = stackOf(null, clientKey);
+    if (fixIndexes) {
+        stack.sort(function(a, b) {
+            return $(a).data("stack_index") - $(b).data("stack_index");
+        });
+    }
+
+    /* Recomputes position of each card in the stack. */
+    var i = 0;
+    stack.each(function() {
+        var cd = $(this);
+        if (fixIndexes) {
+            cd.data("stack_index", i);
+            i += 1;
+        }
+        animateToKey(cd, clientKey);
+    });
+}
+
 /* Forces re-render of cards on board. */
 function redrawBoard() {
-    $(".card").each(function(i) {
-        var card = $(this);
-        var key = card.data("dest_key");
-        // Redraws cards that are not in some hand.
-        if (!isNaN(key)) {
-            var ds = heightOf(card.data("stack_index"));
-            card.css("left", keyToX(key) + ds);
-            card.css("top", keyToY(key) + ds);
-        }
-    });
+    for (key in stackDepthCache) {
+        redrawStack(key, false);
+    }
     redrawDivider();
 }
 
@@ -1392,13 +1426,18 @@ function animateToKey(card, key) {
     log("animating #" + card.prop("id") + " -> " + key);
     var x = keyToX(key);
     var y = keyToY(key);
-    var newX = x + heightOf(stackDepthCache[key] - 1);
-    var newY = y + heightOf(stackDepthCache[key] - 1);
+    var idx = card.data("stack_index");
+    var count = stackDepthCache[key];
+    var newX = x + heightOf(idx, count);
+    var newY = y + heightOf(idx, count);
     updateCardFlipState(card, newY);
     var xChanged = parseInt(newX) != parseInt(card.css('left'));
     var yChanged = parseInt(newY) != parseInt(card.css('top'));
     XXX_jitter *= -1;
     if (xChanged || yChanged) {
+        log("changed: " + (newX - parseInt(card.css("left"))));
+        log("changed: " + (newY - parseInt(card.css("top"))));
+        log("new: " + newX + "," + newY);
         card.animate({
             left: newX + (xChanged ? 0 : XXX_jitter),
             top: newY + (yChanged ? 0 : XXX_jitter),
@@ -1453,7 +1492,9 @@ function computeContainmentHint(selectedSet, bb) {
         has[card.prop("id")] = true;
         return [[card.hasClass("rotated"),
                  toCanonicalKey(card.data("dest_key")),
-                 heightOf(card.data("stack_index"))]];
+                 heightOf(
+                    card.data("stack_index"),
+                    stackDepthCache[card.data("dest_key")])]];
     }
     function extend(result, option) {
         if (option) {
@@ -1620,10 +1661,11 @@ $(document).ready(function() {
                 if (dest_prev_type == "hands") {
                     removeFromArray(handCache, cardId);
                     log("hand: " + JSON.stringify(handCache));
-                    redrawHand();
                 }
                 card.zIndex(localMaxZ);
+                card.data("stack_index", stackDepthCache[dest_key]);
                 localMaxZ += 1;
+                redrawStack(card.data("dest_key"), false);
                 animateToKey(card, dest_key);
             }
             log("Sending card move to " + dest_key);
@@ -1716,11 +1758,8 @@ $(document).ready(function() {
                 var card = createImageNode(state, cid, z);
                 card.data("dest_key", pos);
                 updateCardFlipState(card, y);
-                card.animate({
-                    left: x + heightOf(z),
-                    top: y + heightOf(z),
-                }, animationLength);
             }
+            redrawStack(pos, false);
         }
         log("height cache: " + JSON.stringify(stackDepthCache));
 
@@ -1788,26 +1827,15 @@ $(document).ready(function() {
                 hideSpinner();
                 log("Stack update: " + JSON.stringify(e.data));
                 var clientKey = toClientKey(e.data.op.dest_key);
-                var x = keyToX(clientKey);
-                var y = keyToY(clientKey);
-
-                /* Temporarily hides each card in the stack. */
+                /* Reassigns z-indexes for the stack. */
                 for (i in e.data.z_stack) {
                     var cd = $("#card_" + e.data.z_stack[i]);
-                    cd.hide();
-                }
-
-                /* Redraws and shows each card in the stack. */
-                for (i in e.data.z_stack) {
-                    var cd = $("#card_" + e.data.z_stack[i]);
-                    cd.css("left", x + heightOf(i));
-                    cd.css("top", y + heightOf(i));
-                    cd.data("stack_index", i);
                     cd.zIndex(e.data.z_index[i]);
-                    localMaxZ = Math.max(localMaxZ, e.data.z_index[i]);
                     setOrientProperties(cd, e.data.orient[i]);
-                    cd.fadeIn();
+                    cd.data("stack_index", i);
+                    localMaxZ = Math.max(localMaxZ, e.data.z_index[i]);
                 }
+                redrawStack(clientKey, false);
             },
 
             update: function(e) {
@@ -1834,26 +1862,18 @@ $(document).ready(function() {
                     log("stackDepthCache: " + JSON.stringify(stackDepthCache));
 
                     setOrientProperties(card, e.data.move.dest_orient);
-                    var lastindex = e.data.z_stack.length - 1;
-                    var x = keyToX(clientKey);
-                    var y = keyToY(clientKey);
                     if (removeFromArray(handCache, e.data.move.card)) {
                         redrawHand();
                     }
+                    /* Redraws and shows each card in the stack. */
                     for (i in e.data.z_stack) {
-                        var cd = $("#card_" + e.data.z_stack[i]);
-                        cd.data("stack_index", i);
-                        if (i == lastindex) {
-                            continue; // Skips last element for later handling.
-                        }
-// TODO fix up and enforce z-consistency for both source AND dest stacks
-// currently this just screws up animation of multiple cards to the same stack
-//                        cd.css("left", x + heightOf(i));
-//                        cd.css("top", y + heightOf(i));
+                      var cd = $("#card_" + e.data.z_stack[i]);
+                      cd.data("stack_index", i);
                     }
                     card.zIndex(e.data.z_index);
                     localMaxZ = Math.max(localMaxZ, e.data.z_index);
-                    animateToKey(card, clientKey);
+                    redrawStack(oldClientKey, true);
+                    redrawStack(clientKey, false);
                 } else if (e.data.move.dest_type == "hands") {
 
                     setOrientProperties(card, e.data.move.dest_orient);
