@@ -699,7 +699,7 @@ function findSnapPoint(target) {
     var y = target.offset().top;
     var w = target.width();
     var h = target.height();
-    var minDist = 9999999;
+    var minDist = Infinity;
     var closest = null;
     $(".card").each(function(i) {
         var node = $(this);
@@ -725,9 +725,11 @@ function findSnapPoint(target) {
         }
     });
     if (closest == null) {
+        log("No snap point for: " + target.prop("id"));
         return null;
     } else {
         var snap = topOf(stackOf(closest).not(target));
+        log("Snap point found for: " + target.prop("id") + ": " + snap.data("dest_key"));
         return snap;
     }
 }
@@ -1474,7 +1476,6 @@ function redrawDivider() {
 function redrawCard(card) {
     updateCount += 1;
     var key = card.data("dest_key");
-    log("animating #" + card.prop("id") + " -> " + key);
     var x = keyToX(key);
     var y = keyToY(key);
     var idx = card.data("stack_index");
@@ -1487,17 +1488,12 @@ function redrawCard(card) {
     XXX_jitter *= -1;
     if (xChanged || yChanged) {
         animationCount += 1;
-        log("changed: " + (newX - parseInt(card.css("left"))));
-        log("changed: " + (newY - parseInt(card.css("top"))));
-        log("new: " + newX + "," + newY);
         card.animate({
             left: newX + (xChanged ? 0 : XXX_jitter),
             top: newY + (yChanged ? 0 : XXX_jitter),
             opacity: 1.0,
             avoidTransforms: card.hasClass("rotated") || card.hasClass("flipped"),
         }, animationLength / 2);
-    } else {
-        log("avoided animation");
     }
     card.removeClass("inHand");
 }
