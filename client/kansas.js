@@ -1481,8 +1481,8 @@ function redrawCard(card) {
     var key = card.data("dest_key");
     var x = keyToX(key);
     var y = keyToY(key);
-    var idx = card.data("stack_index");
-    var count = stackDepthCache[key] || 0;
+    var idx = parseInt(card.data("stack_index"));
+    var count = Math.max(idx + 1, stackDepthCache[key] || 0);
     var newX = x + heightOf(idx, count);
     var newY = y + heightOf(idx, count);
     updateCardFlipState(card, newY);
@@ -1717,7 +1717,7 @@ $(document).ready(function() {
                 card.data("stack_index", stackDepthCache[dest_key] || 0);
                 card.data("dest_key", dest_key);
                 redrawStack(oldKey, true);
-                redrawCard(card);
+                redrawStack(card, false);
             }
             log("Sending card move to " + dest_key);
             showSpinner();
