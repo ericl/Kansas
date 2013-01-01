@@ -28,11 +28,12 @@ document.title = user + '@' + gameid;
 
 // Tracks local state of the hand and zIndex of the topmost card.
 var handCache = [];
-var localMaxZ = 200;
 
 // Minimum zIndexes for various states.
 var kHandZIndex = 4000000;
 var kDraggingZIndex = 4500000;
+var nextHandZIndex = kHandZIndex;
+var nextBoardZIndex = 200;
 
 // The URL prefix from which card images are downloaded from.
 var resourcePrefix = '';
@@ -1354,73 +1355,52 @@ function unpickle(imgNode, cdata) {
     imgNode.css("top", cdata[5]);
 }
 
-function freeImgNode(imgNode) {
-    imgNode.attr("class", "card pool");
-    imgNode.css("left", -1000);
-    imgNode.css("top", -1000);
-    imgNode.prop("id", "garbage");
-    imgNode.prop("src", "");
-}
-
-var allocPoolIndex = 0;
-function allocateImgNode() {
-    var node = $("#pool_" + allocPoolIndex);
-    if (node.length == 0) {
-        warning("out of nodes to allocate @ " + allocPoolIndex);
-        return null;
-    } else {
-        allocPoolIndex += 1;
-        node.removeClass("pool");
-        return node;
-    }
-}
-
-/* Guarantees that card will have z-index at least zRequired, and
- * furthermore sets localZIndex > zRequired. Returns the new jquery
- * selection that represents card. Furthermore, successive calls to
- * fastZRaise with the same or greater zRequired value can be guaranteed
- * to result in assignments of increasing z-indexes. */
+/* Ensures card has the max z of the stack it is in.
+ * Precondition: stack isalready z-sorted except for card. */
 var raises = 0;
-function fastZRaise(card, zRequired) {
-    var node = allocateImgNode();
-    if (node == null) {
-        return slowZRaise(card, zRequired);
-    } else if (node.zIndex() < zRequired) {
-        warning("fastZRaise: multilevel pool unimplemented");
-        freeImgNode(node);
-        return slowZRaise(card, zRequired);
+function fastZRaiseInStack(card) {
+    var reverseSortedStack = stackOf(card)
+        .not("#" + card.prop("id"))
+        .sort(function(a, b) {
+            return $(b).zIndex() - $(a).zIndex();
+        });
+    if (reverseSortedStack.length < 1) {
+        log("no sorting necessary");
+        return;
     }
-    var cdata = pickle(card);
-    freeImgNode(card);
-    unpickle(node, cdata);
     raises += 1;
-    return card;
-}
-
-function slowZRaise(card, zRequired) {
-    zRequired = parseInt(zRequired);
-    raises += 1;
-    localMaxZ = Math.max(zRequired + 1, localMaxZ);
-    card.zIndex(zRequired);
-    return card;
+    var assignedSlot = null;
+    var displacedCard = card;
+    var displacedAttrs = pickle(card);
+    // Pushes card down until z-index of stack is sorted again.
+    for (i in reverseSortedStack) {
+        var nextCard = $(reverseSortedStack[i]);
+        if (nextCard.zIndex() > displacedCard.zIndex()) {
+            if (assignedSlot == null) {
+                assignedSlot = displacedCard;
+            }
+            var nextCardAttrs = pickle(nextCard);
+            unpickle(nextCard, displacedAttrs);
+            unpickle(displacedCard, nextCardAttrs);
+            displacedAttrs = nextCardAttrs;
+        } else {
+            break;
+        }
+    }
+    return assignedSlot == null ? card : assignedSlot;
 }
 
 /* Changes Z of cards, by changing the card around each Z.
  * This yields improved mobile performance for small deck shuffles.
- * Guarantees that cards will have z-indexes in increasing order as provided,
- * all of which are greater than zRequired. */
+ * Guarantees that cards will have z-indexes in increasing order as provided. */
 var shuffles = 0;
-function fastZShuffle(cardIds, zRequired) {
+function fastZShuffle(cardIds) {
     var minZ = Infinity;
     var attrs = $.map(cardIds, function(id) {
         var card = $("#card_" + id);
         minZ = Math.min(minZ, card.zIndex());
         return [pickle(card)];
     });
-    if (zRequired > minZ) {
-        warning("fastZShuffle: allocation unimplemented");
-        return slowZShuffle(cardIds, zRequired);
-    }
     var sortedSlots = $.map(cardIds, function(id) {
         return $("#card_" + id);
     }).sort(function(a, b) {
@@ -1434,18 +1414,25 @@ function fastZShuffle(cardIds, zRequired) {
     shuffles += 1;
 }
 
-/* Simple implementation of fastZShuffle. */
-function slowZShuffle(cardIds, zRequired) {
-    zRequired = parseInt(zRequired);
-    shuffles += 1;
-    cardIds.map(function(x) { $("#card_" + x).hide(); });
-    for (i in cardIds) {
-        i = parseInt(i)
-        var cd = $("#card_" + cardIds[i]);
-        localMaxZ = Math.max(zRequired + i + 1, localMaxZ);
-        cd.zIndex(zRequired + i);
+/* Ensures cards are all at hand level. */
+function fastZToHand(cardIds) {
+    // TODO make this actually fast using node pools
+    $.map(cardIds, function(id) {
+        var card = $("#card_" + id);
+        if (card.zIndex() < kHandZIndex) {
+            card.zIndex(nextHandZIndex);
+            nextHandZIndex += 1;
+        }
+    });
+}
+
+/* Ensures cards are all at hand level. */
+function fastZToBoard(card) {
+    // TODO make this actually fast using node pools
+    if (card.zIndex() >= kHandZIndex) {
+        card.zIndex(nextBoardZIndex);
+        nextBoardZIndex += 1;
     }
-    cardIds.map(function(x) { $("#card_" + x).show(); });
 }
 
 /* Redraws user's hand given an array of cards present. */
@@ -1485,7 +1472,8 @@ function renderHandStack(hand) {
     XXX_jitter *= -1;
     var skips = 0;
 
-    fastZShuffle(hand, kHandZIndex);
+    fastZToHand(hand);
+    fastZShuffle(hand);
     for (i in hand) {
         var cd = $("#card_" + hand[i]);
         updateCardFlipState(cd, 999999);
@@ -1529,7 +1517,7 @@ function redrawHand() {
 /* Forces a re-render of the entire stack at the location. */
 function redrawStack(clientKey, fixIndexes) {
     if (isNaN(clientKey)) {
-        log("convert redrawStack - redrawHand");
+        log("convert redrawStack - redrawHand @ " + clientKey);
         redrawHand();
         return;
     }
@@ -1802,11 +1790,12 @@ $(document).ready(function() {
                     removeFromArray(handCache, cardId);
                     log("hand: " + JSON.stringify(handCache));
                 }
-                card = fastZRaise(card, localMaxZ);
                 card.data("stack_index", stackDepthCache[dest_key] || 0);
                 card.data("dest_key", dest_key);
+                fastZToBoard(card);
+                card = fastZRaiseInStack(card);
                 redrawStack(oldKey, true);
-                redrawStack(card, false);
+                redrawStack(dest_key, false);
             }
             log("Sending card move to " + dest_key);
             showSpinner();
@@ -1860,11 +1849,12 @@ $(document).ready(function() {
         animationLength = 0;
         log("Reset all local state.");
         $(".uuid_frame").remove();
-        $(".card").not(".pool").remove();
+        $(".card").remove();
         resourcePrefix = state.resource_prefix;
         handCache = [];
 
         function createImageNode(state, cid, stack_index) {
+            nextBoardZIndex = Math.max(nextBoardZIndex, state.zIndex[cid] + 1);
             var front_url = state.urls_small[cid] || state.urls[cid];
             var back_url = state.back_urls[cid] || state.default_back_url;
             var url = front_url;
@@ -1911,7 +1901,7 @@ $(document).ready(function() {
                 card.data("dest_key", player);
             }
             if (player == user) {
-                renderHandStack(hand, false);
+                renderHandStack(hand);
             } else {
                 for (i in hand) {
                     moveOffscreen($("#card_" + hand[i]));
@@ -1967,7 +1957,7 @@ $(document).ready(function() {
                 hideSpinner();
                 log("Stack update: " + JSON.stringify(e.data));
                 var clientKey = toClientKey(e.data.op.dest_key);
-                fastZShuffle(e.data.z_stack, e.data.z_min);
+                fastZShuffle(e.data.z_stack);
                 for (i in e.data.z_stack) {
                     var cd = $("#card_" + e.data.z_stack[i]);
                     setOrientProperties(cd, e.data.orient[i]);
@@ -2009,7 +1999,8 @@ $(document).ready(function() {
                       var cd = $("#card_" + e.data.z_stack[i]);
                       cd.data("stack_index", i);
                     }
-                    card = fastZRaise(card, e.data.z_index);
+                    fastZToBoard(card);
+                    card = fastZRaiseInStack(card);
                     redrawStack(oldClientKey, true);
                     redrawStack(clientKey, false);
                 } else if (e.data.move.dest_type == "hands") {
@@ -2017,7 +2008,7 @@ $(document).ready(function() {
                     setOrientProperties(card, e.data.move.dest_orient);
                     if (clientKey == user) {
                         card.addClass("inHand");
-                        renderHandStack(e.data.z_stack, true);
+                        renderHandStack(e.data.z_stack);
                     } else {
                         setOrientProperties(card, -1);
                         moveOffscreen(card);
@@ -2271,6 +2262,7 @@ $(document).ready(function() {
 
     setInterval(function() {
         $("#stats")
+            .show()
             .text("animations: " + animationCount
               + ", updates: " + updateCount
               + ", sent: " + ws.sendCount

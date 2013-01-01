@@ -288,7 +288,6 @@ class KansasGameHandler(KansasHandler):
                 {
                     'op': req,
                     'z_stack': stack,
-                    'z_min': self._state.data['zIndex'][stack[0]],
                     'orient': [self._state.data['orientations'][c] for c in stack],
                     'seqno': self.nextseqno(),
                 })
@@ -315,8 +314,6 @@ class KansasGameHandler(KansasHandler):
                     'move': move,
                     # z_stack enforces stack ordering
                     'z_stack': self._state.data[dest_t][dest_k],
-                    # z_index enforces global ordering
-                    'z_index': self._state.data['zIndex'][move['card']],
                     # seqno is a sanity check for the client
                     'seqno': seqno,
                     # information about the origin of the move

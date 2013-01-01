@@ -1,17 +1,14 @@
-High prio, perf & ui:
-* consider z-system where z is only guaranteed within stacks (and there are a fixed number of hand nodes to allocate)
-* override show/hide
-* render large stacks using less images
-* stacks should skew in the other direction on the other side of the board
-* replace autoRefresh in selectable
-
 High prio, perf:
+* replace autoRefresh in selectable
 * send moves in bulk requests when possible
-* implement fast z-changes using a node pool
+* implement fast hand<->board z-changes using a node pool
+* override show/hide with non-mobile-disrupting equivalents
+* render large stacks using less images
 
 High prio, ui:
 * make sure that toClientKey(toCanonicalKey(x)) == x for all x
 * hand->hand moves should be completely local... and gap left when rendering handCache
+* stacks should skew in the other direction on the other side of the board
 
 Low prio, ui:
 * hovering hand?
