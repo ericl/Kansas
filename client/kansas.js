@@ -2182,7 +2182,6 @@ $(document).ready(function() {
 
     setInterval(function() {
         $("#stats")
-            .show()
             .text("animations: " + animationCount
               + ", updates: " + updateCount
               + ", sent: " + ws.sendCount

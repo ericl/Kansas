@@ -1,4 +1,6 @@
 High prio, perf & ui:
+* consider z-system where z is only guaranteed within stacks (and there are a fixed number of hand nodes to allocate)
+* override show/hide
 * render large stacks using less images
 * stacks should skew in the other direction on the other side of the board
 * replace autoRefresh in selectable
