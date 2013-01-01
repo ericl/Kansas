@@ -1327,6 +1327,54 @@ function moveOffscreen(card) {
     }
 }
 
+function pickle(card) {
+    return [
+        card.prop("src"),
+        card.prop("id"),
+        card.attr("class"),
+        {
+            orient: card.data("orient"),
+            front: card.data("front"),
+            front_full: card.data("front_full"),
+            back: card.data("back"),
+            stack_index: card.data("stack_index"),
+            dest_key: card.data("dest_key"),
+        },
+        card.css("left"),
+        card.css("top"),
+    ];
+}
+
+function unpickle(imgNode, cdata) {
+    imgNode.prop("src", cdata[0]);
+    imgNode.prop("id", cdata[1]);
+    imgNode.attr("class", cdata[2]);
+    imgNode.data(cdata[3]);
+    imgNode.css("left", cdata[4]);
+    imgNode.css("top", cdata[5]);
+}
+
+function freeImgNode(imgNode) {
+    imgNode.attr("class", "card pool");
+    imgNode.css("left", -1000);
+    imgNode.css("top", -1000);
+    imgNode.prop("id", "garbage");
+    imgNode.prop("src", "");
+}
+
+var allocPoolIndex = 0;
+function allocateImgNode() {
+    var node = $("#pool_" + allocPoolIndex);
+    if (node.length == 0) {
+        warning("out of nodes to allocate @ " + allocPoolIndex);
+        return null;
+    } else {
+        allocPoolIndex += 1;
+        node.removeClass("pool");
+        return node;
+    }
+}
+
 /* Guarantees that card will have z-index at least zRequired, and
  * furthermore sets localZIndex > zRequired. Returns the new jquery
  * selection that represents card. Furthermore, successive calls to
@@ -1334,27 +1382,70 @@ function moveOffscreen(card) {
  * to result in assignments of increasing z-indexes. */
 var raises = 0;
 function fastZRaise(card, zRequired) {
+    var node = allocateImgNode();
+    if (node == null) {
+        return slowZRaise(card, zRequired);
+    } else if (node.zIndex() < zRequired) {
+        warning("fastZRaise: multilevel pool unimplemented");
+        freeImgNode(node);
+        return slowZRaise(card, zRequired);
+    }
+    var cdata = pickle(card);
+    freeImgNode(card);
+    unpickle(node, cdata);
+    raises += 1;
+    return card;
+}
+
+function slowZRaise(card, zRequired) {
     zRequired = parseInt(zRequired);
     raises += 1;
-    /* TODO fast mobile impl using DOM node pool */
     localMaxZ = Math.max(zRequired + 1, localMaxZ);
     card.zIndex(zRequired);
     return card;
 }
 
-/* Guarantees that cards will have z-indexes in increasing order as provided,
+/* Changes Z of cards, by changing the card around each Z.
+ * This yields improved mobile performance for small deck shuffles.
+ * Guarantees that cards will have z-indexes in increasing order as provided,
  * all of which are greater than zRequired. */
 var shuffles = 0;
 function fastZShuffle(cardIds, zRequired) {
+    var minZ = Infinity;
+    var attrs = $.map(cardIds, function(id) {
+        var card = $("#card_" + id);
+        minZ = Math.min(minZ, card.zIndex());
+        return [pickle(card)];
+    });
+    if (zRequired > minZ) {
+        warning("fastZShuffle: allocation unimplemented");
+        return slowZShuffle(cardIds, zRequired);
+    }
+    var sortedSlots = $.map(cardIds, function(id) {
+        return $("#card_" + id);
+    }).sort(function(a, b) {
+        return $(a).zIndex() - $(b).zIndex();
+    });
+    $.each(sortedSlots, function(i) {
+        var card = $(this);
+        var cardAttrs = attrs[i];
+        unpickle(card, cardAttrs);
+    });
+    shuffles += 1;
+}
+
+/* Simple implementation of fastZShuffle. */
+function slowZShuffle(cardIds, zRequired) {
     zRequired = parseInt(zRequired);
     shuffles += 1;
-    /* TODO fast mobile impl by reassigning z-indexes within cards. */
+    cardIds.map(function(x) { $("#card_" + x).hide(); });
     for (i in cardIds) {
         i = parseInt(i)
         var cd = $("#card_" + cardIds[i]);
         localMaxZ = Math.max(zRequired + i + 1, localMaxZ);
         cd.zIndex(zRequired + i);
     }
+    cardIds.map(function(x) { $("#card_" + x).show(); });
 }
 
 /* Redraws user's hand given an array of cards present. */
@@ -1641,8 +1732,6 @@ $(document).ready(function() {
     showSpinner();
 
     function initCards() {
-        $(".card").disableSelection();
-
         $(".card").draggable({
             containment: $("#arena"),
             refreshPositions: true,
@@ -1771,7 +1860,7 @@ $(document).ready(function() {
         animationLength = 0;
         log("Reset all local state.");
         $(".uuid_frame").remove();
-        $(".card").remove();
+        $(".card").not(".pool").remove();
         resourcePrefix = state.resource_prefix;
         handCache = [];
 
@@ -1792,7 +1881,7 @@ $(document).ready(function() {
                 + ' data-front_full="' + state.urls[cid] + '"'
                 + ' data-back="' + back_url + '"'
                 + ' data-stack_index="' + stack_index + '"'
-                + ' class="accelerated card" src="' + toResource(url) + '">'
+                + ' class="card" src="' + toResource(url) + '">'
             return $(img).appendTo("#arena");
         }
 
