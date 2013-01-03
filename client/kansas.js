@@ -2050,6 +2050,7 @@ $(document).ready(function() {
 
     $("#debug").mouseup(function(e) {
         $("#console").toggle();
+        $("#stats").show();
         loggingEnabled = !loggingEnabled;
     });
 
@@ -2262,7 +2263,7 @@ $(document).ready(function() {
 
     setInterval(function() {
         $("#stats")
-            .show()
+//            .show()
             .text("animations: " + animationCount
               + ", updates: " + updateCount
               + ", sent: " + ws.sendCount
