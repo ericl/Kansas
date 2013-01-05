@@ -77,7 +77,7 @@ var kCardHeight = 175;
 var kCardBorder = 4;
 var kRotatedOffsetLeft = -10;
 var kRotatedOffsetTop = 25;
-var kMinHandHeight = 100;
+var kMinHandHeight = 90;
 var kHoverCardRatio = 4.57;
 var kHoverTapRatio = kHoverCardRatio * 0.875;
 var kSelectionBoxPadding = 15;
@@ -1017,6 +1017,7 @@ function shuffleSelectionConfirm() {
     var node = $(".shufselconfirm");
     node.removeClass("shufselconfirm");
     node.removeClass("hover");
+    node.removeClass("poison-source");
     node.addClass("confirm");
     node.data("key", "shufsel");
     node.html("You&nbsp;sure?");
@@ -1155,6 +1156,28 @@ function unrotateSelected() {
     });
 }
 
+/* Shows hovermenu of prev card in stack. */
+function stackNext(memberCard) {
+    var idx = parseInt(memberCard.data("stack_index")) - 1;
+    var next = stackOf(memberCard).filter(function() {
+        return $(this).data("stack_index") == idx;
+    });
+    activeCard = next;
+    showHoverMenu(next);
+    return "keepmenu";
+}
+
+/* Shows hovermenu of prev card in stack. */
+function stackPrev(memberCard) {
+    var idx = parseInt(memberCard.data("stack_index")) + 1;
+    var prev = stackOf(memberCard).filter(function() {
+        return $(this).data("stack_index") == idx;
+    });
+    activeCard = prev;
+    showHoverMenu(prev);
+    return "keepmenu";
+}
+
 var eventTable = {
     'flip': flipCard,
     'unflip': unflipCard,
@@ -1168,6 +1191,8 @@ var eventTable = {
     'reversestack': reverseStack,
     'shufsel': shuffleSelection,
     'shufselconfirm': shuffleSelectionConfirm,
+    'stacknext': stackNext,
+    'stackprev': stackPrev,
     'peek': peekCard,
     'toselection': cardToSelection,
     'trivialmove': function() {
@@ -1280,7 +1305,7 @@ function menuForSelection(selectedSet) {
         + '<span class="header" style="margin-left: -190px">&nbsp;SELECTION</span>"'
         + cardContextMenu
         + '</ul>'
-        + '<div class="hovernote"><span>' + selectedSet.length
+        + '<div class="hovernote"><span class="hoverdesc">' + selectedSet.length
         + ' cards selected</span></div>'
         + '</div>');
 
@@ -1348,7 +1373,6 @@ function menuForCard(card) {
         + ' src="' + src + '"></img>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
         + '<span class="header" style="margin-left: -190px">&nbsp;STACK</span>"'
-        + '<li style="margin-left: -190px" class="stackprev top boardonly bulk"'
         + '<li style="margin-left: -190px"'
         + ' class="top boardonly bulk"'
         + ' data-key="reversestack">Invert</li>'
@@ -1358,8 +1382,13 @@ function menuForCard(card) {
         + '<span class="header" style="margin-left: -190px">&nbsp;CARD</span>"'
         + cardContextMenu
         + '</ul>'
-        + '<div class="hovernote"><span>Card ' + i + ' of ' + numCards + '</span></div>'
-        + '</div>');
+        + '<div class="hovernote">'
+        + '<span class="hoverlink stackprev" data-key="stackprev">'
+        + '&#11013;&nbsp;</span>'
+        + '<span class="hoverdesc">Card ' + i + ' of ' + numCards + '</span>'
+        + '<span class="hoverlink stacknext" data-key="stacknext">'
+        + '&nbsp;&#10145;</span>'
+        + '</div></div>');
 
     var newNode = $(html).appendTo("body");
     if (card.hasClass("inHand")) {
@@ -1369,6 +1398,11 @@ function menuForCard(card) {
         $(".hovernote").show();
         $(".boardonly").removeClass("disabled");
         $(".nobulk").addClass("disabled");
+        if (i == 1) {
+            $(".stackprev").addClass("disabled");
+        } else if (i == numCards) {
+            $(".stacknext").addClass("disabled");
+        }
     } else {
         $(".hovernote").hide();
         $(".boardonly").removeClass("disabled");
@@ -2061,12 +2095,15 @@ $(document).ready(function() {
                         redrawHand();
                     }
                     /* Redraws and shows each card in the stack. */
-                    for (i in e.data.z_stack) {
-                      var cd = $("#card_" + e.data.z_stack[i]);
+                    var z_stack = e.data.z_stack;
+                    for (i in z_stack) {
+                      var cd = $("#card_" + z_stack[i]);
                       cd.data("stack_index", i);
                     }
                     fastZToBoard(card);
-                    card = fastZRaiseInStack(card);
+                    if ("card_" + z_stack[z_stack.length - 1] == card.prop("id")) {
+                        card = fastZRaiseInStack(card);
+                    }
                     redrawStack(oldClientKey, true);
                     redrawStack(clientKey, false);
                 } else if (e.data.move.dest_type == "hands") {
@@ -2246,11 +2283,12 @@ $(document).ready(function() {
         }
     });
 
-    $(".hovermenu li").live('mouseup', function(event) {
+    $(".hovermenu li, .hoverlink").live('mouseup', function(event) {
         var target = $(event.currentTarget);
         if (target.hasClass("poisoned")) {
             return;
         }
+        target.addClass("poison-source");
         disableArenaEvents = true;
         var oldButtons = $(".hovermenu li");
         var action = eventTable[target.data("key")](activeCard);
@@ -2266,7 +2304,6 @@ $(document).ready(function() {
                 break;
             default:
                 oldButtons.addClass("disabled");
-                target.addClass("poison-source");
                 removeFocus(true);
         }
         return false; /* Necessary for shufselconfirm. */

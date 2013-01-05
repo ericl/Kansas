@@ -53,7 +53,7 @@
         }
 
         .collapsed {
-            height: 100px !important;
+            height: 90px !important;
             background-color: #000000 !important;
             border-top: 2px solid #555 !important;
         }
@@ -87,9 +87,30 @@
             list-style: none;
         }
 
+        .hoverlink {
+            font-weight: bold;
+            font-size: 35pt;
+            line-height: 35pt;
+            vertical-align: middle;
+        }
+
+        .hoverdesc {
+            line-height: 35pt;
+            font-size: 20pt;
+            vertical-align: middle;
+        }
+
         li:hover, li.hover {
             cursor: pointer;
             background-color: #257491;
+        }
+
+        .hoverlink:hover, .hoverlink.hover {
+            cursor: pointer;
+        }
+
+        .hoverlink.poison-source {
+            color: #33b5e5 !important;
         }
 
         li.poison-source {
@@ -196,8 +217,7 @@
             color: #bebebe;
             font-family: sans-serif;
             text-align: center;
-            font-size: 20pt;
-            padding-bottom: 3pt;
+            padding-bottom: 4pt;
             padding-top: 2pt;
             background-color: #000;
             width: auto;

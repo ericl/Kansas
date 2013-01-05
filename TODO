@@ -6,7 +6,6 @@ High prio, perf:
 High prio, ui:
 * make sure that toClientKey(toCanonicalKey(x)) == x for all x
 * stacks should skew in the other direction on the other side of the board
-* prev/next card in hover menu
 
 Low prio, ui:
 * preview selected cards in hover menu
