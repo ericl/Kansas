@@ -673,11 +673,13 @@ function setSnapPoint(snap) {
 /* Returns card at top of stack to snap to or NULL. */
 function findSnapPoint(target) {
     // Enforces that selections with more than 1 stack do not snap.
+    var selectionSource = null;
     if (target.prop("id") == "selectionbox") {
         var seen = {};
         var numStacks = 0;
         $(".selecting").each(function(i) {
             var key = $(this).data("dest_key");
+            selectionSource = key;
             if (!seen[key]) {
                 seen[key] = true;
                 numStacks += 1;
@@ -698,7 +700,9 @@ function findSnapPoint(target) {
     var closest = null;
     $(".card").each(function(i) {
         var node = $(this);
-        if (!node.hasClass("inHand") && node.prop("id") != targetId) {
+        if (!node.hasClass("inHand")
+                && node.prop("id") != targetId
+                && node.data("dest_key") != selectionSource) {
             var cx = node.offset().left;
             var cy = node.offset().top;
             var dx = Math.abs(cx - x);
@@ -2399,7 +2403,7 @@ $(document).ready(function() {
 
     setInterval(function() {
         $("#stats")
-            .show()
+//            .show()
             .text("animations: " + animationCount
               + ", updates: " + updateCount
               + ", sent: " + ws.sendCount
