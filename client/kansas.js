@@ -72,13 +72,13 @@ var kAnimationLength = 400;
 var kMaxGridIndex = 0x7ff;
 
 // Geometry of cards.
-var kCardWidth = 105;
-var kCardHeight = 150;
+var kCardWidth = 123;
+var kCardHeight = 175;
 var kCardBorder = 4;
 var kRotatedOffsetLeft = -10;
 var kRotatedOffsetTop = 25;
-var kMinHandHeight = 90;
-var kHoverCardRatio = 5.33;
+var kMinHandHeight = 100;
+var kHoverCardRatio = 4.57;
 var kHoverTapRatio = kHoverCardRatio * 0.875;
 var kSelectionBoxPadding = 15;
 var kMinSupportedHeight = 1000;

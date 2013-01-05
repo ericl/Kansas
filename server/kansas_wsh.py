@@ -13,7 +13,7 @@ import time
 import urllib2
 import decks
 
-kSmallImageSize = (105, 150)
+kSmallImageSize = (123, 175)
 kServingPrefix = ''
 kLocalServingAddress = 'http://localhost:8000/'
 kCachePath = '../cache'
