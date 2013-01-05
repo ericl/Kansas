@@ -287,32 +287,30 @@ function handleFrameUpdateBroadcast(e) {
 }
 
 function handleSelectionMoved(selectedSet, dx, dy) {
-    showSpinner();
     var snap = findSnapPoint($("#selectionbox"));
     if (snap != null) {
         var dest_key = toCanonicalKey(parseInt(snap.data("dest_key")));
-        selectedSet.each(function(i) {
-            var card = $(this);
+        var innerFn = function(card) {
             var cardId = parseInt(card.prop("id").substr(5));
-            ws.send("move", {move: {card: cardId,
-                                    dest_prev_type: "board",
-                                    dest_type: "board",
-                                    dest_key: dest_key,
-                                    dest_orient: getOrient(card)}});
-        });
+            return {card: cardId,
+                    dest_prev_type: "board",
+                    dest_type: "board",
+                    dest_key: dest_key,
+                    dest_orient: getOrient(card)};
+        };
     } else {
-        selectedSet.each(function(i) {
-            var card = $(this);
+        var innerFn = function(card) {
             var cardId = parseInt(card.prop("id").substr(5));
             var dest = card.data("dest_key");
             var key = keyFromCoords(keyToX(dest) + dx, keyToY(dest) + dy);
-            ws.send("move", {move: {card: cardId,
-                                    dest_prev_type: "board",
-                                    dest_type: "board",
-                                    dest_key: toCanonicalKey(key),
-                                    dest_orient: getOrient(card)}});
-        });
+            return {card: cardId,
+                    dest_prev_type: "board",
+                    dest_type: "board",
+                    dest_key: toCanonicalKey(key),
+                    dest_orient: getOrient(card)};
+        };
     }
+    makeBulkMove(innerFn);
 }
 
 function handleSelectionClicked(selectedSet) {
@@ -325,33 +323,29 @@ function handleSelectionClicked(selectedSet) {
 }
 
 function handleSelectionMovedFromHand(selectedSet, x, y) {
-    showSpinner();
     var snap = findSnapPoint($("#selectionbox"));
     if (snap != null) {
         var fixedKey = parseInt(snap.data("dest_key"));
     }
-    selectedSet.each(function(i) {
-        var card = $(this);
+    makeBulkMove(function(card) {
         var cardId = parseInt(card.prop("id").substr(5));
         var key = (snap != null) ? fixedKey : keyFromCoords(x, y);
-        ws.send("move", {move: {card: cardId,
-                                dest_prev_type: "hands",
-                                dest_type: "board",
-                                dest_key: toCanonicalKey(key),
-                                dest_orient: getOrient(card)}});
+        return {card: cardId,
+                dest_prev_type: "hands",
+                dest_type: "board",
+                dest_key: toCanonicalKey(key),
+                dest_orient: getOrient(card)};
     });
 }
 
 function handleSelectionMovedToHand(selectedSet) {
-    showSpinner();
-    selectedSet.each(function(i) {
-        var card = $(this);
+    makeBulkMove(function(card) {
         var cardId = parseInt(card.prop("id").substr(5));
-        ws.send("move", {move: {card: cardId,
-                                dest_prev_type: "board",
-                                dest_type: "hands",
-                                dest_key: user,
-                                dest_orient: getOrient(card)}});
+        return {card: cardId,
+                dest_prev_type: "board",
+                dest_type: "hands",
+                dest_key: user,
+                dest_orient: getOrient(card)};
     });
 }
 
@@ -768,10 +762,7 @@ function startDragProgress(target) {
         ws.send("broadcast",
             {"subtype": "dragstart", "uuid": uuid, "card": target.prop("id")});
     } else if (target.prop("id") == "selectionbox") {
-        selectedSet.each(function(i) {
-            ws.send("broadcast",
-                {"subtype": "dragstart", "uuid": uuid, "card": $(this).prop("id")});
-        });
+        // TODO send some other appropriate dragging hint
     }
     updateFocus(target);
 }
@@ -1061,15 +1052,16 @@ function shuffleSelection() {
     ws.send("stackop", {op_type: "shuffle",
                         dest_type: "board",
                         dest_key: canonicalKey});
-    selectedSet.each(function() {
-        var card = $(this);
+    makeBulkMove(function(card) {
         if (parseInt(card.data("dest_key")) != majorityKey) {
             var cardId = parseInt(card.prop("id").substr(5));
-            ws.send("move", {move: {card: cardId,
-                                    dest_prev_type: "board",
-                                    dest_type: "board",
-                                    dest_key: canonicalKey,
-                                    dest_orient: canonicalOrient}});
+            return {card: cardId,
+                    dest_prev_type: "board",
+                    dest_type: "board",
+                    dest_key: canonicalKey,
+                    dest_orient: canonicalOrient};
+        } else {
+            return [];
         }
     });
 }
@@ -1080,23 +1072,94 @@ function cardToSelection(memberCard) {
     return "keepmenu";
 }
 
-function forSelected(fn) {
-    return function() {
-        selectedSet.each(function() {
-            fn($(this));
-        });
+/* Generates the move that does not move a card. */
+function generateTrivialMove(card) {
+    var cardId = parseInt(card.prop("id").substr(5));
+    var dest_type = "board";
+    var dest_prev_type = "board";
+    var dest_key = parseInt(card.data("dest_key"));
+    if (card.hasClass("inHand")) {
+        dest_type = "hands";
+        dest_key = user;
+        dest_prev_type = "hands";
     }
+    return {card: cardId,
+            dest_prev_type: dest_type,
+            dest_type: dest_type,
+            dest_key: toCanonicalKey(dest_key),
+            dest_orient: getOrient(card)};
+}
+
+function makeBulkMove(innerFn) {
+    showSpinner();
+    var moves = $.map(selectedSet, function(x) {
+        var card = $(x);
+        return innerFn(card);
+    });
+    ws.send("bulkmove", {moves: moves});
+}
+
+function flipSelected() {
+    makeBulkMove(function(card) {
+        var orient = getOrient(card);
+        if (orient > 0) {
+            var move = generateTrivialMove(card);
+            move["dest_orient"] = -orient;
+            return move;
+        } else {
+            return [];
+        }
+    });
+}
+
+function unflipSelected() {
+    makeBulkMove(function(card) {
+        var orient = getOrient(card);
+        if (orient < 0) {
+            var move = generateTrivialMove(card);
+            move["dest_orient"] = -orient;
+            return move;
+        } else {
+            return [];
+        }
+    });
+}
+
+function rotateSelected() {
+    makeBulkMove(function(card) {
+        var orient = getOrient(card);
+        if (Math.abs(orient) == 1) {
+            var move = generateTrivialMove(card);
+            move["dest_orient"] = Math.abs(orient) / orient * 2;
+            return move;
+        } else {
+            return [];
+        }
+    });
+}
+
+function unrotateSelected() {
+    makeBulkMove(function(card) {
+        var orient = getOrient(card);
+        if (Math.abs(orient) != 1) {
+            var move = generateTrivialMove(card);
+            move["dest_orient"] = Math.abs(orient) / orient;
+            return move;
+        } else {
+            return [];
+        }
+    });
 }
 
 var eventTable = {
     'flip': flipCard,
     'unflip': unflipCard,
-    'flipall': forSelected(flipCard),
-    'unflipall': forSelected(unflipCard),
+    'flipall': flipSelected,
+    'unflipall': unflipSelected,
     'rotate': rotateCard,
     'unrotate': unrotateCard,
-    'rotateall': forSelected(rotateCard),
-    'unrotateall': forSelected(unrotateCard),
+    'rotateall': rotateSelected,
+    'unrotateall': unrotateSelected,
     'flipstack': invertStack,
     'reversestack': reverseStack,
     'shufsel': shuffleSelection,
@@ -1416,7 +1479,6 @@ function fastZShuffle(cardIds) {
 
 /* Ensures cards are all at hand level. */
 function fastZToHand(cardIds) {
-    // TODO make this actually fast using node pools
     $.map(cardIds, function(id) {
         var card = $("#card_" + id);
         if (card.zIndex() < kHandZIndex) {
@@ -1428,7 +1490,6 @@ function fastZToHand(cardIds) {
 
 /* Ensures cards are all at hand level. */
 function fastZToBoard(card) {
-    // TODO make this actually fast using node pools
     if (card.zIndex() >= kHandZIndex) {
         card.zIndex(nextBoardZIndex);
         nextBoardZIndex += 1;
@@ -1953,6 +2014,7 @@ $(document).ready(function() {
                 reset(e.data[0]);
             },
 
+            // TODO unify with bulkupdate
             stackupdate: function(e) {
                 hideSpinner();
                 log("Stack update: " + JSON.stringify(e.data));
@@ -1966,6 +2028,7 @@ $(document).ready(function() {
                 redrawStack(clientKey, false);
             },
 
+            // TODO unify with bulkupdate
             update: function(e) {
                 hideSpinner();
                 log("Update: " + JSON.stringify(e.data));
@@ -1989,7 +2052,6 @@ $(document).ready(function() {
                     stackDepthCache[clientKey] = e.data.z_stack.length;
                     log("stackDepthCache: " + JSON.stringify(stackDepthCache));
 
-                    var oldOrient = getOrient(card);
                     setOrientProperties(card, e.data.move.dest_orient);
                     if (removeFromArray(handCache, e.data.move.card)) {
                         redrawHand();
@@ -2019,6 +2081,78 @@ $(document).ready(function() {
                 }
             },
 
+            bulkupdate: function(e) {
+                hideSpinner();
+                log("BulkUpdate.");
+
+                var redrawHandQueued = false;
+                var handRedrawn = false;
+                var redrawn = {};
+                var queuedStackRedraws = {};
+
+                for (i in e.data) {
+                    var data = e.data[i];
+                    var clientKey = toClientKey(data.dest_key);
+
+                    for (j in data['updates']) {
+                        var update = data['updates'][j];
+                        var card = $("#card_" + update.move.card);
+                        var oldClientKey = toClientKey(update.old_key);
+                        card.data("dest_key", clientKey);
+
+                        if (update.old_type == "board") {
+                            stackDepthCache[oldClientKey] -= 1;
+                            if (stackDepthCache[oldClientKey] <= 0) {
+                                if (stackDepthCache[oldClientKey] < 0) {
+                                    warning("Count cache is corrupted.");
+                                } else {
+                                    delete stackDepthCache[oldClientKey];
+                                }
+                            }
+                        }
+                        setOrientProperties(card, update.move.dest_orient);
+                        if (update.move.dest_type == "board") {
+                            if (removeFromArray(handCache, update.move.card)) {
+                                redrawHandQueued = true;
+                            }
+                            fastZToBoard(card);
+                            queuedStackRedraws[oldClientKey] = true;
+                        } else if (update.move.dest_type == "hands") {
+                            if (clientKey == user) {
+                                card.addClass("inHand");
+                                handCache = data.z_stack;
+                            } else {
+                                setOrientProperties(card, -1);
+                                moveOffscreen(card);
+                            }
+                        }
+                    }
+
+                    stackDepthCache[clientKey] = data.z_stack.length;
+                    for (i in data.z_stack) {
+                      var cd = $("#card_" + data.z_stack[i]);
+                      cd.data("stack_index", i);
+                    }
+                    if (data.dest_type == "board") {
+                      fastZShuffle(data.z_stack);
+                    }
+                    redrawStack(clientKey);
+                    log("redraw stack " + clientKey);
+                    redrawn[clientKey] = true;
+                }
+                log("stackDepthCache: " + JSON.stringify(stackDepthCache));
+
+                for (k in queuedStackRedraws) {
+                    if (!redrawn[k]) {
+                        redrawStack(k, true);
+                    }
+                }
+
+                if (redrawHandQueued && !handRedrawn) {
+                    redrawHand();
+                }
+            },
+
             broadcast_message: function(e) {
                 log("Recv broadcast: " + JSON.stringify(e));
                 switch (e.data.subtype) {
@@ -2030,6 +2164,7 @@ $(document).ready(function() {
                         break;
                 }
             },
+
             _default: function(e) {
                 log("Unknown response: " + JSON.stringify(e));
             },
@@ -2136,6 +2271,7 @@ $(document).ready(function() {
     $("#arena").selectable({
         distance: 50,
         appendTo: "#arena",
+        autoRefresh: true,
         start: function(e,u) {
             hideSelectionBox();
         },
@@ -2263,7 +2399,7 @@ $(document).ready(function() {
 
     setInterval(function() {
         $("#stats")
-//            .show()
+            .show()
             .text("animations: " + animationCount
               + ", updates: " + updateCount
               + ", sent: " + ws.sendCount

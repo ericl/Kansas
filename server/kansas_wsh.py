@@ -1,9 +1,8 @@
 # Implementation of Kansas websocket handler.
 
-
-
 import Image
 import copy
+import collections
 import json
 import logging
 import os
@@ -261,6 +260,7 @@ class KansasGameHandler(KansasHandler):
         self._state = KansasGameState()
         self.handlers['broadcast'] = self.handle_broadcast
         self.handlers['move'] = self.handle_move
+        self.handlers['bulkmove'] = self.handle_bulkmove
         self.handlers['stackop'] = self.handle_stackop
         self.handlers['resync'] = self.handle_resync
         self.handlers['reset'] = self.handle_reset
@@ -291,6 +291,39 @@ class KansasGameHandler(KansasHandler):
                     'orient': [self._state.data['orientations'][c] for c in stack],
                     'seqno': self.nextseqno(),
                 })
+
+    def handle_bulkmove(self, req, output):
+        with self._lock:
+            logging.info("Starting bulk move.")
+            updatebuffer = collections.defaultdict(list)
+            for move in req['moves']:
+                try:
+                    dest_t = move['dest_type']
+                    dest_k = move['dest_key']
+                    if dest_t == 'hands':
+                        if move['dest_prev_type'] == 'board':
+                            move['dest_orient'] = 1
+                        elif move['dest_orient'] > 0:
+                            move['dest_orient'] = 1
+                        else:
+                            move['dest_orient'] = -1
+                    src_type, src_key, seqno = self.apply_move(move)
+                    updatebuffer[dest_t, dest_k].append({
+                        'move': move,
+                        'old_type': src_type,
+                        'old_key': src_key,
+                    })
+                except:
+                    logging.warning("Ignoring bad move: " + str(move));
+            msg = []
+            for (dest_t, dest_k), updates in updatebuffer.iteritems():
+                msg.append({
+                    'dest_type': dest_t,
+                    'dest_key': dest_k,
+                    'updates': updates,
+                    'z_stack': self._state.data[dest_t][dest_k],
+                })
+            self.broadcast(set(self.streams.keys()), 'bulkupdate', msg)
 
     def handle_move(self, req, output):
         with self._lock:
