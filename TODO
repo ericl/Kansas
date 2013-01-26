@@ -1,11 +1,11 @@
 High prio, perf:
-* replace autoRefresh in selectable [difficult]
+* replace autoRefresh in selectable or replace selectable
 * implement fast hand<->board z-changes using a node pool [difficult]
 * render large stacks using less images [difficult]
 
 High prio, ui:
-* make sure that toClientKey(toCanonicalKey(x)) == x for all x
-* stacks should skew in the other direction on the other side of the board
+* snap-to grid with dotted visualization
+* tap->tap, double tap->reveal, hold->hovermenu
 
 Low prio, ui:
 * preview selected cards in hover menu
