@@ -25,7 +25,7 @@ def name_to_url(name):
   req = urllib2.Request("http://magiccards.info/query?q=!%s&v=card&s=cname" % '+'.join(name.split()))
   stream = urllib2.urlopen(req)
   data = stream.read()
-  match = re.search('"http://magiccards.info/scans/en/[a-z0-9]*/[0-9]*.jpg"', data)
+  match = re.search('"http://magiccards.info/scans/en/[a-z0-9]*/[a-z0-9]*.jpg"', data)
   return match.group()[33:-1]
 
 i = 60
