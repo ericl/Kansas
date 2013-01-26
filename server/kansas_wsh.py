@@ -38,7 +38,7 @@ class CachingLoader(dict):
             if not os.path.exists(path):
                 logging.info("GET " + url)
                 imgdata = urllib2.urlopen(url).read()
-                with open(path, 'w') as f:
+                with open(path, 'wb') as f:
                     f.write(imgdata)
             return path
 
