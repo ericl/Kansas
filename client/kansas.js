@@ -13,6 +13,8 @@
  * which again will be received by other clients in a globally consistent order.
  */
 
+// TODO refactor this mudball
+
 // Default settings for websocket connection.
 var kWSPort = 8080
 var gameid = "testgame1";
@@ -25,6 +27,9 @@ var connected = false;
 var disconnected = false;
 var gameReady = false;
 document.title = user + '@' + gameid;
+
+// TODO detect mobile devices better
+var onMobile = navigator.platform.indexOf("android") >= 0;
 
 // Tracks local state of the hand and zIndex of the topmost card.
 var handCache = [];
@@ -62,6 +67,7 @@ var disableArenaEvents = false;
 var dragging = false;
 
 // Workaround for https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
+// TODO fix this - this makes for a terrible UI experience.
 var XXX_jitter = 1;
 
 // Set to kAnimationLength once initial load has completed.
@@ -313,8 +319,15 @@ function handleSelectionMoved(selectedSet, dx, dy) {
     makeBulkMove(innerFn);
 }
 
-function handleSelectionClicked(selectedSet) {
-    if (hoverCardId != "#selectionbox") {
+function handleSelectionClicked(selectedSet, event) {
+    if (event.which == 2) {
+        // Implements middle-click-to-tap shortcut.
+        if (selectedSet.hasClass("rotated")) {
+            unrotateSelected(selectedSet);
+        } else {
+            rotateSelected(selectedSet);
+        }
+    } else if (hoverCardId != "#selectionbox") {
         disableArenaEvents = true;
         showHoverMenu(selectedSet);
     } else {
@@ -930,6 +943,15 @@ function changeOrient(card, orient) {
                             dest_key: toCanonicalKey(dest_key),
                             dest_prev_type: dest_type,
                             dest_orient: orient}});
+}
+
+function toggleRotateCard(card) {
+    var orient = getOrient(card);
+    if (Math.abs(orient) == 1) {
+        rotateCard(card);
+    } else {
+        unrotateCard(card);
+    }
 }
 
 /* Rotates card to 90deg. */
@@ -1777,6 +1799,11 @@ function computeContainmentHint(selectedSet, bb) {
 
 /* Draws selection box about items. */
 function createSelection(items, popupMenu) {
+    // On mobile, always pop up the hover menu,
+    // since middle-click shortcuts are not possible.
+    if (!onMobile) {
+        popupMenu = false;
+    }
     selectedSet = items;
     if (selectedSet.length < 2) {
         updateFocus(selectedSet);
@@ -1784,7 +1811,9 @@ function createSelection(items, popupMenu) {
         hideSelectionBox();
         if (selectedSet.length == 1) {
             activeCard = selectedSet;
-            showHoverMenu(selectedSet);
+            if (popupMenu) {
+                showHoverMenu(selectedSet);
+            }
         }
         return;
     }
@@ -1803,7 +1832,7 @@ function createSelection(items, popupMenu) {
     boxAndArea.show();
     $("#selectionbox span")
         .text(selectedSet.length + " cards")
-        .css("opacity", 0);
+        .css("opacity", onMobile ? 0 : 1);
     updateFocus($("#selectionbox"), true);
     if (popupMenu) {
         showHoverMenu(selectedSet);
@@ -1932,7 +1961,13 @@ $(document).ready(function() {
                     $("#hand").removeClass("collapsed");
                     redrawHand();
                 } else if (hoverCardId != card.prop("id")) {
-                    showHoverMenu(card);
+                    // Taps/untaps by middle-click.
+                    if (event.which == 2) {
+                        toggleRotateCard(card);
+                        removeFocus();
+                    } else {
+                        showHoverMenu(card);
+                    }
                 } else {
                     removeFocus();
                 }
@@ -2357,11 +2392,11 @@ $(document).ready(function() {
                 if (dragging) {
                     handleSelectionMovedFromHand(selectedSet, x, y);
                 } else {
-                    handleSelectionClicked(selectedSet);
+                    handleSelectionClicked(selectedSet, event);
                 }
             } else {
                 if (dx == 0 && dy == 0) {
-                    handleSelectionClicked(selectedSet);
+                    handleSelectionClicked(selectedSet, event);
                 } else {
                     handleSelectionMoved(selectedSet, dx, dy);
                 }

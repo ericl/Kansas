@@ -33,7 +33,7 @@ class CachingLoader(dict):
         self['resource_prefix'] = kServingPrefix
 
         def download(suffix):
-            url = self.toResource(suffix)
+            url = self.toAbsoluteURL(suffix)
             path = self.cachePath(url)
             if not os.path.exists(path):
                 logging.info("GET " + url)
@@ -73,7 +73,7 @@ class CachingLoader(dict):
              .resize(kSmallImageSize, Image.ANTIALIAS)\
              .save(small_path)
 
-    def toResource(self, url):
+    def toAbsoluteURL(self, url):
         if url.startswith('/'):
             return kLocalServingAddress + url
         if url.startswith('http:'):
