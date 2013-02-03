@@ -9,6 +9,7 @@ import random
 import threading
 import time
 import urllib2
+import re
 import decks
 
 try:
@@ -26,6 +27,33 @@ kCachePath = '../cache'
 
 if not os.path.exists(kCachePath):
     os.makedirs(kCachePath)
+
+
+# TODO split into loader module
+lookupCache = {}
+def CardNameToUrl(name, exact=False):
+    key = (name, exact)
+    if key in lookupCache:
+        val = lookupCache[key]
+        if not val:
+            raise Exception
+        return val
+    url = "http://magiccards.info/query?q=%s%s&v=card&s=cname" %\
+        ('!' if exact else '', '+'.join(name.split()))
+    logging.info("GET " + url)
+    req = urllib2.Request(url)
+    stream = urllib2.urlopen(req)
+    data = stream.read()
+    match = re.search(
+        '"http://magiccards.info/scans/en/[a-z0-9]*/[a-z0-9]*.jpg"',
+        data)
+    try:
+        logging.info("found " + match.group())
+        lookupCache[key] = match.group()[1:-1]
+        return lookupCache[key]
+    except Exception, e:
+        lookupCache[key] = None
+        raise e
 
 
 class CachingLoader(dict):
@@ -234,7 +262,11 @@ class KansasInitHandler(KansasHandler):
     def __init__(self):
         KansasHandler.__init__(self)
         self.handlers['connect'] = self.handle_connect
+        self.handlers['connect_searchapi'] = self.handle_connect_searchapi
         self.games = {}
+
+    def handle_connect_searchapi(self, request, output):
+        output.reply("ok")
 
     def handle_connect(self, request, output):
         with self._lock:
@@ -256,8 +288,32 @@ class KansasInitHandler(KansasHandler):
         if reqtype == 'connect':
             KansasHandler.transition(self, reqtype, request, output)
             return self.games[request['gameid']]
+        elif reqtype == 'connect_searchapi':
+            KansasHandler.transition(self, reqtype, request, output)
+            return searchHandler
         else:
             return KansasHandler.transition(self, reqtype, request, output)
+
+
+class KansasSearchHandler(KansasHandler):
+    """There is a singleton search handler for all search api requests."""
+
+    def __init__(self):
+        KansasHandler.__init__(self)
+        self.handlers['query'] = self.handle_query
+
+    def handle_query(self, request, output):
+        try:
+            try:
+                logging.info("Trying exact match")
+                url = CardNameToUrl(request['term'], True)
+                output.reply({'url': url, 'tags': request.get('tags')})
+            except Exception:
+                logging.info("Trying inexact match")
+                url = CardNameToUrl(request['term'], False)
+                output.reply({'url': url, 'tags': request.get('tags')})
+        except Exception:
+            output.reply({'error': 'No match found.', 'tags': request.get('tags')})
 
 
 class KansasGameHandler(KansasHandler):
@@ -425,6 +481,7 @@ class KansasGameHandler(KansasHandler):
 
 
 initHandler = KansasInitHandler()
+searchHandler = KansasSearchHandler()
 
 
 def web_socket_do_extra_handshake(request):
