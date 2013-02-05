@@ -79,13 +79,18 @@ $(document).ready(function() {
             query_resp: function(e) {
                 hideThrobber();
                 log(JSON.stringify(e));
-                if (e.data.url === undefined) {
+                if (e.data.urls === undefined) {
                     if (e.data.tags != "immediate") {
                         $("#notfound").show();
                     }
                 } else {
-                    $("#preview").prop("src", e.data.url);
-                    $("#preview").fadeIn();
+                    $("#previews img").remove();
+                    $.each(e.data.urls, function() {
+                        $("#previews").append(
+                            "<img src="
+                            + $(this)[0]
+                            + " class=kansas_preview></img>");
+                    });
                     $("#notfound").hide();
                 }
             },

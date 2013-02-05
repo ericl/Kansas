@@ -20,17 +20,37 @@
         right: 30px;
         top: 3px;
     }
+    .kansas_preview {
+        padding-top: 1em;
+        padding-right: 1em;
+        margin: 0;
+        width: 380px;
+    }
+    #throbber {
+        display: none
+    }
+    #previews {
+        padding-top: 7em;
+    }
+    #floater {
+        background: rgba(255, 255, 255, 0.9);
+        padding-bottom: 1em;
+        width: 100%;
+        position: fixed;
+    }
     </style>
   </head>
   <body>
     <div style="padding-left: 2em;">
-        <h3>Search for cards</h3>
-        <form class="navbar-form">
-          <input id="kansas_typeahead" type="text" class="span5">
-          <img src="third_party/images/throbber.gif" id="throbber" style="display: none">
-          <span id="notfound" style="display: none">no matches found</span>
-        </form>
-        <img src="" id="preview" class="span5" style="padding-top: 1em; margin: 0; display: none;"></img>
+        <div id="floater">
+            <h3>Search for cards</h3>
+            <form class="navbar-form">
+              <input id="kansas_typeahead" type="text" class="span5">
+              <img src="third_party/images/throbber.gif" id="throbber">
+              <span id="notfound" style="display: none">no matches found</span>
+            </form>
+        </div>
+        <div id="previews"></div>
     </div>
   </body>
 </html>

@@ -31,7 +31,7 @@ if not os.path.exists(kCachePath):
 
 # TODO split into loader module
 lookupCache = {}
-def CardNameToUrl(name, exact=False):
+def CardNameToUrls(name, exact=False):
     key = (name, exact)
     if key in lookupCache:
         val = lookupCache[key]
@@ -44,13 +44,16 @@ def CardNameToUrl(name, exact=False):
     req = urllib2.Request(url)
     stream = urllib2.urlopen(req)
     data = stream.read()
-    match = re.search(
+    matches = re.finditer(
         '"http://magiccards.info/scans/en/[a-z0-9]*/[a-z0-9]*.jpg"',
         data)
     try:
-        logging.info("found " + match.group())
-        lookupCache[key] = match.group()[1:-1]
-        return lookupCache[key]
+        urls = [m.group() for m in matches]
+        if urls:
+            logging.info("found " + ','.join(urls))
+            lookupCache[key] = urls
+            return urls
+        raise Exception("no matches found")
     except Exception, e:
         lookupCache[key] = None
         raise e
@@ -306,12 +309,12 @@ class KansasSearchHandler(KansasHandler):
         try:
             try:
                 logging.info("Trying exact match")
-                url = CardNameToUrl(request['term'], True)
-                output.reply({'url': url, 'tags': request.get('tags')})
+                urls = CardNameToUrls(request['term'], True)
+                output.reply({'urls': urls, 'tags': request.get('tags')})
             except Exception:
                 logging.info("Trying inexact match")
-                url = CardNameToUrl(request['term'], False)
-                output.reply({'url': url, 'tags': request.get('tags')})
+                urls = CardNameToUrls(request['term'], False)
+                output.reply({'urls': urls, 'tags': request.get('tags')})
         except Exception:
             output.reply({'error': 'No match found.', 'tags': request.get('tags')})
 
