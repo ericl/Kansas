@@ -39,7 +39,7 @@ def CardNameToUrls(name, exact=False):
             raise Exception
         return val
     url = "http://magiccards.info/query?q=%s%s&v=card&s=cname" %\
-        ('!' if exact else '', '+'.join(name.split()))
+        ('!' if exact else 'l:en+', '+'.join(name.split()))
     logging.info("GET " + url)
     req = urllib2.Request(url)
     stream = urllib2.urlopen(req)
