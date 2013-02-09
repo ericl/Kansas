@@ -1869,9 +1869,10 @@ $(document).ready(function() {
             } else {
                 deactivateHand();
             }
-            /* Slow on mobile.
-            card.zIndex(kDraggingZIndex);
-            */
+            /* Slow on mobile. */
+            if (!onMobile) {
+                card.zIndex(kDraggingZIndex);
+            }
             startDragProgress(card);
         });
 
