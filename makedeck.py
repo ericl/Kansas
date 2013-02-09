@@ -19,8 +19,6 @@ buf = {}
 while len(buf) < 60:
   print "> Enter card specifier (e.g. 4 Mountain):",
   line = raw_input().strip()
-  if line == 'ok':
-    break
   if line:
     try:
       num, name = line.split(' ', 1)
@@ -54,6 +52,9 @@ if choice == 'a':
 else:
   DECK['_deck1'] = name
   offset = 60
+print offset
+print buf.keys()
 for i, v in buf.iteritems():
-  DECK['urls'][i + offset] = v
-pprint.pprint(DECK, open('m_deck.py', 'w'))
+  DECK['urls'][int(i + offset)] = v
+with open('m_deck.py', 'w') as deckfile:
+    print >>deckfile, "DECK = %s" % pprint.pformat(DECK)
