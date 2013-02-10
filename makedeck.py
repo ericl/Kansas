@@ -52,8 +52,6 @@ if choice == 'a':
 else:
   DECK['_deck1'] = name
   offset = 60
-print offset
-print buf.keys()
 for i, v in buf.iteritems():
   DECK['urls'][int(i + offset)] = v
 with open('m_deck.py', 'w') as deckfile:
