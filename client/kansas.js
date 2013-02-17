@@ -36,7 +36,7 @@ var handCache = [];
 
 // Minimum zIndexes for various states.
 var kHandZIndex = 4000000;
-var kDraggingZIndex = 4500000;
+var kDraggingZIndex = 4400000;
 var nextHandZIndex = kHandZIndex;
 var nextBoardZIndex = 200;
 
