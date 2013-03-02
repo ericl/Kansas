@@ -1,0 +1,6 @@
+1. Separate Deck from GameState
+2. Integrate quickdeck.py created by Daniel
+3. Work on deck creation part
+	a. Allow deletion of selected cards
+	b. Connect search.html with index.html
+	c. Allow multiple deck creation
