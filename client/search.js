@@ -9,6 +9,7 @@ var connected = false;
 var disconnected = false;
 var lastGet = 0;
 var lastTyped = 0;
+var tmp;
 
 // TODO detect mobile devices better
 var onMobile = navigator.platform.indexOf("android") >= 0;
@@ -99,6 +100,14 @@ $(document).ready(function() {
             },
         },
     });
+    
+    $(".kansas_preview").live("click", function(event) {
+        tmp = event;
+	var src_image = $(event.target).prop("src");
+    
+        console.log($(event.target).prop("src"));
+        $('#hand').prepend('<img id="own_card" src=' + src_image + ' />');
+    });
 });
 
-// vim: et sw=4
+//vim:et sw=4
