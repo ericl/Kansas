@@ -154,6 +154,7 @@ class KansasGameState(object):
         else:
             i = 0
         for loc, stack in self.data['board'].iteritems():
+            random.shuffle(stack)
             for card in stack:
                 if card not in self.data['zIndex']:
                     self.data['zIndex'][card] = i
