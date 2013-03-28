@@ -3,7 +3,7 @@ Created on Mar 27, 2013
 
 As named, this module includes all the websocket_utils
 
-@author: huangchenglai
+@author: 
 '''
 
 import json

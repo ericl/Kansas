@@ -1,7 +1,7 @@
 '''
 Created on Mar 27, 2013
 
-@author: huangchenglai
+@author: 
 '''
 import decks
 from server.loaders import CachingLoader
