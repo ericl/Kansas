@@ -5,7 +5,7 @@ import pprint
 import urllib2
 import sys
 import re
-from m_deck import DECK
+from piece.m_deck import DECK
 
 def name_to_url(name):
   req = urllib2.Request("http://magiccards.info/query?q=!%s&v=card&s=cname" % '+'.join(name.split()))

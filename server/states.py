@@ -3,7 +3,7 @@ Created on Mar 27, 2013
 
 @author: 
 '''
-import decks
+import piece.decks as decks 
 from server.loaders import CachingLoader
 
 class KansasGameState(object):
