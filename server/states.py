@@ -3,14 +3,16 @@ Created on Mar 27, 2013
 
 @author: 
 '''
-import piece.decks as decks 
+import random
+
 from server.loaders import CachingLoader
+from server.loaders import PiecesConfigLoader
 
 class KansasGameState(object):
     """KansasGameState holds the entire state of the game in json format."""
 
     def __init__(self):
-        self.data = CachingLoader(decks.DEFAULT_MAGIC_DECK, (123, 175), '', 'http://localhost:8000/', '../cache')
+        self.data = CachingLoader(PiecesConfigLoader.load_decks(), (123, 175), '', 'http://localhost:8000/', '../cache')
         self.index = self.buildIndex()
         self.assignZIndices()
         self.assignOrientations()
@@ -21,6 +23,7 @@ class KansasGameState(object):
         else:
             i = 0
         for loc, stack in self.data['board'].iteritems():
+            random.shuffle(stack)
             for card in stack:
                 if card not in self.data['zIndex']:
                     self.data['zIndex'][card] = i

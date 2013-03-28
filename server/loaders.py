@@ -9,6 +9,7 @@ import copy
 import urllib2
 import os
 import re
+import json
 
 try:
     import Image
@@ -18,28 +19,80 @@ except:
     haveImaging = False
     
 MAGIC_TYPE = "magic"
+PIECE_EXTENSION = ".piece"
+PIECE_PATH = "../piece"
     
 class PiecesConfigLoader():
-    pass
+    
+    DECK_NAMES = "deck_names"
+    BOARD = "board"
+    DECK_TYPE = "deck_type"
+    URLS = "urls"
+    RESOURCE_PREFIX = "resource_prefix"
+    DEFAULT_BACK_URL = "default_back_url"
+        
+    @classmethod
+    def load_decks(cls):
+        import server.config as config
+        decks = {}
+        decks[cls.DECK_NAMES] = []
+        decks[cls.BOARD] = {}
+        decks[cls.URLS] = {}
+        decks_config = config.decks
+        counter = 0
+        for loc, filename in decks_config.iteritems():
+            if PieceConfigLoader.deck_config_exist(filename):
+                with open("%s/%s" % (PIECE_PATH, PieceConfigLoader.deck_config_name(filename)), 'r') as f:
+                    deck = json.load(f)
+            else:
+                deck = PieceConfigLoader.create_deck_config(filename)
+                
+            decks[cls.DECK_NAMES].append(PieceConfigLoader.deck_name(filename))
+            decks[cls.BOARD][long(loc)] = range(counter, counter+len(deck[cls.URLS]))
+            for _, val in deck[cls.URLS].iteritems():
+                decks[cls.URLS][counter] = val
+                counter += 1
+                
+            #FIXME Need to generalize this!!!
+            decks[cls.RESOURCE_PREFIX] = deck[cls.RESOURCE_PREFIX]
+            decks[cls.DEFAULT_BACK_URL] = deck[cls.DEFAULT_BACK_URL]
+                  
+        return decks 
 
-class PieceConfigLoader():
-    @staticmethod
-    def magic_card_name_to_url(name):
+class PieceConfigLoader(PiecesConfigLoader):
+    
+    @classmethod
+    def deck_name(cls, filename):
+        return os.path.splitext(filename)[0]+PIECE_EXTENSION
+    
+    @classmethod
+    def deck_config_name(cls, filename):
+        return os.path.splitext(filename)[0]+PIECE_EXTENSION
+    
+    @classmethod
+    def deck_config_exist(cls, filename):
+        return os.path.exists("%s/%s" % (PIECE_PATH, cls.deck_config_name(filename)))
+        
+    @classmethod
+    def magic_card_name_to_url(cls, name):
         req = urllib2.Request("http://magiccards.info/query?q=!%s&v=card&s=cname" % '+'.join(name.split()))
         stream = urllib2.urlopen(req)
         data = stream.read()
         match = re.search('"http://magiccards.info/scans/en/[a-z0-9]*/[0-9]*.jpg"', data)
         return match.group()[33:-1]
     
-    @staticmethod
-    def magic_card_file_to_deck(filename):
-        deck = open('piece/%s' %filename)
+    @classmethod
+    def create_deck_config(cls, filename):
+        deck = open('%s/%s' % (PIECE_PATH, filename))
+        
+        #FIXME generalize to any card
+        
         deckdata = {
-        'deck_name': filename,
-        'deck_type' : MAGIC_TYPE,
-        'resource_prefix': 'http://magiccards.info/scans/en/',
-        'default_back_url': '/third_party/images/mtg_detail.jpg',
-        'urls': {}
+                    cls.DECK_NAMES: filename,
+                    cls.DECK_TYPE : MAGIC_TYPE,
+                    cls.RESOURCE_PREFIX : 'http://magiccards.info/scans/en/',
+                    cls.DEFAULT_BACK_URL : '/third_party/images/mtg_detail.jpg',
+                    cls.URLS : {}
         }
         i = 0
         while True:
@@ -50,12 +103,17 @@ class PieceConfigLoader():
                     num, name = line.split(' ', 1)
                     num = int(num)
                     try:
-                        url = PieceConfigLoader.magic_card_name_to_url(name)
+                        url = cls.magic_card_name_to_url(name)
                         for _ in range(num):
                             deckdata['urls'][i] = url
                             i += 1
                     except Exception, e:
                         print "failed", e
+                        
+        storepath = "%s/%s" % (PIECE_PATH, cls.deck_config_name(filename))
+        with open(storepath, 'w') as f:
+            json.dump(deckdata, f)
+            f.flush()
         return deckdata
 
 class UrlLoader():
@@ -94,6 +152,13 @@ class CachingLoader(dict):
         start = time.time()
         dict.__init__(self, copy.deepcopy(values))
         self.oldPrefix = self['resource_prefix']
+        
+        self['hands'] = {}
+        self['zIndex'] = {}
+        self['orientations'] = {}
+        self['urls_small'] = {}
+        self['back_urls'] = {}
+        self['titles'] = {}
         
         logging.info("new CachingLoader")
 
