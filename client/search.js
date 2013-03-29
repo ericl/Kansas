@@ -101,13 +101,34 @@ $(document).ready(function() {
         },
     });
     
+    // Put card from preview to hand
     $(".kansas_preview").live("click", function(event) {
-        tmp = event;
-	var src_image = $(event.target).prop("src");
-    
-        console.log($(event.target).prop("src"));
-        $('#hand').prepend('<img id="own_card" src=' + src_image + ' />');
+        var src_image = $(event.target).prop("src");   
+        console.log(src_image);
+        $('#hand').prepend('<img src=' + src_image + ' class="own_hand"/>');
     });
+    
+    // Remove card from hand
+    $(".own_hand").live("click", function(event) {
+    	$(event.target).remove();
+    });
+    
+    //Function for the buttons
+    $("#reset").mouseup(function(e) {
+    	$(".own_hand").remove();
+    });
+    
+    $("#player1").mouseup(function(e) {
+    	var all_cards = new Array();
+    	$(".own_hand").each(function() { 
+    		all_cards.push($(this).prop("src")); }
+    	);
+    	console.log(all_cards);    	
+    });
+    
+    $("#player2").mouseup(function(e) {
+    });
+    
 });
 
 //vim:et sw=4
