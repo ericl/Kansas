@@ -13,6 +13,7 @@ import collections
 from server.loaders import UrlLoader
 from server.loaders import PieceConfigLoader
 from server.states import KansasGameState
+import server.config as config
 
 
 class KansasHandler(object):
@@ -108,12 +109,7 @@ class KansasSearchHandler(KansasHandler):
             player = request["player"]
             deck_name = "player"+str(player)
             PieceConfigLoader.create_magic_deck_config_from_urls(request["cards"], deck_name)
-            if (player == 1):
-                pass
-                #update player1 deck
-            else:
-                pass
-                #update player2 deck
+            config.update_player_deck(deck_name, player)
         except Exception:
             output.reply({'error': 'Fail to submit'})
         
