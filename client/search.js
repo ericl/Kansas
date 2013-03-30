@@ -123,7 +123,8 @@ $(document).ready(function() {
     	$(".own_hand").each(function() { 
     		all_cards.push($(this).prop("src")); }
     	);
-    	console.log(all_cards);    	
+    	log("sent cards in hand to replace deck at play");
+        ws.send("submit", {"player": 1, "cards": all_cards});
     });
     
     $("#player2").mouseup(function(e) {

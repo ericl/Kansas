@@ -11,6 +11,7 @@ import json
 import collections
 
 from server.loaders import UrlLoader
+from server.loaders import PieceConfigLoader
 from server.states import KansasGameState
 
 
@@ -85,6 +86,7 @@ class KansasSearchHandler(KansasHandler):
     def __init__(self):
         KansasHandler.__init__(self)
         self.handlers['query'] = self.handle_query
+        self.handlers['submit'] = self.handle_submit
         self.urlLoader = UrlLoader()
 
     def handle_query(self, request, output):
@@ -100,6 +102,21 @@ class KansasSearchHandler(KansasHandler):
         except Exception:
             output.reply({'error': 'No match found.', 'tags': request.get('tags')})
 
+    def handle_submit(self, request, output):
+        try:
+            logging.info("Try to make a deck")
+            player = request["player"]
+            deck_name = "player"+str(player)
+            PieceConfigLoader.create_magic_deck_config_from_urls(request["cards"], deck_name)
+            if (player == 1):
+                pass
+                #update player1 deck
+            else:
+                pass
+                #update player2 deck
+        except Exception:
+            output.reply({'error': 'Fail to submit'})
+        
 
 class KansasGameHandler(KansasHandler):
     """There is single game handler for each game, shared among all players.

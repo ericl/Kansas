@@ -21,6 +21,11 @@ except:
 MAGIC_TYPE = "magic"
 PIECE_EXTENSION = ".piece"
 PIECE_PATH = "../piece"
+
+#Will make a class for this later
+CONFIG_FILE = "config.json"
+CONFIG_DECKS = "decks"
+
     
 class PiecesConfigLoader():
     
@@ -33,19 +38,19 @@ class PiecesConfigLoader():
         
     @classmethod
     def load_decks(cls):
-        import server.config as config
+        #TODO should make a class for config
+        decks_config = cls.load_config();
         decks = {}
         decks[cls.DECK_NAMES] = []
         decks[cls.BOARD] = {}
         decks[cls.URLS] = {}
-        decks_config = config.decks
         counter = 0
         for loc, filename in decks_config.iteritems():
-            if PieceConfigLoader.deck_config_exist(filename):
+            if filename.endswith(PIECE_EXTENSION) or PieceConfigLoader.deck_config_exist(filename):
                 with open("%s/%s" % (PIECE_PATH, PieceConfigLoader.deck_config_name(filename)), 'r') as f:
                     deck = json.load(f)
             else:
-                deck = PieceConfigLoader.create_deck_config(filename)
+                deck = PieceConfigLoader.create_magic_deck_config_from_names(filename)
                 
             decks[cls.DECK_NAMES].append(PieceConfigLoader.deck_name(filename))
             decks[cls.BOARD][long(loc)] = range(counter, counter+len(deck[cls.URLS]))
@@ -58,9 +63,15 @@ class PiecesConfigLoader():
             decks[cls.DEFAULT_BACK_URL] = deck[cls.DEFAULT_BACK_URL]
                   
         return decks 
+    
+    @classmethod
+    def load_config(cls):
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+            return config[CONFIG_DECKS]
 
 class PieceConfigLoader(PiecesConfigLoader):
-    
+      
     @classmethod
     def deck_name(cls, filename):
         return os.path.splitext(filename)[0]+PIECE_EXTENSION
@@ -82,18 +93,22 @@ class PieceConfigLoader(PiecesConfigLoader):
         return match.group()[33:-1]
     
     @classmethod
-    def create_deck_config(cls, filename):
+    def get_template_magic_deck_config(cls):
+        return {
+                cls.DECK_TYPE : MAGIC_TYPE,
+                cls.RESOURCE_PREFIX : 'http://magiccards.info/scans/en/',
+                cls.DEFAULT_BACK_URL : '/third_party/images/mtg_detail.jpg',
+                cls.URLS : {}
+                }
+    
+    @classmethod
+    def create_magic_deck_config_from_names(cls, filename):
         deck = open('%s/%s' % (PIECE_PATH, filename))
         
         #FIXME generalize to any card
+        deckdata = cls.get_template_magic_deck_config()
+        deckdata[cls.DECK_NAMES] = filename
         
-        deckdata = {
-                    cls.DECK_NAMES: filename,
-                    cls.DECK_TYPE : MAGIC_TYPE,
-                    cls.RESOURCE_PREFIX : 'http://magiccards.info/scans/en/',
-                    cls.DEFAULT_BACK_URL : '/third_party/images/mtg_detail.jpg',
-                    cls.URLS : {}
-        }
         i = 0
         while True:
             read = deck.readline()
@@ -115,6 +130,22 @@ class PieceConfigLoader(PiecesConfigLoader):
             json.dump(deckdata, f)
             f.flush()
         return deckdata
+    
+    @classmethod
+    def create_magic_deck_config_from_urls(cls, urls, filename):
+        deckdata = cls.get_template_magic_deck_config()
+        deckdata[cls.DECK_NAMES] = filename
+        
+        for idx, url in enumerate(urls):
+            deckdata[cls.URLS][idx] = "/".join(url.split("/")[-2:])
+        
+        storepath = "%s/%s" % (PIECE_PATH, filename+PIECE_EXTENSION)
+        with open(storepath, 'w') as f:
+            json.dump(deckdata, f)
+            f.flush()
+        return deckdata
+        
+        
 
 class UrlLoader():
     def __init__(self):
