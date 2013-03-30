@@ -128,6 +128,12 @@ $(document).ready(function() {
     });
     
     $("#player2").mouseup(function(e) {
+    	var all_cards = new Array();
+    	$(".own_hand").each(function() { 
+    		all_cards.push($(this).prop("src")); }
+    	);
+    	log("sent cards in hand to replace deck at play");
+        ws.send("submit", {"player": 2, "cards": all_cards});
     });
     
 });
