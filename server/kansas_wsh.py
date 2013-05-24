@@ -154,6 +154,7 @@ class KansasGameState(object):
         else:
             i = 0
         for loc, stack in self.data['board'].iteritems():
+            assert type(loc) is int, "card locs must be int"
             random.shuffle(stack)
             for card in stack:
                 if card not in self.data['zIndex']:
@@ -340,6 +341,7 @@ class KansasGameHandler(KansasHandler):
         with self._lock:
             dest_t = req['dest_type']
             dest_k = req['dest_key']
+            print dest_k, self._state.data[dest_t].keys()
             stack = self._state.data[dest_t][dest_k]
             if req['op_type'] == 'invert':
                 stack.reverse()
