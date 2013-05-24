@@ -3,7 +3,6 @@
 
 import pprint
 import urllib2
-import sys
 import re
 from m_deck import DECK
 
@@ -19,8 +18,10 @@ buf = {}
 while len(buf) < 60:
   print "> Enter card specifier (e.g. 4 Mountain):",
   line = raw_input().strip()
-  if line:
+  match = re.match(r'[0-9]+ [a-zA-Z,\-\' ]+', line)
+  if match:
     try:
+      line = match.group().strip()
       num, name = line.split(' ', 1)
       num = int(num)
       url = name_to_url(name)

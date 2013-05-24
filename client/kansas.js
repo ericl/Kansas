@@ -1096,7 +1096,7 @@ function shuffleSelection() {
 /* Goes from a single card to selecting the entire stack. */
 function cardToSelection(memberCard) {
     createSelection(stackOf(memberCard).addClass("highlight"), true);
-    return "keepmenu";
+    return "refreshselection";
 }
 
 /* Generates the move that does not move a card. */
@@ -1277,10 +1277,7 @@ function menuForSelection(selectedSet) {
     hoverCardId = "#selectionbox";
 
     var cardContextMenu = (''
-        + '<li style="margin-left: -190px"'
-        + ' class="bulk top"'
-        + ' data-key="trivialmove">Move</li>'
-        + '<li class="tapall boardonly" style="margin-left: -190px"'
+        + '<li class="tapall boardonly top" style="margin-left: -190px"'
         + ' data-key="rotateall">Tap All</li>'
         + '<li style="margin-left: -190px"'
         + ' class="untapall boardonly" data-key="unrotateall">Untap All'
@@ -1479,7 +1476,7 @@ function unpickle(imgNode, cdata) {
 }
 
 /* Ensures card has the max z of the stack it is in.
- * Precondition: stack isalready z-sorted except for card. */
+ * Precondition: stack is already z-sorted except for card. */
 var raises = 0;
 function fastZRaiseInStack(card) {
     var reverseSortedStack = stackOf(card)
@@ -1847,17 +1844,17 @@ $(document).ready(function() {
     document.addEventListener("touchleave", touchHandler, true);
     showSpinner();
 
-    function initCards() {
-        $(".card").draggable({
+    function initCards(sel) {
+        sel.draggable({
             containment: $("#arena"),
             refreshPositions: true,
         });
 
-        $(".card").each(function(index, card) {
+        sel.each(function(index, card) {
             setOrientProperties($(card), getOrient($(card)));
         });
 
-        $(".card").bind("dragstart", function(event, ui) {
+        sel.bind("dragstart", function(event, ui) {
             log("dragstart");
             var card = $(event.currentTarget);
             dragging = true;
@@ -1876,14 +1873,14 @@ $(document).ready(function() {
             startDragProgress(card);
         });
 
-        $(".card").bind("drag", function(event, ui) {
+        sel.bind("drag", function(event, ui) {
             var card = $(event.currentTarget);
             dragging = true;
             card.stop();
             updateDragProgress(card);
         });
 
-        $(".card").bind("dragstop", function(event, ui) {
+        sel.bind("dragstop", function(event, ui) {
             var card = $(event.currentTarget);
             updateDragProgress(card, true);
             $("#hand").removeClass("dragging");
@@ -1937,7 +1934,7 @@ $(document).ready(function() {
             dragStartKey = null;
         });
 
-        $(".card").mousedown(function(event) {
+        sel.mousedown(function(event) {
             log("----------");
             var card = $(event.currentTarget);
             dragStartKey = card.data("dest_key");
@@ -1951,7 +1948,7 @@ $(document).ready(function() {
             }
         });
 
-        $(".card").mouseup(function(event) {
+        sel.mouseup(function(event) {
             var card = $(event.currentTarget);
             if (!dragging) {
                 if ($(".selecting").length != 0) {
@@ -2044,7 +2041,7 @@ $(document).ready(function() {
             }
         }
         $(".card").fadeIn();
-        initCards();
+        initCards($(".card"));
         animationLength = kAnimationLength;
     }
 
@@ -2337,6 +2334,9 @@ $(document).ready(function() {
                 break;
             case "keepselection":
                 removeHoverMenu(true);
+                break;
+            case "refreshselection":
+                showHoverMenu(selectedSet);
                 break;
             default:
                 oldButtons.addClass("disabled");
