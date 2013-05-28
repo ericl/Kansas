@@ -13,6 +13,7 @@ import collections
 from server.loaders import UrlLoader
 from server.loaders import PieceConfigLoader
 from server.states import KansasGameState
+import server.config as config
 
 class KansasHandler(object):
     """KansasHandler implements a state machine where the transitions are
