@@ -1121,7 +1121,19 @@ function makeBulkMove(innerFn) {
     showSpinner();
     var moves = $.map(selectedSet, function(x) {
         var card = $(x);
-        return innerFn(card);
+        var move = innerFn(card);
+
+        /* Fixes orientation if the card is moved to the hand. */
+        if (move.dest_type == "hands") {
+            if (move.dest_prev_type == "board")
+                move.dest_orient = 1;
+            else if (move.dest_orient > 0)
+                move.dest_orient = 1;
+            else
+               move.dest_orient = -1;
+        }
+
+        return move;
     });
     ws.send("bulkmove", {moves: moves});
 }
@@ -1925,6 +1937,17 @@ $(document).ready(function() {
             }
             log("Sending card move to " + dest_key);
             showSpinner();
+
+            /* Fixes orientation if the card is moved to the hand. */
+            if (dest_type == "hands") {
+                if (dest_prev_type == "board")
+                    orient = 1;
+                else if (orient > 0)
+                    orient = 1;
+                else
+                    orient = -1;
+            }
+
             ws.send("move", {move: {card: cardId,
                                     dest_prev_type: dest_prev_type,
                                     dest_type: dest_type,

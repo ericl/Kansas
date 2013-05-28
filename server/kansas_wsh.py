@@ -372,13 +372,6 @@ class KansasGameHandler(KansasHandler):
                 try:
                     dest_t = move['dest_type']
                     dest_k = move['dest_key']
-                    if dest_t == 'hands':
-                        if move['dest_prev_type'] == 'board':
-                            move['dest_orient'] = 1
-                        elif move['dest_orient'] > 0:
-                            move['dest_orient'] = 1
-                        else:
-                            move['dest_orient'] = -1
                     src_type, src_key, seqno = self.apply_move(move)
                     updatebuffer[dest_t, dest_k].append({
                         'move': move,
@@ -402,13 +395,6 @@ class KansasGameHandler(KansasHandler):
             move = req['move']
             dest_t = move['dest_type']
             dest_k = move['dest_key']
-            if dest_t == 'hands':
-                if move['dest_prev_type'] == 'board':
-                    move['dest_orient'] = 1
-                elif move['dest_orient'] > 0:
-                    move['dest_orient'] = 1
-                else:
-                    move['dest_orient'] = -1
             src_type, src_key, seqno = self.apply_move(move)
             logging.info("Accepted move request '%s'", req)
             self.broadcast(
