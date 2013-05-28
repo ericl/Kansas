@@ -205,7 +205,12 @@ class CachingLoader(dict):
         def download(suffix):
             url = self.toAbsoluteURL(suffix)
             path = self.cachePath(url)
+            print url
+            if os.path.exists(url):
+                return url
+            
             if not os.path.exists(path):
+                print path
                 logging.info("GET " + url)
                 imgdata = urllib2.urlopen(url).read()
                 with open(path, 'wb') as f:
