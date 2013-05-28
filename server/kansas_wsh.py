@@ -1,5 +1,6 @@
 # Implementation of Kansas websocket handler.
 
+import random
 import copy
 import collections
 import json
@@ -10,7 +11,7 @@ import threading
 import time
 import urllib2
 import re
-import decks
+from m_deck import DECKS
 
 try:
     import Image
@@ -142,11 +143,17 @@ class JSONOutput(object):
 class KansasGameState(object):
     """KansasGameState holds the entire state of the game in json format."""
 
-    def __init__(self):
-        self.data = CachingLoader(decks.DEFAULT_MAGIC_DECK)
-        self.index = self.buildIndex()
-        self.assignZIndices()
-        self.assignOrientations()
+    def __init__(self, first_deck = None, second_deck = None):
+		if not first_deck or not second_deck:
+			self.deck1 = random.choice(DECKS.keys())
+			self.deck2 = random.choice(DECKS.keys())
+		else:
+			self.deck1 = first_deck
+			self.deck2 = second_deck
+		self.data = CachingLoader(join_decks(DECKS[self.deck1], DECKS[self.deck2]))
+		self.index = self.buildIndex()
+		self.assignZIndices()
+		self.assignOrientations()
 
     def assignZIndices(self):
         if self.data['zIndex']:
@@ -335,6 +342,7 @@ class KansasGameHandler(KansasHandler):
         self.handlers['stackop'] = self.handle_stackop
         self.handlers['resync'] = self.handle_resync
         self.handlers['reset'] = self.handle_reset
+        self.handlers['select'] = self.handle_reset
         self.streams = {creatorOutputStream: creator}
 
     def handle_stackop(self, req, output):
@@ -440,11 +448,19 @@ class KansasGameHandler(KansasHandler):
 
     def handle_reset(self, req, output):
         with self._lock:
-            self._state = KansasGameState()
+            self._state = KansasGameState(self._state.deck1, self._state.deck2)
             self.broadcast(
                 set(self.streams.keys()),
                 'reset',
                 self.snapshot())
+
+	def handle_select(self, req, output):
+		with self._lock:
+			self._state = KansasGameState(self._state.deck, self._state.deck2)
+			self.boardcast(
+				set(self.stream.keys()),
+				'reset',
+				self.snapshot())
 
     def snapshot(self):
         with self._lock:
@@ -485,6 +501,32 @@ class KansasGameHandler(KansasHandler):
             return src_type, src_key, self.nextseqno()
 
 
+def join_decks(deck1, deck2):
+	"""Combines two MTG decks into one data structure for game state."""	
+	d1length = len(deck1['urls'])
+	d2length = len(deck2['urls'])
+	data = {
+    'deck_name': 'Test magic deck',
+    'resource_prefix': 'http://magiccards.info/scans/en/',
+    'default_back_url': '/third_party/images/mtg_detail.jpg',
+    'board': {
+        70321710: range(0, d1length),
+        44892300: range(d1length, d1length+d2length)
+    },
+    'hands': {},
+    'zIndex': {},
+    'orientations': {},
+    'urls': {},
+    'urls_small': {},
+    'back_urls': {},
+    'titles': {}
+    }
+	data['urls'] = deck1['urls'].copy()
+	i = d1length
+	for key, val in deck2['urls'].iteritems():
+		data['urls'][i] = val
+		i += 1
+	return data
 
 initHandler = KansasInitHandler()
 searchHandler = KansasSearchHandler()
