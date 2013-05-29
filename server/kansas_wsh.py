@@ -288,7 +288,10 @@ class KansasInitHandler(KansasHandler):
     def handle_list_games(self, request, output):
         with self._lock:
             resp = []
-            for gameid, handler in self.games.iteritems():
+	    ranked = sorted(
+		self.games.items(),
+		key=lambda (k, v): -v.last_used)
+            for gameid, handler in ranked:
                 resp.append({
                     'gameid': gameid,
                     'presence': handler.presence_count()})

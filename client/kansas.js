@@ -2360,6 +2360,8 @@ $(document).ready(function() {
         console.log("could not parse cookie: " + document.cookie);
     }
 
+    $("#gamename").val(Date());
+
     if (document.location.hash) {
         $("#homescreen").hide();
     }
