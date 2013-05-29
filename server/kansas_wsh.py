@@ -234,6 +234,11 @@ class KansasGameState(object):
 
         return src_type, src_key
 
+    def removeCard(self, card):
+		loc_type, loc = self.index[card]
+		del self.index[card]
+		self.data['board'][loc].remove(card)
+    
 
 class KansasHandler(object):
     """KansasHandler implements a state machine where the transitions are
@@ -339,6 +344,7 @@ class KansasGameHandler(KansasHandler):
         self.handlers['stackop'] = self.handle_stackop
         self.handlers['resync'] = self.handle_resync
         self.handlers['reset'] = self.handle_reset
+        self.handlers['remove'] = self.handle_remove
         self.streams = {creatorOutputStream: creator}
 
     def handle_stackop(self, req, output):
@@ -413,6 +419,18 @@ class KansasGameHandler(KansasHandler):
                 set(self.streams.keys()),
                 'reset',
                 self.snapshot())
+
+    def handle_remove(self, req, output):
+        with self._lock:
+            logging.info("Starting mass excommunication.")
+            for card in req:
+                try: 
+                    self._state.removeCard(card)			
+                except:
+                    loggin.warning("Ignoring bad remove: " + str(card))
+            self.broadcast(
+                set(self.streams.keys()),
+                'reset', self.snapshot())
 
     def snapshot(self):
         with self._lock:
