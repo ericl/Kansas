@@ -1121,7 +1121,11 @@ function generateTrivialMove(card) {
 
 function makeBulkMove(innerFn) {
     showSpinner();
-    var moves = $.map(selectedSet, function(x) {
+    var sortedSet = selectedSet
+        .sort(function(a, b) {
+            return $(a).zIndex() - $(b).zIndex();
+        });
+    var moves = $.map(sortedSet, function(x) {
         var card = $(x);
         var move = innerFn(card);
 
@@ -2431,7 +2435,7 @@ $(document).ready(function() {
     });
 
     if (window.innerHeight < kMinSupportedHeight) {
-        $("#screenSizeWarning").show();
+//        $("#screenSizeWarning").show();
     }
 
     $(window).resize(function() {
