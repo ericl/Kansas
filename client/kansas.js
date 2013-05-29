@@ -1607,7 +1607,7 @@ function fastZToBoard(card) {
 function renderHandStack(hand) {
     handCache = hand;
 
-    var kHandSpacing = 5;
+    var kHandSpacing = 4;
     var kConsiderUnloaded = 20;
     var handWidth = $("#hand").outerWidth();
     var cardWidth = kCardWidth + 6;
@@ -2372,7 +2372,7 @@ $(document).ready(function() {
     ws = $.websocket("ws:///" + hostname + ":" + kWSPort + "/kansas", {
         open: function() {
             if (document.location.hash) {
-                var arr = document.location.hash.split(":");
+                var arr = document.location.hash.split(';');
                 user = arr[0].substr(1);
                 $("#username").val(user);
                 gameid = arr[2];
@@ -2600,7 +2600,7 @@ $(document).ready(function() {
             orient = "player2";
             setGeometry(0);
         }
-        document.title = user + ':' + orient + ':' + gameid;
+        document.title = user + ';' + orient + ';' + gameid;
         document.location.hash = document.title;
         document.cookie = JSON.stringify({
             orient: orient,
