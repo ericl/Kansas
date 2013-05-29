@@ -314,18 +314,15 @@
         }
 
         #homescreen {
+            background-color: #fffbdf;
             font-family: sans;
             position: absolute;
-            border-radius: 25px;
-            border: 5px solid #35b5e5;
             width: 550px;
             top: 10%;
             left: 50%;
             margin: 0px 0 0 -300px;
-            background-color: white;
             padding: 0px 20px 20px 20px;
             z-index: 9800000;
-            opacity: 0.8;
         }
 
         .home-hidden {
@@ -346,11 +343,12 @@
   </head>
   <body>
   <div id="homescreen">
-    <h1>Player Settings</h1>
+    <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
+    <h3>Player Settings</h3>
     <input id="username" type=textbox value="Anonymous" name="name">
     <input id="orient_up" type="radio" name="users" checked>Player 1
     <input id="orient_down" type="radio" name="users">Player 2
-    <h1>Choose Game</h1>
+    <h3>Choose Game</h3>
     <div id="gamelist"><span id="gamelist_loading">Loading...</span></div>
     <div class="gamechoice">
       <input id="gamename" type=textbox>
