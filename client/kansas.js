@@ -1603,7 +1603,6 @@ function renderHandStack(hand) {
 
     var kHandSpacing = 5;
     var kConsiderUnloaded = 20;
-    var currentX = kHandSpacing;
     var handWidth = $("#hand").outerWidth();
     var cardWidth = kCardWidth + 6;
     var cardHeight = kCardHeight + 6;
@@ -1623,13 +1622,9 @@ function renderHandStack(hand) {
     handHeight = Math.min(handHeight, $("#arena").outerHeight() - cardHeight * 2);
     $("#hand").height(handHeight);
     var collapsed = $("#hand").hasClass("collapsed");
-    if (!collapsed) {
-        var startX = spacing;
-    } else {
-        var startX = 0;
-    }
+    var startX = kHandSpacing;
     var currentX = startX;
-    var currentY = $("#hand").position().top - $(window).scrollTop() + spacing;
+    var currentY = $("#hand").position().top - $(window).scrollTop() + kHandSpacing;
 
     XXX_jitter *= -1;
     var skips = 0;
@@ -1641,7 +1636,7 @@ function renderHandStack(hand) {
         updateCardFlipState(cd, 999999);
         if (!collapsed) {
             if (currentX + cardWidth > handWidth) {
-                currentY += cardHeight + spacing;
+                currentY += cardHeight + kHandSpacing;
                 currentX = startX;
             }
         }
@@ -1663,7 +1658,7 @@ function renderHandStack(hand) {
         if (collapsed) {
             currentX += collapsedHandSpacing;
         } else {
-            currentX += cardWidth + spacing;
+            currentX += cardWidth + kHandSpacing;
         }
     }
     log("hand animated with " + skips + " skips");
