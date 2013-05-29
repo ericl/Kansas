@@ -2488,8 +2488,7 @@ $(document).ready(function() {
         },
     });
 
-    function enter(gameid) {
-        document.title = user + '@' + gameid;
+    function enter() {
         $("#homescreen").fadeOut('slow');
         $(".home-hidden").fadeIn('slow');
         if ($("#user_a").is(":checked")) {
@@ -2501,6 +2500,7 @@ $(document).ready(function() {
             document.cookie = "user_b";
             setGeometry(0);
         }
+        document.title = user + '@' + gameid;
         init();
 
         /* Enforces that this function is only run once. */
