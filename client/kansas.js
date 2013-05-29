@@ -2100,6 +2100,11 @@ function init() {
         }
     });
 
+    $("#leave").mouseup(function(e) {
+        document.location.hash = "";
+        document.location.reload();
+    });
+
     $("#debug").mouseup(function(e) {
         $("#console").toggle();
         $("#stats").show();
