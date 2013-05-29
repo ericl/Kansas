@@ -2420,6 +2420,12 @@ $(document).ready(function() {
                     present[e.data[i].uuid] = true;
                 }
 
+                $("#presence").text("Online: " +
+                    JSON.stringify(
+                        $.map(e.data, function(d) {
+                            return d.name;
+                        })));
+
                 /* Removes frames of clients no longer present. */
                 $.each($(".uuid_frame"), function(i) {
                     var frame = $(this);

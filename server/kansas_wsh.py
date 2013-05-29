@@ -254,6 +254,10 @@ class KansasHandler(object):
         logging.debug("served ping")
         output.reply('pong')
 
+    def notify_closed(self, stream):
+        """Callback for when a stream has been closed."""
+        pass
+
     def transition(self, reqtype, request, output):
         """Returns the handler instance that should serve future requests."""
 
@@ -291,11 +295,11 @@ class KansasInitHandler(KansasHandler):
                 logging.info("Joining existing game '%s'", request['gameid'])
                 game = self.games[request['gameid']]
                 game.streams[output.stream] = presence
-                game.notify_presence()
             else:
                 logging.info("Creating new game '%s'", request['gameid'])
                 game = KansasGameHandler(presence, output.stream)
                 self.games[request['gameid']] = game
+            game.notify_presence()
 
         # Atomically registers the player with the game handler.
         with game._lock:
@@ -471,6 +475,14 @@ class KansasGameHandler(KansasHandler):
             'presence',
             self.streams.values())
 
+    def notify_closed(self, stream):
+        if stream in self.streams:
+            del self.streams[stream]
+            self.notify_presence()
+        else:
+            logging.warning("Unrelated stream close?")
+
+
     def apply_move(self, move):
         """Applies move and increments seqno, returning True on success."""
         with self._lock:
@@ -500,6 +512,7 @@ def web_socket_transfer_data(request):
         line = request.ws_stream.receive_message()
         if not line:
             logging.info("Socket closed")
+            currentHandler.notify_closed(request.ws_stream)
             return
         try:
             req = json.loads(line)
