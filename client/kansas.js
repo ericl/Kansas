@@ -17,7 +17,6 @@
 
 // Default settings for websocket connection.
 var kWSPort = 8080
-var gameid = "testgame1";
 var hostname = window.location.hostname || "localhost"
 var uuid = "p_" + Math.random().toString().substring(5);
 var user = window.location.hash || "#alice";
@@ -26,7 +25,6 @@ var loggingEnabled = false;
 var connected = false;
 var disconnected = false;
 var gameReady = false;
-document.title = user + '@' + gameid;
 
 // TODO detect mobile devices better
 var onMobile = navigator.platform.indexOf("android") >= 0;
@@ -1854,7 +1852,7 @@ function createSelection(items, popupMenu) {
     }
 }
 
-$(document).ready(function() {
+function init(gameid, user) {
     document.addEventListener("touchstart", touchHandler, true);
     document.addEventListener("touchmove", touchHandler, true);
     document.addEventListener("touchend", touchHandler, true);
@@ -2461,6 +2459,25 @@ $(document).ready(function() {
     }, 500);
 
     redrawDivider();
+}
+
+$(document).ready(function() {
+    function enter(gameid) {
+        document.title = user + '@' + gameid;
+        $("#homescreen").fadeOut('slow');
+        $(".home-hidden").fadeIn('slow');
+        init(gameid, user);
+    };
+
+    $("#newgame").click(function() {
+        var gameid = $("#gamename").val();
+        enter(gameid, user);
+    });
+
+    $(".entergame").click(function() {
+        var gameid = $(event.currentTarget).data("gameid");
+        enter(gameid, user);
+    });
 });
 
 // vim: et sw=4
