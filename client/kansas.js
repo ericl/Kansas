@@ -2502,6 +2502,9 @@ $(document).ready(function() {
             setGeometry(0);
         }
         init();
+
+        /* Enforces that this function is only run once. */
+        enter = function() {};
     };
 
     if (document.cookie == "user_b")
