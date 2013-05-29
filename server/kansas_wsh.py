@@ -286,13 +286,15 @@ class KansasInitHandler(KansasHandler):
     def handle_connect(self, request, output):
         with self._lock:
             logging.info(request)
+            presence = {'uuid': request['uuid'], 'name': request['user']}
             if request['gameid'] in self.games:
                 logging.info("Joining existing game '%s'", request['gameid'])
                 game = self.games[request['gameid']]
-                game.streams[output.stream] = request['user']
+                game.streams[output.stream] = presence
+                game.notify_presence()
             else:
                 logging.info("Creating new game '%s'", request['gameid'])
-                game = KansasGameHandler(request['user'], output.stream)
+                game = KansasGameHandler(presence, output.stream)
                 self.games[request['gameid']] = game
 
         # Atomically registers the player with the game handler.
@@ -444,6 +446,7 @@ class KansasGameHandler(KansasHandler):
     def broadcast(self, streamSet, reqtype, data):
         logging.info("Broadcasting %s: '%s'", reqtype, data)
         start = time.time()
+        presence_changed = False
         for stream in streamSet:
             try:
                 stream.send_message(
@@ -456,8 +459,17 @@ class KansasGameHandler(KansasHandler):
             except Exception, e:
                 logging.exception(e)
                 logging.warning("Removing broken stream %s", stream)
+                presence_changed = True
                 del self.streams[stream]
         logging.info("Broadcast took %.2f seconds" % (time.time() - start))
+        if presence_changed:
+            self.notify_presence()
+
+    def notify_presence(self):
+        self.broadcast(
+            set(self.streams.keys()),
+            'presence',
+            self.streams.values())
 
     def apply_move(self, move):
         """Applies move and increments seqno, returning True on success."""

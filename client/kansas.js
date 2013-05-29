@@ -2086,6 +2086,7 @@ function init() {
     ws.send("connect", {
         user: user,
         gameid: gameid,
+        uuid: uuid,
     });
 
     $("#sync").mouseup(function(e) {
@@ -2315,14 +2316,13 @@ function init() {
 
     setInterval(function() {
         $("#stats")
-//            .show()
-            .text("animations: " + animationCount
+            .text("anim: " + animationCount
               + ", updates: " + updateCount
-              + ", sent: " + ws.sendCount
-              + ", recv: " + ws.recvCount
-              + ", zChanges: " + zChanges
-              + ", zRaises: " + raises
-              + ", zShuffles: " + shuffles);
+              + ", out: " + ws.sendCount
+              + ", in: " + ws.recvCount
+              + ", zCh: " + zChanges
+              + ", zRa: " + raises
+              + ", zShuf: " + shuffles);
     }, 500);
 
     redrawDivider();
@@ -2410,6 +2410,22 @@ $(document).ready(function() {
                     cd.data("stack_index", i);
                 }
                 redrawStack(clientKey, false);
+            },
+
+            presence: function(e) {
+                log("Presence changed: " + JSON.stringify(e.data));
+
+                var present = {};
+                for (i in e.data) {
+                    present[e.data[i].uuid] = true;
+                }
+
+                /* Removes frames of clients no longer present. */
+                $.each($(".uuid_frame"), function(i) {
+                    var frame = $(this);
+                    if (!present[frame.prop("id")])
+                        frame.hide();
+                });
             },
 
             bulkupdate: function(e) {
