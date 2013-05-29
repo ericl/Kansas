@@ -27,6 +27,7 @@ var user = "Player A";
 // Websocket and game state.
 var ws = null;
 var loggingEnabled = false;
+var connect_pending = false;
 var connected = false;
 var disconnected = false;
 var gameReady = false;
@@ -2083,6 +2084,7 @@ function init() {
     document.addEventListener("touchleave", touchHandler, true);
     showSpinner();
 
+    connect_pending = true;
     ws.send("connect", {
         user: user,
         gameid: gameid,
@@ -2361,16 +2363,26 @@ $(document).ready(function() {
         events: {
             list_games_resp: function(e) {
                 $("#gamelist_loading").hide();
+                $("#gamelist").empty();
                 for (g in e.data) {
+                    var online = "";
+                    if (e.data[g].presence > 0)
+                        online = " (" + e.data[g].presence + " online)";
                     var node = $("<div class='gamechoice'><span>"
-                        + e.data[g]
+                        + e.data[g].gameid
+                        + online
                         + "</span> <button>"
                         + "Join"
                         + "</button></div>"
                     ).appendTo("#gamelist");
                     node.addClass("entergame");
-                    node.data("gameid", e.data[g]);
+                    node.data("gameid", e.data[g].gameid);
                 }
+                setTimeout(function() {
+                    if (!connect_pending) {
+                        ws.send("list_games");
+                    }
+                }, 500);
             },
 
             connect_resp: function(e) {

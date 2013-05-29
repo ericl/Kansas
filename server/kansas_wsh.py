@@ -285,7 +285,12 @@ class KansasInitHandler(KansasHandler):
 
     def handle_list_games(self, request, output):
         with self._lock:
-            output.reply(self.games.keys())
+            resp = []
+            for gameid, handler in self.games.iteritems():
+                resp.append({
+                    'gameid': gameid,
+                    'presence': handler.presence_count()})
+            output.reply(resp)
 
     def handle_connect(self, request, output):
         with self._lock:
@@ -468,6 +473,9 @@ class KansasGameHandler(KansasHandler):
         logging.info("Broadcast took %.2f seconds" % (time.time() - start))
         if presence_changed:
             self.notify_presence()
+
+    def presence_count(self):
+        return len(self.streams)
 
     def notify_presence(self):
         self.broadcast(
