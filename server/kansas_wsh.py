@@ -525,8 +525,8 @@ def web_socket_transfer_data(request):
         try:
             req = json.loads(line)
             logging.debug("Parsed json %s", req)
-            logging.info("Handler %s", type(currentHandler))
-            logging.info("Request type %s", req['type'])
+            logging.debug("Handler %s", type(currentHandler))
+            logging.debug("Request type %s", req['type'])
             currentHandler = currentHandler.transition(
                 req['type'],
                 req.get('data'),

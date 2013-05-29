@@ -22,7 +22,7 @@ var uuid = "p_" + Math.random().toString().substring(5);
 
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
-var user = "Player A";
+var user = "Anonymous";
 
 // Websocket and game state.
 var ws = null;
@@ -2332,8 +2332,14 @@ function init() {
 
 $(document).ready(function() {
 
-    if (document.cookie == "user_b") {
-        $("#user_b").prop("checked", true);
+    try {
+        var config = JSON.parse(document.cookie);
+        if (config.orient == "orient_down") {
+            $("#orient_down").prop("checked", true);
+        }
+        $("#username").val(config.username);
+    } catch (err) {
+        console.log("could not parse cookie: " + document.cookie);
     }
 
     if (document.location.hash) {
@@ -2343,12 +2349,14 @@ $(document).ready(function() {
     ws = $.websocket("ws:///" + hostname + ":" + kWSPort + "/kansas", {
         open: function() {
             if (document.location.hash) {
-                var arr = document.location.hash.split("@");
-                gameid = arr[1];
-                if (arr[0] == "#user_b")
-                    $("#user_b").prop("checked", true);
-                else if (arr[0] == "#user_a")
-                    $("#user_a").prop("checked", true);
+                var arr = document.location.hash.split(":");
+                user = arr[1];
+                $("#username").val(user);
+                gameid = arr[2];
+                if (arr[0] == "#orient_up")
+                    $("#orient_up").prop("checked", true);
+                else if (arr[0] == "#orient_down")
+                    $("#orient_down").prop("checked", true);
                 enter();
             } else {
                 ws.send("list_games");
@@ -2433,10 +2441,12 @@ $(document).ready(function() {
                 }
 
                 $("#presence").text("Online: " +
-                    JSON.stringify(
-                        $.map(e.data, function(d) {
+                    $.map(e.data, function(d) {
+                        if (d.uuid == uuid)
+                            return d.name + " (self)";
+                        else
                             return d.name;
-                        })));
+                    }).join(", "));
 
                 /* Removes frames of clients no longer present. */
                 $.each($(".uuid_frame"), function(i) {
@@ -2539,17 +2549,23 @@ $(document).ready(function() {
     function enter() {
         $("#homescreen").fadeOut('slow');
         $(".home-hidden").fadeIn('slow');
-        if ($("#user_a").is(":checked")) {
-            user = "Player A";
+        var orient;
+        user = $("#username").val();
+        if ($("#orient_up").is(":checked")) {
             document.cookie = "user_a";
+            orient = "orient_up";
             setGeometry(1);
         } else {
-            user = "Player B";
             document.cookie = "user_b";
+            orient = "orient_down";
             setGeometry(0);
         }
-        document.title = user + '@' + gameid;
-        document.location.hash = document.cookie + '@' + gameid;
+        document.title = orient + ':' + user + ':' + gameid;
+        document.location.hash = document.title;
+        document.cookie = JSON.stringify({
+            orient: orient,
+            username: user,
+        });
         init();
 
         /* Enforces that this function is only run once. */
