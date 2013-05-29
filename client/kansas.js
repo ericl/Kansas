@@ -1328,11 +1328,11 @@ function menuForSelection(selectedSet) {
         + '<li style="margin-left: -130px"'
         + ' class="flipall" data-key="flipall">Hide All'
         + '</li>'
-        + '<li style="margin-left: -190px"'
+        + '<li style="margin-left: -130px"'
         + ' class="boardonly shufselconfirm"'
         + ' data-key="shufselconfirm">Shuffle'
         + '</li>'
-        + '<li style="margin-left: -190px"'
+        + '<li style="margin-left: -130px"'
         + ' class="bottom remove" data-key="remove">Remove'
         + '</li>'
  
