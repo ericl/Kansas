@@ -23,6 +23,7 @@ var uuid = "p_" + Math.random().toString().substring(5);
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
 var user = "Anonymous";
+var hand_user = "Player 1";
 
 // Websocket and game state.
 var ws = null;
@@ -100,9 +101,11 @@ function setGeometry(up) {
     if (up) {
         clientRotation = 0;
         clientTranslation = [0, 0];
+        hand_user = "Player 1";
     } else {
         clientRotation = 2;
         clientTranslation = [-kCardWidth, -kCardHeight];
+        hand_user = "Player 2";
     }
 }
 
@@ -365,7 +368,7 @@ function handleSelectionMovedToHand(selectedSet) {
         return {card: cardId,
                 dest_prev_type: "board",
                 dest_type: "hands",
-                dest_key: user,
+                dest_key: hand_user,
                 dest_orient: getOrient(card)};
     });
 }
@@ -944,7 +947,7 @@ function changeOrient(card, orient) {
     var dest_key = parseInt(card.data("dest_key"));
     if (card.hasClass("inHand")) {
         dest_type = "hands";
-        dest_key = user;
+        dest_key = hand_user;
         dest_prev_type = "hands";
     }
     log("Sending orient change.");
@@ -1132,7 +1135,7 @@ function generateTrivialMove(card) {
     var dest_key = parseInt(card.data("dest_key"));
     if (card.hasClass("inHand")) {
         dest_type = "hands";
-        dest_key = user;
+        dest_key = hand_user;
         dest_prev_type = "hands";
     }
     return {card: cardId,
@@ -1935,7 +1938,7 @@ function reset(state) {
             var card = createImageNode(state, hand[i], i);
             card.data("dest_key", player);
         }
-        if (player == user) {
+        if (player == hand_user) {
             renderHandStack(hand);
         } else {
             for (i in hand) {
@@ -2000,7 +2003,7 @@ function initCards(sel) {
         if ($("#hand").hasClass("active")) {
             deferDeactivateHand();
             var dest_type = "hands";
-            var dest_key = user;
+            var dest_key = hand_user;
             // Assumes the server will put the card at the end of the stack.
             handCache.push(cardId);
             setOrientProperties(card, 1)
@@ -2350,8 +2353,8 @@ $(document).ready(function() {
 
     try {
         var config = JSON.parse(document.cookie);
-        if (config.orient == "orient_down") {
-            $("#orient_down").prop("checked", true);
+        if (config.orient == "player2") {
+            $("#player2").prop("checked", true);
         }
         if (config.username) {
             $("#username").val(config.username);
@@ -2370,13 +2373,13 @@ $(document).ready(function() {
         open: function() {
             if (document.location.hash) {
                 var arr = document.location.hash.split(":");
-                user = arr[1];
+                user = arr[0].substr(1);
                 $("#username").val(user);
                 gameid = arr[2];
-                if (arr[0] == "#orient_up")
-                    $("#orient_up").prop("checked", true);
-                else if (arr[0] == "#orient_down")
-                    $("#orient_down").prop("checked", true);
+                if (arr[1] == "player1")
+                    $("#player1").prop("checked", true);
+                else if (arr[1] == "player2")
+                    $("#player2").prop("checked", true);
                 enter();
             } else {
                 ws.send("list_games");
@@ -2532,7 +2535,7 @@ $(document).ready(function() {
                             fastZToBoard(card);
                             queuedStackRedraws[oldClientKey] = true;
                         } else if (update.move.dest_type == "hands") {
-                            if (clientKey == user) {
+                            if (clientKey == hand_user) {
                                 card.addClass("inHand");
                                 handCache = data.z_stack;
                             } else {
@@ -2590,16 +2593,14 @@ $(document).ready(function() {
         $(".home-hidden").fadeIn('slow');
         var orient;
         user = $("#username").val();
-        if ($("#orient_up").is(":checked")) {
-            document.cookie = "user_a";
-            orient = "orient_up";
+        if ($("#player1").is(":checked")) {
+            orient = "player1";
             setGeometry(1);
         } else {
-            document.cookie = "user_b";
-            orient = "orient_down";
+            orient = "player2";
             setGeometry(0);
         }
-        document.title = orient + ':' + user + ':' + gameid;
+        document.title = user + ':' + orient + ':' + gameid;
         document.location.hash = document.title;
         document.cookie = JSON.stringify({
             orient: orient,
