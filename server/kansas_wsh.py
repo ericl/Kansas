@@ -19,7 +19,7 @@ except:
     logging.warning("Failed to import imaging module.")
     haveImaging = False
 
-kSmallImageSize = (123, 175)
+kSmallImageSize = (92, 131)
 kServingPrefix = ''
 kLocalServingAddress = 'http://localhost:8000/'
 kCachePath = '../cache'
@@ -254,6 +254,10 @@ class KansasHandler(object):
         logging.debug("served ping")
         output.reply('pong')
 
+    def notify_closed(self, stream):
+        """Callback for when a stream has been closed."""
+        pass
+
     def transition(self, reqtype, request, output):
         """Returns the handler instance that should serve future requests."""
 
@@ -281,19 +285,26 @@ class KansasInitHandler(KansasHandler):
 
     def handle_list_games(self, request, output):
         with self._lock:
-            output.reply(self.games.keys())
+            resp = []
+            for gameid, handler in self.games.iteritems():
+                resp.append({
+                    'gameid': gameid,
+                    'presence': handler.presence_count()})
+            output.reply(resp)
 
     def handle_connect(self, request, output):
         with self._lock:
             logging.info(request)
+            presence = {'uuid': request['uuid'], 'name': request['user']}
             if request['gameid'] in self.games:
                 logging.info("Joining existing game '%s'", request['gameid'])
                 game = self.games[request['gameid']]
-                game.streams[output.stream] = request['user']
+                game.streams[output.stream] = presence
             else:
                 logging.info("Creating new game '%s'", request['gameid'])
-                game = KansasGameHandler(request['user'], output.stream)
+                game = KansasGameHandler(presence, output.stream)
                 self.games[request['gameid']] = game
+            game.notify_presence()
 
         # Atomically registers the player with the game handler.
         with game._lock:
@@ -427,7 +438,7 @@ class KansasGameHandler(KansasHandler):
                 try: 
                     self._state.remove_card(card)			
                 except:
-                    loggin.warning("Ignoring bad remove: " + str(card))
+                    logging.warning("Ignoring bad remove: " + str(card))
             self.broadcast(
                 set(self.streams.keys()),
                 'reset', self.snapshot())
@@ -444,6 +455,7 @@ class KansasGameHandler(KansasHandler):
     def broadcast(self, streamSet, reqtype, data):
         logging.info("Broadcasting %s: '%s'", reqtype, data)
         start = time.time()
+        presence_changed = False
         for stream in streamSet:
             try:
                 stream.send_message(
@@ -456,8 +468,28 @@ class KansasGameHandler(KansasHandler):
             except Exception, e:
                 logging.exception(e)
                 logging.warning("Removing broken stream %s", stream)
+                presence_changed = True
                 del self.streams[stream]
         logging.info("Broadcast took %.2f seconds" % (time.time() - start))
+        if presence_changed:
+            self.notify_presence()
+
+    def presence_count(self):
+        return len(self.streams)
+
+    def notify_presence(self):
+        self.broadcast(
+            set(self.streams.keys()),
+            'presence',
+            self.streams.values())
+
+    def notify_closed(self, stream):
+        if stream in self.streams:
+            del self.streams[stream]
+            self.notify_presence()
+        else:
+            logging.warning("Unrelated stream close?")
+
 
     def apply_move(self, move):
         """Applies move and increments seqno, returning True on success."""
@@ -488,12 +520,13 @@ def web_socket_transfer_data(request):
         line = request.ws_stream.receive_message()
         if not line:
             logging.info("Socket closed")
+            currentHandler.notify_closed(request.ws_stream)
             return
         try:
             req = json.loads(line)
             logging.debug("Parsed json %s", req)
-            logging.info("Handler %s", type(currentHandler))
-            logging.info("Request type %s", req['type'])
+            logging.debug("Handler %s", type(currentHandler))
+            logging.debug("Request type %s", req['type'])
             currentHandler = currentHandler.transition(
                 req['type'],
                 req.get('data'),
@@ -505,4 +538,4 @@ def web_socket_transfer_data(request):
                binary=False)
 
 
-# vi:sts=4 sw=4 et
+# vim: ts=4 sw=4 et

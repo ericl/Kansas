@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>Kansas Test</title>
-    <meta name="viewport" content="target-densitydpi=device-dpi user-scalable=no, initial-scale=0.75, maximum-scale=0.75, minimum-scale=0.75" />
+    <meta name="viewport" content="target-densitydpi=device-dpi user-scalable=no, initial-scale=0.5, maximum-scale=0.5, minimum-scale=0.5" />
     <script type="text/javascript" src="third_party/jquery-1.8.3.min.js"></script>
     <script type="text/javascript" src="third_party/jquery.animate-enhanced.min.js"></script>
     <script type="text/javascript" src="third_party/jquery.websocket-0.0.1.js"></script>
@@ -53,7 +53,7 @@
         }
 
         .collapsed {
-            height: 90px !important;
+            height: 60px !important;
             background-color: #000000 !important;
             border-top: 2px solid #555 !important;
         }
@@ -79,8 +79,8 @@
             position: fixed;
             border-radius: 6px;
             border: 3px solid black;
-            width: 123px;
-            height: 175px;
+            width: 92px;
+            height: 131px;
         }
         
         ol, ul {
@@ -89,14 +89,14 @@
 
         .hoverlink {
             font-weight: bold;
-            font-size: 35pt;
-            line-height: 35pt;
+            font-size: 15pt;
+            line-height: 15pt;
             vertical-align: middle;
         }
 
         .hoverdesc {
-            line-height: 35pt;
-            font-size: 20pt;
+            line-height: 25pt;
+            font-size: 10pt;
             vertical-align: middle;
         }
 
@@ -161,39 +161,39 @@
 
         li {
             color: white;
-            line-height: 120px;
-            height: 120px;
+            line-height: 75px;
+            height: 75px;
             vertical-align: middle;
-            font-size: 30pt;
+            font-size: 20pt;
             font-family: sans-serif;
             text-align: left;
             border-bottom: 2px solid #2e2e30;
             margin-bottom: -9px;
-            margin-top: 10px;
-            padding-left: 18px;
+            margin-top: 5px;
+            padding-left: 10px;
         }
 
         li.top {
-            border-top: 3px solid #404144;
+            border-top: 2px solid #404144;
         }
 
         li.bottom {
             border-bottom: none;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
         }
         
         .header {
             color: #bebebe;
             font-weight: bold;
             font-family: sans-serif;
-            font-size: 20pt;
+            font-size: 12pt;
         }
 
         div.hovermenu {
             left: 50%;
             border-radius: 8px;
             right: 50%;
-            top: 35%;
+            top: 30%;
             bottom: 75%;
             border: 8px solid black;
             position: absolute;
@@ -222,7 +222,7 @@
             background-color: #000;
             width: auto;
             position: absolute;
-            top: 800px !important;
+            top: 518px !important;
             width: 100%;
             font-style: italic;
             margin-left: -8px;
@@ -246,7 +246,7 @@
 
         #selectionbox {
             position: fixed;
-            border: 5px solid #33b5e5 !important;
+            border: 4px solid #33b5e5 !important;
             display: none;
             z-index: 4500000;
             background-color: rgba(25, 200, 230, 0.3);
@@ -314,18 +314,18 @@
         }
 
         #homescreen {
+            font-family: sans;
             position: absolute;
             border-radius: 25px;
-            border: 5px solid #257390;
+            border: 5px solid #35b5e5;
             width: 550px;
-            height: 750px;
-            top: 50%;
+            top: 10%;
             left: 50%;
-            margin: -400px 0 0 -300px;
+            margin: 0px 0 0 -300px;
             background-color: white;
-            padding: 20px;
+            padding: 0px 20px 20px 20px;
             z-index: 9800000;
-            opacity: 0.9;
+            opacity: 0.8;
         }
 
         .home-hidden {
@@ -333,36 +333,47 @@
         }
 
         .gamechoice {
-          padding-bottom: 10px;
+            padding-bottom: 10px;
+        }
+
+        #presence {
+            float: right;
+            color: gray;
+            font-size: small;
+            padding: .5em;
         }
     </style>
   </head>
   <body>
   <div id="homescreen">
-    <h1>Choose player</h1>
-    <input id="user_a" type="radio" name="users" value="up" checked>Player A
-    <input id="user_b" type="radio" name="users" value="down">Player B
-    <h1>Choose game</h1>
+    <h1>Player Settings</h1>
+    <input id="username" type=textbox value="Anonymous" name="name">
+    <input id="orient_up" type="radio" name="users" checked>Orient Up
+    <input id="orient_down" type="radio" name="users">Orient Down
+    <h1>Choose Game</h1>
     <div id="gamelist"><span id="gamelist_loading">Loading...</span></div>
     <div class="gamechoice">
       <input id="gamename" type=textbox>
       <button id="newgame">New Game</button>
     </div>
   </div>
-  <textarea style="display: none; position: absolute; z-index: 9999999; right: 0" id="console" rows=15 cols=90></textarea><br>
+  <textarea style="display: none; position: absolute; z-index: 9999999; right: 0" id="console" rows=15 cols=60></textarea><br>
   <div id="arena">
     <div style="display: none; float: left;" class="connected">
+<!--
         <button id="sync">Force Sync</button>
+-->
         <button id="debug">Toggle Debug</button>
         <button id="reset">Reset Game</button>
+        <button id="leave">Leave Game</button>
     </div>
     <div id="spinner" class="home-hidden" style="font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding: 12px; background-color: #FFFBDF; font-size: 25pt;">Loading...</div>
     <div id="stats" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 0; padding: 12px; color: white; background-color: green; font-size: 25pt;">Error.</div>
     <div id="error" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 1; padding: 12px; color: white; background-color: red; font-size: 25pt;">Error.</div>
-    <div id="screenSizeWarning" style="font-family: sans-serif; color: white; float: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; z-index: 90000010 !important; padding: 12px; background-color: orange; font-size: 25pt; display: none;">Your screen height is too small. Consider zooming out.</div>
     <div id="selectionbox"><span></span></div>
     <div id="selectionarea"></div>
     <div id="hand" class="collapsed home-hidden"></div>
+    <div id="presence"></div>
   </div>
   <div id="divider" style="display: none"></div>
   </body>
