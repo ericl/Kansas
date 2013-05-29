@@ -273,6 +273,8 @@ class KansasHandler(object):
 class KansasInitHandler(KansasHandler):
     """The request handler created for each new websocket connection."""
 
+    MAX_GAMES = 5
+
     def __init__(self):
         KansasHandler.__init__(self)
         self.handlers['connect'] = self.handle_connect
@@ -292,6 +294,16 @@ class KansasInitHandler(KansasHandler):
                     'presence': handler.presence_count()})
             output.reply(resp)
 
+    def garbage_collect_games(self):
+	if len(self.games) > KansasInitHandler.MAX_GAMES:
+	    ranked = sorted(
+		self.games.items(),
+		key=lambda (k, v): -v.last_used)
+	    while len(self.games) > KansasInitHandler.MAX_GAMES:
+		victim_id, victim = ranked.pop()
+		victim.terminate()
+		del self.games[victim_id]
+
     def handle_connect(self, request, output):
         with self._lock:
             logging.info(request)
@@ -309,6 +321,9 @@ class KansasInitHandler(KansasHandler):
         # Atomically registers the player with the game handler.
         with game._lock:
             output.reply(game.snapshot())
+
+	with self._lock:
+	    self.garbage_collect_games()
 
     def transition(self, reqtype, request, output):
         if reqtype == 'connect':
@@ -357,6 +372,7 @@ class KansasGameHandler(KansasHandler):
         self.handlers['reset'] = self.handle_reset
         self.handlers['remove'] = self.handle_remove
         self.streams = {creatorOutputStream: creator}
+	self.last_used = time.time()
 
     def handle_stackop(self, req, output):
         with self._lock:
@@ -446,6 +462,21 @@ class KansasGameHandler(KansasHandler):
     def snapshot(self):
         with self._lock:
             return self._state.data, self._seqno
+    
+    def terminate(self):
+	logging.info("Terminating game.")
+	with self._lock:
+	    for s in self.streams:
+		try:
+		    s.send_message(
+		       json.dumps({
+			   'type': 'error',
+			   'msg': "game terminated"}),
+		       binary=False)
+		    s.close_connection()
+		except Exception, e:
+		    logging.exception(e)
+	    self.streams = {}
 
     def nextseqno(self):
         with self._lock:
@@ -455,6 +486,7 @@ class KansasGameHandler(KansasHandler):
     def broadcast(self, streamSet, reqtype, data):
         logging.info("Broadcasting %s: '%s'", reqtype, data)
         start = time.time()
+	self.last_used = start
         presence_changed = False
         for stream in streamSet:
             try:
@@ -475,21 +507,23 @@ class KansasGameHandler(KansasHandler):
             self.notify_presence()
 
     def presence_count(self):
-        return len(self.streams)
+	with self._lock:
+	    return len(self.streams)
 
     def notify_presence(self):
-        self.broadcast(
-            set(self.streams.keys()),
-            'presence',
-            self.streams.values())
+	with self._lock:
+	    self.broadcast(
+		set(self.streams.keys()),
+		'presence',
+		self.streams.values())
 
     def notify_closed(self, stream):
-        if stream in self.streams:
-            del self.streams[stream]
-            self.notify_presence()
-        else:
-            logging.warning("Unrelated stream close?")
-
+	with self._lock:
+	    if stream in self.streams:
+		del self.streams[stream]
+		self.notify_presence()
+	    else:
+		logging.warning("Stream already closed.")
 
     def apply_move(self, move):
         """Applies move and increments seqno, returning True on success."""
@@ -501,7 +535,6 @@ class KansasGameHandler(KansasHandler):
             src_type, src_key = self._state.moveCard(
                 card, dest_type, dest_key, dest_orient)
             return src_type, src_key, self.nextseqno()
-
 
 
 initHandler = KansasInitHandler()

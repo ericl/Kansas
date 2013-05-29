@@ -456,8 +456,11 @@ function log(msg) {
 
 /* Logs warning to debug console */
 function warning(msg) {
+    console.log(msg);
     log(msg);
-    $("#error").text(msg).show();
+    if (!$("#error").is(":visible")) {
+        $("#error").text(msg).show();
+    }
 }
 
 /**
