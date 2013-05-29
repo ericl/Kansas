@@ -267,11 +267,16 @@ class KansasInitHandler(KansasHandler):
     def __init__(self):
         KansasHandler.__init__(self)
         self.handlers['connect'] = self.handle_connect
+        self.handlers['list_games'] = self.handle_list_games
         self.handlers['connect_searchapi'] = self.handle_connect_searchapi
         self.games = {}
 
     def handle_connect_searchapi(self, request, output):
         output.reply("ok")
+
+    def handle_list_games(self, request, output):
+        with self._lock:
+            output.reply(self.games.keys())
 
     def handle_connect(self, request, output):
         with self._lock:

@@ -332,8 +332,11 @@
   </head>
   <body>
   <div id="homescreen">
+    <h1>Select user</h1>
+    <input id="user_a" type="radio" name="users" value="up" checked>Player A
+    <input id="user_b" type="radio" name="users" value="down">Player B
     <h1>Select game</h1>
-    <div>Loading...</div>
+    <div id="gamelist"><span id="gamelist_loading">Loading...</span></div>
     <h1>New game</h1>
     <input id="gamename" type=textbox>
     <button id="newgame">Create</button>
