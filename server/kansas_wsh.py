@@ -286,6 +286,7 @@ class KansasInitHandler(KansasHandler):
         output.reply("ok")
 
     def handle_list_games(self, request, output):
+        self.garbage_collect_games()
         with self._lock:
             resp = []
             ranked = sorted(
@@ -305,7 +306,9 @@ class KansasInitHandler(KansasHandler):
             while len(self.games) > KansasInitHandler.MAX_GAMES:
                 victim_id, victim = ranked.pop()
                 victim.terminate()
-                del self.games[victim_id]
+        for gameid, game in self.games.items():
+            if game.terminated:
+                del self.games[gameid]
 
     def handle_connect(self, request, output):
         with self._lock:
@@ -373,9 +376,11 @@ class KansasGameHandler(KansasHandler):
         self.handlers['stackop'] = self.handle_stackop
         self.handlers['resync'] = self.handle_resync
         self.handlers['reset'] = self.handle_reset
+        self.handlers['end'] = self.handle_end
         self.handlers['remove'] = self.handle_remove
         self.streams = {creatorOutputStream: creator}
         self.last_used = time.time()
+        self.terminated = False
 
     def handle_stackop(self, req, output):
         with self._lock:
@@ -465,10 +470,14 @@ class KansasGameHandler(KansasHandler):
     def snapshot(self):
         with self._lock:
             return self._state.data, self._seqno
+
+    def handle_end(self, req, output):
+        self.terminate()
     
     def terminate(self):
         logging.info("Terminating game.")
         with self._lock:
+            self.terminated = True
             for s in self.streams:
                 try:
                     s.send_message(

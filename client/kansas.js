@@ -2122,6 +2122,16 @@ function init() {
         }
     });
 
+    $("#end").mouseup(function(e) {
+        if (confirm("Are you sure you want to end the game?")) {
+            showSpinner();
+            ws.send("end");
+            $("#error").remove();
+            document.location.hash = "";
+            document.location.reload();
+        }
+    });
+
     $("#leave").mouseup(function(e) {
         document.location.hash = "";
         document.location.reload();
@@ -2405,6 +2415,9 @@ $(document).ready(function() {
                         break;
                     }
                 }
+                if ($(".gameonline").length != e.data.length) {
+                    needsRefresh = true;
+                }
 
                 if (needsRefresh) {
                     $("#gamelist").empty();
@@ -2415,7 +2428,7 @@ $(document).ready(function() {
                             online = " (" + e.data[g].presence + " online)";
                         var node = $("<div id='"
                             + nodeid
-                            + "' class='gamechoice' data-presence="
+                            + "' class='gamechoice gameonline' data-presence="
                             + e.data[g].presence
                             + "><span>"
                             + e.data[g].gameid
@@ -2453,7 +2466,7 @@ $(document).ready(function() {
             },
 
             error: function(e) {
-                warning("Server Error: " + e.msg);
+                warning("Server: " + e.msg);
             },
 
             reset: function(e) {
