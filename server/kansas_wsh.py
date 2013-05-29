@@ -19,7 +19,7 @@ except:
     logging.warning("Failed to import imaging module.")
     haveImaging = False
 
-kSmallImageSize = (123, 175)
+kSmallImageSize = (92, 131)
 kServingPrefix = ''
 kLocalServingAddress = 'http://localhost:8000/'
 kCachePath = '../cache'

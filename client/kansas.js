@@ -81,13 +81,13 @@ var kAnimationLength = 400;
 var kMaxGridIndex = 0x7ff;
 
 // Geometry of cards.
-var kCardWidth = 123;
-var kCardHeight = 175;
+var kCardWidth = 92;
+var kCardHeight = 131;
 var kCardBorder = 4;
 var kRotatedOffsetLeft = -10;
 var kRotatedOffsetTop = 25;
 var kMinHandHeight = 90;
-var kHoverCardRatio = 4.57;
+var kHoverCardRatio = 3.95;
 var kHoverTapRatio = kHoverCardRatio * 0.875;
 var kSelectionBoxPadding = 15;
 var kMinSupportedHeight = 1000;
@@ -144,7 +144,7 @@ function heightOf(stackIndex, stackCount) {
     } else if (stackCount == 4) {
         kStackDelta = 8;
     }
-    var kMaxVisibleStackHeight = 9;
+    var kMaxVisibleStackHeight = 7;
     if (stackIndex > kMaxVisibleStackHeight) {
         stackIndex = kMaxVisibleStackHeight;
     }
@@ -1278,7 +1278,7 @@ function showHoverMenu(card) {
     }
 
     var newImg = newNode.children("img");
-    newNode.width(805);
+    newNode.width(545);
     newNode.height(kCardHeight * kHoverCardRatio);
     newNode.css("margin-left", - ($(".hovermenu").outerWidth() / 2));
     newNode.css("margin-top", - ($(".hovermenu").outerHeight() / 2));
@@ -1302,18 +1302,18 @@ function menuForSelection(selectedSet) {
     hoverCardId = "#selectionbox";
 
     var cardContextMenu = (''
-        + '<li class="tapall boardonly top" style="margin-left: -190px"'
+        + '<li class="tapall boardonly top" style="margin-left: -130px"'
         + ' data-key="rotateall">Tap All</li>'
-        + '<li style="margin-left: -190px"'
+        + '<li style="margin-left: -130px"'
         + ' class="untapall boardonly" data-key="unrotateall">Untap All'
         + '</li>'
-        + '<li style="margin-left: -190px"'
+        + '<li style="margin-left: -130px"'
         + ' class="unflipall" data-key="unflipall">Reveal All'
         + '</li>'
-        + '<li style="margin-left: -190px"'
+        + '<li style="margin-left: -130px"'
         + ' class="flipall" data-key="flipall">Hide All'
         + '</li>'
-        + '<li style="margin-left: -190px"'
+        + '<li style="margin-left: -130px"'
         + ' class="bottom boardonly shufselconfirm"'
         + ' data-key="shufselconfirm">Shuffle'
         + '</li>'
@@ -1346,7 +1346,7 @@ function menuForSelection(selectedSet) {
         + height + 'px; width: ' + width + 'px;"'
         + '></img>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
-        + '<span class="header" style="margin-left: -190px">&nbsp;SELECTION</span>"'
+        + '<span class="header" style="margin-left: -130px">&nbsp;SELECTION</span>"'
         + cardContextMenu
         + '</ul>'
         + '<div class="hovernote"><span class="hoverdesc">' + selectedSet.length
@@ -1386,28 +1386,28 @@ function menuForCard(card) {
     var src = toResource(highRes(card));
     var imgCls = '';
     if (card.hasClass("rotated")) {
-        var tapFn =  '<li style="margin-left: -190px" class="boardonly"'
+        var tapFn =  '<li style="margin-left: -130px" class="boardonly"'
             + ' data-key="unrotate">Untap</li>'
         var height = kCardHeight * kHoverTapRatio;
         var width = kCardWidth * kHoverTapRatio;
         imgCls = "hoverRotate";
     } else {
-        var tapFn =  '<li style="margin-left: -190px" class="boardonly"'
+        var tapFn =  '<li style="margin-left: -130px" class="boardonly"'
             + ' data-key="rotate">Tap</li>'
         var height = kCardHeight * kHoverCardRatio;
         var width = kCardWidth * kHoverCardRatio;
     }
 
     if (getOrient(card) > 0) {
-        var flipFn = '<li class="top" style="margin-left: -190px"'
+        var flipFn = '<li class="top" style="margin-left: -130px"'
             + ' data-key=flip>Hide</li>';
     } else {
-        var flipFn = '<li class="top" style="margin-left: -190px"'
+        var flipFn = '<li class="top" style="margin-left: -130px"'
             + ' data-key=unflip>Reveal</li>';
     }
 
     var cardContextMenu = (flipFn + tapFn
-        + '<li style="margin-left: -190px"'
+        + '<li style="margin-left: -130px"'
         + ' class="bottom nobulk peek boardonly" data-key="peek">Peek'
         + '</li>');
 
@@ -1416,14 +1416,14 @@ function menuForCard(card) {
         + height + 'px; width: ' + width + 'px;"'
         + ' src="' + src + '"></img>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
-        + '<span class="header" style="margin-left: -190px">&nbsp;STACK</span>"'
-        + '<li style="margin-left: -190px"'
+        + '<span class="header" style="margin-left: -130px">&nbsp;STACK</span>"'
+        + '<li style="margin-left: -130px"'
         + ' class="top boardonly bulk"'
         + ' data-key="reversestack">Invert</li>'
-        + '<li style="margin-left: -190px"'
+        + '<li style="margin-left: -130px"'
         + ' class="bottom bulk boardonly"'
         + ' data-key="toselection"><i>More...</i></li>'
-        + '<span class="header" style="margin-left: -190px">&nbsp;CARD</span>"'
+        + '<span class="header" style="margin-left: -130px">&nbsp;CARD</span>"'
         + cardContextMenu
         + '</ul>'
         + '<div class="hovernote">'
@@ -1586,8 +1586,8 @@ function renderHandStack(hand) {
     var kConsiderUnloaded = 20;
     var currentX = kHandSpacing;
     var handWidth = $("#hand").outerWidth();
-    var cardWidth = kCardWidth + 8;
-    var cardHeight = kCardHeight + 8;
+    var cardWidth = kCardWidth + 6;
+    var cardHeight = kCardHeight + 6;
     var collapsedHandSpacing = Math.min(
         kHandSpacing + cardWidth,
         (handWidth - cardWidth - kHandSpacing * 2) / (hand.length - 1)
@@ -2303,16 +2303,7 @@ function init() {
         }
     });
 
-    if (window.innerHeight < kMinSupportedHeight) {
-//        $("#screenSizeWarning").show();
-    }
-
     $(window).resize(function() {
-        if (window.innerHeight < kMinSupportedHeight) {
-            $("#screenSizeWarning").show();
-        } else {
-            $("#screenSizeWarning").hide();
-        }
         redrawHand();
         redrawBoard();
     });
@@ -2334,9 +2325,27 @@ function init() {
 
 $(document).ready(function() {
 
+    if (document.cookie == "user_b") {
+        $("#user_b").prop("checked", true);
+    }
+
+    if (document.location.hash) {
+        $("#homescreen").hide();
+    }
+
     ws = $.websocket("ws:///" + hostname + ":" + kWSPort + "/kansas", {
         open: function() {
-            ws.send("list_games");
+            if (document.location.hash) {
+                var arr = document.location.hash.split("@");
+                gameid = arr[1];
+                if (arr[0] == "#user_b")
+                    $("#user_b").prop("checked", true);
+                else if (arr[0] == "#user_a")
+                    $("#user_a").prop("checked", true);
+                enter();
+            } else {
+                ws.send("list_games");
+            }
         },
         close: function() {
             warning("Connection Error.");
@@ -2501,14 +2510,12 @@ $(document).ready(function() {
             setGeometry(0);
         }
         document.title = user + '@' + gameid;
+        document.location.hash = document.cookie + '@' + gameid;
         init();
 
         /* Enforces that this function is only run once. */
         enter = function() {};
     };
-
-    if (document.cookie == "user_b")
-        $("#user_b").prop("checked", true);
 
     $("#newgame").click(function() {
         if ($("#gamename").val())
