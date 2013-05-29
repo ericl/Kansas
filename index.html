@@ -315,31 +315,39 @@
 
         #homescreen {
             position: absolute;
-            width: 600px;
-            height: 800px;
+            border-radius: 25px;
+            border: 5px solid #257390;
+            width: 550px;
+            height: 750px;
             top: 50%;
             left: 50%;
             margin: -400px 0 0 -300px;
             background-color: white;
-            opacity: 0.9;
+            padding: 20px;
             z-index: 9800000;
+            opacity: 0.9;
         }
 
         .home-hidden {
             display: none;
         }
+
+        .gamechoice {
+          padding-bottom: 10px;
+        }
     </style>
   </head>
   <body>
   <div id="homescreen">
-    <h1>Select user</h1>
+    <h1>Choose player</h1>
     <input id="user_a" type="radio" name="users" value="up" checked>Player A
     <input id="user_b" type="radio" name="users" value="down">Player B
-    <h1>Select game</h1>
+    <h1>Choose game</h1>
     <div id="gamelist"><span id="gamelist_loading">Loading...</span></div>
-    <h1>New game</h1>
-    <input id="gamename" type=textbox>
-    <button id="newgame">Create</button>
+    <div class="gamechoice">
+      <input id="gamename" type=textbox>
+      <button id="newgame">New Game</button>
+    </div>
   </div>
   <textarea style="display: none; position: absolute; z-index: 9999999; right: 0" id="console" rows=15 cols=90></textarea><br>
   <div id="arena">

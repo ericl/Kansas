@@ -22,7 +22,7 @@ var uuid = "p_" + Math.random().toString().substring(5);
 
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
-var user = "Unnamed User";
+var user = "Player A";
 
 // Websocket and game state.
 var ws = null;
@@ -2348,10 +2348,14 @@ $(document).ready(function() {
             list_games_resp: function(e) {
                 $("#gamelist_loading").hide();
                 for (g in e.data) {
-                    var node = $("<button/><br>").appendTo("#gamelist");
+                    var node = $("<div class='gamechoice'><span>"
+                        + e.data[g]
+                        + "</span> <button>"
+                        + "Join"
+                        + "</button></div>"
+                    ).appendTo("#gamelist");
                     node.addClass("entergame");
                     node.data("gameid", e.data[g]);
-                    node.text(e.data[g]);
                 }
             },
 
@@ -2488,11 +2492,15 @@ $(document).ready(function() {
         document.title = user + '@' + gameid;
         $("#homescreen").fadeOut('slow');
         $(".home-hidden").fadeIn('slow');
-        setGeometry($("#user_a").is(":checked"));
-        if ($("#user_a").is(":checked"))
+        if ($("#user_a").is(":checked")) {
+            user = "Player A";
             document.cookie = "user_a";
-        else
+            setGeometry(1);
+        } else {
+            user = "Player B";
             document.cookie = "user_b";
+            setGeometry(0);
+        }
         init();
     };
 
