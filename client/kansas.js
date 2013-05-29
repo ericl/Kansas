@@ -2394,12 +2394,12 @@ $(document).ready(function() {
                     var node = $("<div class='gamechoice'><span>"
                         + e.data[g].gameid
                         + online
-                        + "</span> <button>"
+                        + "</span> <button class='entergame' data-gameid='"
+                        + e.data[g].gameid
+                        + "'>"
                         + "Join"
                         + "</button></div>"
                     ).appendTo("#gamelist");
-                    node.addClass("entergame");
-                    node.data("gameid", e.data[g].gameid);
                 }
                 setTimeout(function() {
                     if (!connect_pending) {
