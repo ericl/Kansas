@@ -235,9 +235,9 @@ class KansasGameState(object):
         return src_type, src_key
 
     def removeCard(self, card):
-		loc_type, loc = self.index[card]
-		del self.index[card]
-		self.data['board'][loc].remove(card)
+        loc_type, loc = self.index[card]
+        del self.index[card]
+        self.data['board'][loc].remove(card)
     
 
 class KansasHandler(object):
@@ -424,10 +424,10 @@ class KansasGameHandler(KansasHandler):
         with self._lock:
             logging.info("Starting mass excommunication.")
             for card in req:
-                try: 
-                    self._state.removeCard(card)			
+                try:
+                    self._state.removeCard(card)
                 except:
-                    loggin.warning("Ignoring bad remove: " + str(card))
+                    logging.warning("Ignoring bad remove: " + str(card))
             self.broadcast(
                 set(self.streams.keys()),
                 'reset', self.snapshot())
@@ -505,4 +505,4 @@ def web_socket_transfer_data(request):
                binary=False)
 
 
-# vi:sts=4 sw=4 et
+# vim: ts=4 sw=4 et
