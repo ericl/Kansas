@@ -2337,7 +2337,9 @@ $(document).ready(function() {
         if (config.orient == "orient_down") {
             $("#orient_down").prop("checked", true);
         }
-        $("#username").val(config.username);
+        if (config.username) {
+            $("#username").val(config.username);
+        }
     } catch (err) {
         console.log("could not parse cookie: " + document.cookie);
     }
