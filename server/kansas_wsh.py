@@ -234,7 +234,7 @@ class KansasGameState(object):
 
         return src_type, src_key
 
-    def removeCard(self, card):
+    def remove_card(self, card):
 		loc_type, loc = self.index[card]
 		del self.index[card]
 		self.data['board'][loc].remove(card)
@@ -425,7 +425,7 @@ class KansasGameHandler(KansasHandler):
             logging.info("Starting mass excommunication.")
             for card in req:
                 try: 
-                    self._state.removeCard(card)			
+                    self._state.remove_card(card)			
                 except:
                     loggin.warning("Ignoring bad remove: " + str(card))
             self.broadcast(

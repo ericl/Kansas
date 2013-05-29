@@ -954,6 +954,18 @@ function changeOrient(card, orient) {
             dest_orient: orient}]});
 }
 
+/* Remove selected cards. */
+function removeCard() {
+    log(selectedSet);
+    // extra card ID, (substr(5) == length of _card)
+    var cards = $.map(selectedSet, function(x) {
+        return parseInt(x.id.substr(5));   
+    });
+        
+    ws.send("remove", cards);   
+}
+
+
 function toggleRotateCard(card) {
     var orient = getOrient(card);
     if (Math.abs(orient) == 1) {
@@ -1203,6 +1215,7 @@ function unrotateSelected() {
     });
 }
 
+
 /* Shows hovermenu of prev card in stack. */
 function stackNext(memberCard) {
     var idx = parseInt(memberCard.data("stack_index")) - 1;
@@ -1237,6 +1250,7 @@ var eventTable = {
     'flipstack': invertStack,
     'reversestack': reverseStack,
     'shufsel': shuffleSelection,
+    'remove': removeCard,
     'shufselconfirm': shuffleSelectionConfirm,
     'stacknext': stackNext,
     'stackprev': stackPrev,
@@ -1314,9 +1328,13 @@ function menuForSelection(selectedSet) {
         + ' class="flipall" data-key="flipall">Hide All'
         + '</li>'
         + '<li style="margin-left: -190px"'
-        + ' class="bottom boardonly shufselconfirm"'
+        + ' class="boardonly shufselconfirm"'
         + ' data-key="shufselconfirm">Shuffle'
         + '</li>'
+        + '<li style="margin-left: -190px"'
+        + ' class="bottom remove" data-key="remove">Remove'
+        + '</li>'
+ 
         );
 
     var height = kCardHeight * kHoverCardRatio;
