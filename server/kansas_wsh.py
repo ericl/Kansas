@@ -330,7 +330,6 @@ class KansasGameHandler(KansasHandler):
         self._seqno = 1000
         self._state = KansasGameState()
         self.handlers['broadcast'] = self.handle_broadcast
-        self.handlers['move'] = self.handle_move
         self.handlers['bulkmove'] = self.handle_bulkmove
         self.handlers['stackop'] = self.handle_stackop
         self.handlers['resync'] = self.handle_resync
@@ -389,28 +388,6 @@ class KansasGameHandler(KansasHandler):
                     'z_stack': self._state.data[dest_t][dest_k],
                 })
             self.broadcast(set(self.streams.keys()), 'bulkupdate', msg)
-
-    def handle_move(self, req, output):
-        with self._lock:
-            move = req['move']
-            dest_t = move['dest_type']
-            dest_k = move['dest_key']
-            src_type, src_key, seqno = self.apply_move(move)
-            logging.info("Accepted move request '%s'", req)
-            self.broadcast(
-                set(self.streams.keys()),
-                'update',
-                {
-                    # move delta is sufficient in most cases
-                    'move': move,
-                    # z_stack enforces stack ordering
-                    'z_stack': self._state.data[dest_t][dest_k],
-                    # seqno is a sanity check for the client
-                    'seqno': seqno,
-                    # information about the origin of the move
-                    'old_type': src_type,
-                    'old_key': src_key,
-                })
 
     def handle_broadcast(self, req, output):
         with self._lock:

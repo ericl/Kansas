@@ -938,11 +938,13 @@ function changeOrient(card, orient) {
     }
     log("Sending orient change.");
     showSpinner();
-    ws.send("move", {move: {card: cardId,
-                            dest_type: dest_type,
-                            dest_key: toCanonicalKey(dest_key),
-                            dest_prev_type: dest_type,
-                            dest_orient: orient}});
+    ws.send("bulkmove",
+        {moves: [{
+            card: cardId,
+            dest_type: dest_type,
+            dest_key: toCanonicalKey(dest_key),
+            dest_prev_type: dest_type,
+            dest_orient: orient}]});
 }
 
 function toggleRotateCard(card) {
@@ -1948,11 +1950,13 @@ $(document).ready(function() {
                     orient = -1;
             }
 
-            ws.send("move", {move: {card: cardId,
-                                    dest_prev_type: dest_prev_type,
-                                    dest_type: dest_type,
-                                    dest_key: toCanonicalKey(dest_key),
-                                    dest_orient: orient}});
+            ws.send("bulkmove",
+                {moves:
+                    [{card: cardId,
+                      dest_prev_type: dest_prev_type,
+                      dest_type: dest_type,
+                      dest_key: toCanonicalKey(dest_key),
+                      dest_orient: orient}]});
             draggingId = null;
             dragStartKey = null;
         });
@@ -2108,7 +2112,6 @@ $(document).ready(function() {
                 reset(e.data[0]);
             },
 
-            // TODO unify with bulkupdate
             stackupdate: function(e) {
                 hideSpinner();
                 log("Stack update: " + JSON.stringify(e.data));
@@ -2120,62 +2123,6 @@ $(document).ready(function() {
                     cd.data("stack_index", i);
                 }
                 redrawStack(clientKey, false);
-            },
-
-            // TODO unify with bulkupdate
-            update: function(e) {
-                hideSpinner();
-                log("Update: " + JSON.stringify(e.data));
-                var card = $("#card_" + e.data.move.card);
-                var clientKey = toClientKey(e.data.move.dest_key);
-                var oldClientKey = toClientKey(e.data.old_key);
-                card.data("dest_key", clientKey);
-
-                if (e.data.old_type == "board") {
-                    stackDepthCache[oldClientKey] -= 1;
-                    if (stackDepthCache[oldClientKey] <= 0) {
-                        if (stackDepthCache[oldClientKey] < 0) {
-                            warning("Count cache is corrupted.");
-                        } else {
-                            delete stackDepthCache[oldClientKey];
-                        }
-                    }
-                }
-
-                if (e.data.move.dest_type == "board") {
-                    stackDepthCache[clientKey] = e.data.z_stack.length;
-                    log("stackDepthCache: " + JSON.stringify(stackDepthCache));
-
-                    setOrientProperties(card, e.data.move.dest_orient);
-                    if (removeFromArray(handCache, e.data.move.card)) {
-                        redrawHand();
-                    }
-                    /* Redraws and shows each card in the stack. */
-                    var z_stack = e.data.z_stack;
-                    for (i in z_stack) {
-                      var cd = $("#card_" + z_stack[i]);
-                      cd.data("stack_index", i);
-                    }
-                    fastZToBoard(card);
-                    if ("card_" + z_stack[z_stack.length - 1] == card.prop("id")) {
-                        card = fastZRaiseInStack(card);
-                    }
-                    redrawStack(oldClientKey, true);
-                    redrawStack(clientKey, false);
-                } else if (e.data.move.dest_type == "hands") {
-
-                    setOrientProperties(card, e.data.move.dest_orient);
-                    if (clientKey == user) {
-                        card.addClass("inHand");
-                        renderHandStack(e.data.z_stack);
-                    } else {
-                        setOrientProperties(card, -1);
-                        moveOffscreen(card);
-                    }
-
-                } else {
-                    warning("unknown dest type: " + e.data.move.dest_type);
-                }
             },
 
             bulkupdate: function(e) {
