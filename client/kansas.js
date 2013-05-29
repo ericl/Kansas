@@ -2386,20 +2386,39 @@ $(document).ready(function() {
         events: {
             list_games_resp: function(e) {
                 $("#gamelist_loading").hide();
-                $("#gamelist").empty();
+
+                /* Avoids annoyance of buttons disappearing on unneeded refresh. */
+                var needsRefresh = false;
                 for (g in e.data) {
-                    var online = "";
-                    if (e.data[g].presence > 0)
-                        online = " (" + e.data[g].presence + " online)";
-                    var node = $("<div class='gamechoice'><span>"
-                        + e.data[g].gameid
-                        + online
-                        + "</span> <button class='entergame' data-gameid='"
-                        + e.data[g].gameid
-                        + "'>"
-                        + "Join"
-                        + "</button></div>"
-                    ).appendTo("#gamelist");
+                    var nodeid = "#gnode_" + btoa(e.data[g].gameid).split("=")[0];
+                    var node = $(nodeid);
+                    if (!node || node.data("presence") != e.data[g].presence) {
+                        needsRefresh = true;
+                        break;
+                    }
+                }
+
+                if (needsRefresh) {
+                    $("#gamelist").empty();
+                    for (g in e.data) {
+                        var nodeid = "gnode_" + btoa(e.data[g].gameid).split("=")[0];
+                        var online = "";
+                        if (e.data[g].presence > 0)
+                            online = " (" + e.data[g].presence + " online)";
+                        var node = $("<div id='"
+                            + nodeid
+                            + "' class='gamechoice' data-presence="
+                            + e.data[g].presence
+                            + "><span>"
+                            + e.data[g].gameid
+                            + online
+                            + "</span> <button class='entergame' data-gameid='"
+                            + e.data[g].gameid
+                            + "'>"
+                            + "Join"
+                            + "</button></div>"
+                        ).appendTo("#gamelist");
+                    }
                 }
                 setTimeout(function() {
                     if (!connect_pending) {
