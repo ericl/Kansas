@@ -1685,7 +1685,7 @@ function redrawBoard() {
 
 /* Sets position of center divider. */
 function redrawDivider() {
-    $("#divider").css("top", keyToY((kMaxGridIndex / 2) << 16));
+    $("#divider").fadeIn().css("top", keyToY((kMaxGridIndex / 2) << 16));
 }
 
 /* Animates a card move to a destination on the board. */
@@ -2466,7 +2466,9 @@ $(document).ready(function() {
         document.title = user + '@' + gameid;
         $("#homescreen").fadeOut('slow');
         $(".home-hidden").fadeIn('slow');
-        init(gameid, user);
+        setTimeout(function() {
+            init(gameid, user);
+        }, 500);
     };
 
     $("#newgame").click(function() {
