@@ -2424,20 +2424,30 @@ $(document).ready(function() {
                     for (g in e.data) {
                         var nodeid = "gnode_" + btoa(e.data[g].gameid).split("=")[0];
                         var online = "";
-                        if (e.data[g].presence > 0)
+                        var name = e.data[g].gameid;
+                        var button = "<button class='entergame' data-gameid='"
+                            + e.data[g].gameid
+                            + "'>"
+                            + "Join"
+                            + "</button>";
+                        if (e.data[g].private) {
+                            name = "<i>Private Game</i>"
+                            button = "";
+                        }
+                        if (e.data[g].presence > 0) {
                             online = " (" + e.data[g].presence + " online)";
+                        }
+
                         var node = $("<div id='"
                             + nodeid
                             + "' class='gamechoice gameonline' data-presence="
                             + e.data[g].presence
                             + "><span>"
-                            + e.data[g].gameid
+                            + name
                             + online
-                            + "</span> <button class='entergame' data-gameid='"
-                            + e.data[g].gameid
-                            + "'>"
-                            + "Join"
-                            + "</button></div>"
+                            + "</span> "
+                            + button
+                            + "</div>"
                         ).appendTo("#gamelist");
                     }
                 }
@@ -2628,6 +2638,8 @@ $(document).ready(function() {
     $("#newgame").click(function() {
         if ($("#gamename").val())
             gameid = $("#gamename").val();
+        if ($("#private").is(":checked"))
+            gameid += "@private_" + uuid;
         enter();
     });
 

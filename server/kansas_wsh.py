@@ -300,22 +300,23 @@ class KansasInitHandler(KansasHandler):
             resp = []
             ranked = sorted(
                 self.games.items(),
-                key=lambda (k, v): -v.last_used)
+                key=lambda (k, v): (bool(not v.presence_count()), -v.last_used))
             for gameid, handler in ranked:
-                if '@hidden' not in gameid:
-                    resp.append({
-                        'gameid': gameid,
-                        'presence': handler.presence_count()})
+                resp.append({
+                    'gameid': gameid if '@private' not in gameid else '',
+                    'private': '@private' in gameid,
+                    'presence': handler.presence_count()})
             output.reply(resp)
 
     def garbage_collect_games(self):
         if len(self.games) > KansasInitHandler.MAX_GAMES:
             ranked = sorted(
                 self.games.items(),
-                key=lambda (k, v): -v.last_used)
+                key=lambda (k, v): (bool(not v.presence_count()), -v.last_used))
             while len(self.games) > KansasInitHandler.MAX_GAMES:
                 victim_id, victim = ranked.pop()
                 victim.terminate()
+                del self.games[victim_id]
         for gameid, game in self.games.items():
             if game.terminated:
                 del self.games[gameid]
