@@ -21,7 +21,7 @@ except:
 
 kSmallImageSize = (92, 131)
 kServingPrefix = ''
-kLocalServingAddress = 'http://localhost:8000/'
+kLocalServingAddress = 'http://localhost:9000/'
 kCachePath = '../cache'
 
 
@@ -65,24 +65,15 @@ class CachingLoader(dict):
         dict.__init__(self, copy.deepcopy(values))
         self.oldPrefix = self['resource_prefix']
         logging.info("new CachingLoader")
+        self.highest_id = max(self['urls'].keys())
 
         # The cached files are assumed served from this path by another server.
         self['resource_prefix'] = kServingPrefix
 
-        def download(suffix):
-            url = self.toAbsoluteURL(suffix)
-            path = self.cachePath(url)
-            if not os.path.exists(path):
-                logging.info("GET " + url)
-                imgdata = urllib2.urlopen(url).read()
-                with open(path, 'wb') as f:
-                    f.write(imgdata)
-            return path
-
         # Caches front image urls.
         for card, suffix in self['urls'].items():
             # Downloads large version of images.
-            large_path = download(suffix)
+            large_path = self.download(suffix)
             self['urls'][card] = large_path
 
             # Generates small version of images.
@@ -92,13 +83,31 @@ class CachingLoader(dict):
             self['urls_small'][card] = small_path
 
         # Caches the back image.
-        self['default_back_url'] = download(self['default_back_url'])
+        self['default_back_url'] = self.download(self['default_back_url'])
 
         # Caches other back urls.
         for card, suffix in self['back_urls'].items():
-            self['back_urls'][card] = download(suffix)
+            self['back_urls'][card] = self.download(suffix)
 
         logging.info("Cache load in %.3f seconds" % (time.time() - start))
+
+    def add_card(self, front_url):
+        """Returns id of new card."""
+
+        self.highest_id += 1
+        new_id = self.highest_id
+        self.urls[new_id] = self.download(front_url)
+        return new_id
+
+    def download(self, suffix):
+        url = self.toAbsoluteURL(suffix)
+        path = self.cachePath(url)
+        if not os.path.exists(path):
+            logging.info("GET " + url)
+            imgdata = urllib2.urlopen(url).read()
+            with open(path, 'wb') as f:
+                f.write(imgdata)
+        return path
 
     def cachePath(self, url):
         return os.path.join(kCachePath, hex(hash('$' + url))[2:] + '.jpg')
