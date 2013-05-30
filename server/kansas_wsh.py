@@ -303,7 +303,9 @@ class KansasInitHandler(KansasHandler):
                 key=lambda (k, v): (bool(not v.presence_count()), -v.last_used))
             for gameid, handler in ranked:
                 resp.append({
-                    'gameid': gameid if '@private' not in gameid else '',
+                    'gameid': gameid
+                        if '@private' not in gameid
+                            else abs(hash(gameid) % 10000000),
                     'private': '@private' in gameid,
                     'presence': handler.presence_count()})
             output.reply(resp)

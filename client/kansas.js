@@ -2425,18 +2425,24 @@ $(document).ready(function() {
                         var nodeid = "gnode_" + btoa(e.data[g].gameid).split("=")[0];
                         var online = "";
                         var name = e.data[g].gameid;
-                        var button = "<button class='entergame' data-gameid='"
+                        var priv = "";
+
+                        if (e.data[g].private) {
+                            name = "<i>Private Game " + e.data[g].gameid + "</i>"
+                            priv = "disabled "
+                        }
+
+                        if (e.data[g].presence > 0) {
+                            online = " (" + e.data[g].presence + " online)";
+                        }
+
+                        var button = "<button "
+                            + priv
+                            + "class='entergame' data-gameid='"
                             + e.data[g].gameid
                             + "'>"
                             + "Join"
                             + "</button>";
-                        if (e.data[g].private) {
-                            name = "<i>Private Game</i>"
-                            button = "";
-                        }
-                        if (e.data[g].presence > 0) {
-                            online = " (" + e.data[g].presence + " online)";
-                        }
 
                         var node = $("<div id='"
                             + nodeid
