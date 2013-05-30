@@ -2161,7 +2161,10 @@ function init() {
                     }
                 }
             }
-            ws.send('add', sendList);
+            if (sendList.length > 500)
+                warning("Trying to add too many cards");
+            else 
+                ws.send('add', sendList);
             $('#addtext').toggle();
         }
     });
