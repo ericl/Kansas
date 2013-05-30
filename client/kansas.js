@@ -2373,7 +2373,7 @@ $(document).ready(function() {
         console.log("could not parse cookie: " + document.cookie);
     }
 
-    $("#gamename").val(Date());
+    $("#gamename").val(new Date().toJSON());
 
     if (document.location.hash) {
         $("#homescreen").hide();
