@@ -503,6 +503,7 @@ class KansasGameHandler(KansasHandler):
                     self._state.add_card(card)
                 except:
                     logging.warning("Ignoring bad add: " + str(card))
+            self._state.assignZIndices()
             self.broadcast(
                 set(self.streams.keys()),
                 'reset', self.snapshot())
