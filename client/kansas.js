@@ -2144,8 +2144,26 @@ function init() {
     });
 
     $("#add").mouseup(function(e) {
-        var cardName = $('#addtext').val();
-        ws.send('add', [{loc:70321830, name:cardName}]);
+        if ($('#addtext').css('display') == 'none') {
+            $('#addtext').toggle();
+        }else {
+            var cards = $('#addtext').val();
+            cardNames = cards.split("\n");
+            sendList = [];
+            var regex = /^([0-9])+ (.*)$/;
+            
+            for (var i = 0; i < cardNames.length; i++) {
+                var match = regex.exec(cardNames[i]);
+                var count = match[1];
+                console.log(match[1]);
+                console.log(match[2]);
+                for (var j = 0; j < count; j++) {
+                    sendList[sendList.length] = {loc: 70321830, name: match[2]};
+                }
+            }
+            ws.send('add', sendList);
+            $('#addtext').toggle();
+        }
     });
 
     $("#hand").droppable({
