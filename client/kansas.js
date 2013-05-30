@@ -2146,7 +2146,6 @@ function init() {
     $("#add").mouseup(function(e) {
         var cardName = $('#addtext').val();
         ws.send('add', [{loc:70321830, name:cardName}]);
-                        
     });
 
     $("#hand").droppable({

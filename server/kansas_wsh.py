@@ -10,7 +10,6 @@ import threading
 import time
 import urllib2
 import re
-import decks
 
 try:
     import Image
@@ -27,6 +26,21 @@ kCachePath = '../cache'
 
 if not os.path.exists(kCachePath):
     os.makedirs(kCachePath)
+
+
+BLANK_DECK = {
+    'deck_name': 'Blank deck',
+    'resource_prefix': '/third_party/',
+    'default_back_url': '/third_party/images/mtg_detail.jpg',
+    'board': {},
+    'hands': {},
+    'zIndex': {},
+    'orientations': {},
+    'urls_small': {},
+    'urls': {},
+    'back_urls': {},
+    'titles': {}
+}
 
 
 # TODO split into loader module
@@ -65,7 +79,10 @@ class CachingLoader(dict):
         dict.__init__(self, copy.deepcopy(values))
         self.oldPrefix = self['resource_prefix']
         logging.info("new CachingLoader")
-        self.highest_id = max(self['urls'].keys())
+        if self['urls']:
+            self.highest_id = max(self['urls'].keys())
+        else:
+            self.highest_id = 0
 
         # The cached files are assumed served from this path by another server.
         self['resource_prefix'] = kServingPrefix
@@ -154,7 +171,7 @@ class KansasGameState(object):
     """KansasGameState holds the entire state of the game in json format."""
 
     def __init__(self):
-        self.data = CachingLoader(decks.DEFAULT_MAGIC_DECK)
+        self.data = CachingLoader(BLANK_DECK)
         self.index = self.buildIndex()
         self.assignZIndices()
         self.assignOrientations()
