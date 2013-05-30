@@ -1,0 +1,4 @@
+#!/bin/bash
+
+python -m SimpleHTTPServer 8000 &
+./test_server.py 8080
