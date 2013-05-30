@@ -302,9 +302,10 @@ class KansasInitHandler(KansasHandler):
                 self.games.items(),
                 key=lambda (k, v): -v.last_used)
             for gameid, handler in ranked:
-                resp.append({
-                    'gameid': gameid,
-                    'presence': handler.presence_count()})
+                if '@hidden' not in gameid:
+                    resp.append({
+                        'gameid': gameid,
+                        'presence': handler.presence_count()})
             output.reply(resp)
 
     def garbage_collect_games(self):
