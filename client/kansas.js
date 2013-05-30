@@ -165,7 +165,7 @@ function stackOf(memberCard, optKey) {
 
 /* Returns topmost card in stack. */
 function topOf(stack) {
-    var maxZ = 0;
+    var maxZ = -1;
     var highest = null;
     stack.each(function(i) {
         var z = $(this).zIndex();
