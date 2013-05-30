@@ -2150,15 +2150,15 @@ function init() {
             var cards = $('#addtext').val();
             cardNames = cards.split("\n");
             sendList = [];
-            var regex = /^([0-9])+ (.*)$/;
+            var regex = /^([0-9]+) ([a-zA-Z,\-\' ]+)$/;
             
             for (var i = 0; i < cardNames.length; i++) {
                 var match = regex.exec(cardNames[i]);
+                if (match != null) {
                 var count = match[1];
-                console.log(match[1]);
-                console.log(match[2]);
-                for (var j = 0; j < count; j++) {
-                    sendList[sendList.length] = {loc: 70321830, name: match[2]};
+                    for (var j = 0; j < count; j++) {
+                        sendList[sendList.length] = {loc: 70321830, name: match[2]};
+                    }
                 }
             }
             ws.send('add', sendList);
