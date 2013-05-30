@@ -2562,12 +2562,12 @@ $(document).ready(function() {
                             }
                         }
                         setOrientProperties(card, update.move.dest_orient);
+                        queuedStackRedraws[oldClientKey] = true;
                         if (update.move.dest_type == "board") {
                             if (removeFromArray(handCache, update.move.card)) {
                                 redrawHandQueued = true;
                             }
                             fastZToBoard(card);
-                            queuedStackRedraws[oldClientKey] = true;
                         } else if (update.move.dest_type == "hands") {
                             if (clientKey == hand_user) {
                                 card.addClass("inHand");
