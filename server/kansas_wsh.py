@@ -253,7 +253,7 @@ class KansasGameState(object):
     def add_card(self, card):
         loc = card['loc']
         name = card['name']
-        #Trim the quotes 
+        # Trims the quotes off the url.
         url = CardNameToUrls(name, True)[0][1:-1]
         card_id = self.data.add_card(url)
         if loc in self.data['board']:
