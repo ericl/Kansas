@@ -2143,6 +2143,12 @@ function init() {
         loggingEnabled = !loggingEnabled;
     });
 
+    $("#add").mouseup(function(e) {
+        var cardName = $('#addtext').val();
+        ws.send('add', [{loc:70321830, name:cardName}]);
+                        
+    });
+
     $("#hand").droppable({
         over: function(event, ui) {
             if (ui.draggable.hasClass("card")) {

@@ -96,11 +96,13 @@ class CachingLoader(dict):
 
         self.highest_id += 1
         new_id = self.highest_id
-        self.urls[new_id] = self.download(front_url)
+        self['urls'][new_id] = self.download(front_url)
         return new_id
 
     def download(self, suffix):
+        logging.info(suffix)
         url = self.toAbsoluteURL(suffix)
+        logging.info(url)
         path = self.cachePath(url)
         if not os.path.exists(path):
             logging.info("GET " + url)
@@ -247,6 +249,18 @@ class KansasGameState(object):
         loc_type, loc = self.index[card]
         del self.index[card]
         self.data['board'][loc].remove(card)
+        
+    def add_card(self, card):
+        loc = card['loc']
+        name = card['name']
+        #Trim the quotes 
+        url = CardNameToUrls(name, True)[0][1:-1]
+        card_id = self.data.add_card(url)
+        if loc in self.data['board']:
+            self.data['board'][loc].append(card_id)
+        else:
+            self.data['board'][loc] = [card_id]
+        self.index[card_id] = ('board', loc)
     
 
 class KansasHandler(object):
@@ -391,6 +405,7 @@ class KansasGameHandler(KansasHandler):
         self.handlers['reset'] = self.handle_reset
         self.handlers['end'] = self.handle_end
         self.handlers['remove'] = self.handle_remove
+        self.handlers['add'] = self.handle_add
         self.streams = {creatorOutputStream: creator}
         self.last_used = time.time()
         self.terminated = False
@@ -476,6 +491,18 @@ class KansasGameHandler(KansasHandler):
                     self._state.remove_card(card)           
                 except:
                     logging.warning("Ignoring bad remove: " + str(card))
+            self.broadcast(
+                set(self.streams.keys()),
+                'reset', self.snapshot())
+
+    def handle_add(self, req, output):
+        with self._lock:
+            logging.info("Starting mass immigration.")
+            for card in req:
+                try:
+                    self._state.add_card(card)
+                except:
+                    logging.warning("Ignoring bad add: " + str(card))
             self.broadcast(
                 set(self.streams.keys()),
                 'reset', self.snapshot())
