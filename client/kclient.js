@@ -19,16 +19,16 @@
  *
  *  to query game state:
  *      kclient.get_ids() -> list[int]
- *      kclient.get_serverpos(id) -> (type: str, pos)
- *      kclient.get_stack(pos_type, serverpos) -> list[int]
+ *      kclient.get_pos(id) -> (type: str, pos: any)
+ *      kclient.get_stack(pos_type, pos) -> list[int]
  *      kclient.get_front_url(id) -> str
  *      kclient.get_back_url(id) -> str
  *
- *  to mutate game state:
+ *  "low-level" mutation method for game state:
  *      kclient.newBulkMoveTxn()
- *          .update(id1, dest_t_a, serverpos_a, server_orient_a)
- *          .update(id2, dest_t_a, serverpos_a, server_orient_b)
- *          .update(id3, dest_t_b, serverpos_b, server_orient_c)
+ *          .update(id1, pos_type_a, pos_a, server_orient_a)
+ *          .update(id2, pos_type_a, pos_a, server_orient_b)
+ *          .update(id3, pos_type_b, pos_b, server_orient_c)
  *          .commit()
  */
 function KansasClient(hostname, ip_port) {
@@ -67,11 +67,11 @@ KansasClient.prototype.get_ids = function() {
     /* TODO */
 }
 
-KansasClient.prototype.get_serverpos = function(id) {
+KansasClient.prototype.get_pos = function(id) {
     /* TODO */
 }
 
-KansasClient.prototype.get_stack = function(pos_type, serverpos) {
+KansasClient.prototype.get_stack = function(pos_type, pos) {
     /* TODO */
 }
 
