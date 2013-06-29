@@ -1,8 +1,5 @@
-// KansasClient - talks to server and provides change notifications
-// KansasView - translates screen coordinates into server-side positions
-
 /**
- * Kansas websocket client.
+ * Kansas websocket client - talks to server and notifies of updates.
  *
  * Usage:
  *
@@ -21,150 +18,141 @@
  *  See kclient._hooks for more information on adding hooks.
  *
  *  to query game state:
- *      TODO impl game state accessors:
- *      kclient.get_ids()
- *      kclient.get_serverpos(id)
- *      kclient.get_stack(serverpos)
- *      kclient.front_url(id)
- *      kclient.back_url(id)
+ *      kclient.get_ids() -> list[int]
+ *      kclient.get_serverpos(id) -> (type: str, pos)
+ *      kclient.get_stack(pos_type, serverpos) -> list[int]
+ *      kclient.get_front_url(id) -> str
+ *      kclient.get_back_url(id) -> str
  *
  *  to mutate game state:
- *      TODO impl game state mutators:
- *      kclient.startBulkMove()
- *          .move(id1, serverpos_a, server_orient_a)
- *          .move(id2, serverpos_a, server_orient_b)
- *          .move(id3, serverpos_b, server_orient_c)
+ *      kclient.newBulkMoveTxn()
+ *          .update(id1, dest_t_a, serverpos_a, server_orient_a)
+ *          .update(id2, dest_t_a, serverpos_a, server_orient_b)
+ *          .update(id3, dest_t_b, serverpos_b, server_orient_c)
  *          .commit()
  */
 function KansasClient(hostname, ip_port) {
-    var client = new Object();
-
-    client._gameState = {
+    this.hostname = hostname;
+    this.ip_port = ip_port;
+    this._ws = null;
+    this._state = 'offline';
+    this._gameState = {
         board: {},
         hands: {},
         urls: {},
         back_urls: {},
     };
-    client._ws = null;
-    client._state = 'offline';
-
-    client._onOpen = function() {
-        console.log("ws:open");
-        client._state = 'opened';
-    };
-
-    client._onClose = function() {
-        console.log("ws:close");
-        client._state = 'offline'
-        client._ws = null;
-        client._notify('disconnected');
-    }
-
-    client._reset = function(state) {
-        /* TODO reset local cache using state */
-        client._notify('reset');
-    }
-
-    client._eventHandlers = {
-        _default: function(e) {
-            console.log("Unhandled response: " + JSON.stringify(e));
-        },
-        broadcast_resp: function() {
-            /* Ignore */
-        },
-        error: function(e) {
-            client._notify('error', e.data);
-        },
-        broadcast_message: function(e) {
-            client._notify('broadcast', e.data);
-        },
-        list_games_resp: function(e) {
-            client._notify('listgames', e.data);
-        },
-        connect_resp: function(e) {
-            client._state = 'connected';
-            client._reset(e.data[0]);
-        },
-        resync_resp: function(e) {
-            client._reset(e.data[0]);
-        },
-        reset: function(e) {
-            client._reset(e.data[0]);
-        },
-        stackupdate: function(e) {
-            /* TODO update local cache */
-            client._notify('stackchanged', e.data.op.dest_key);
-        },
-        bulkupdate: function(e) {
-            /* TODO update local cache */
-            /* TODO call hooks on all changed stacks */
-        },
-        presence: function(e) {
-            client._notify('presence', e.data);
-        },
-    }
-
-    client._notify = function(hook, arg) {
-        console.log('invoke hook: ' + hook);
-        client._hooks[hook](arg);
-    }
-
-    client._hooks = {
-        error: function(data) {},
-        broadcast: function(data) {},
-        listgames: function(data) {},
-        stackchanged: function(data) {},
-        reset: function() {},
-        disconnected: function() {},
-    }
-
-    client.bind = function(name, fn) {
-        client._hooks[name] = fn
-        return client;
-    }
-
-    client.send = function(tag, data) {
-        client._ws.send(tag, data);
-    }
-
-    client.connect = function(onOpen) {
-        client._state = 'offline';
-        client._ws = $.websocket(
-            "ws:///" + hostname + ":" + ip_port + "/kansas",
-            { open: client._onOpen,
-              close: client._onClose,
-              events: client._eventHandlers});
-        return client;
-    }
-
-    return client;
 }
 
-/**
- * KansasView wraps kclient to provide different user perspectives.
- * E.g. two people looking at a board from different angles.
- *
- * Usage:
- *      var view = KansasView(kclient, 2, [0, 0]);
- *      kclient.get_coord(id)
- *      kclient.front_url(id)
- *      kclient.back_url(id)
- *
- *  to mutate game state:
- *      view.startBulkMove()
- *          .move(id1, x1, y1)
- *          .moveTo(id2, id1)
- *          .move(id3, x2, y2)
- *          .flip(id4)
- *          .unflip(id5)
- *          .rotate(id6)
- *          .unrotate(id7)
- *          .commit()
- */
-function KansasView(kclient, rotation, translation) {
-    var view = new Object();
+KansasClient.prototype.bind = function(name, fn) {
+    this._hooks[name] = fn
+    return this;
+}
 
-    /* TODO define methods on view. */
+KansasClient.prototype.send = function(tag, data) {
+    this._ws.send(tag, data);
+}
 
-    return view;
+KansasClient.prototype.connect = function(onOpen) {
+    this._state = 'offline';
+    this._ws = $.websocket(
+        "ws:///" + hostname + ":" + ip_port + "/kansas",
+        { open: this._onOpen,
+          close: this._onClose,
+          events: this._eventHandlers});
+    return this;
+}
+
+KansasClient.prototype.get_ids = function() {
+    /* TODO */
+}
+
+KansasClient.prototype.get_serverpos = function(id) {
+    /* TODO */
+}
+
+KansasClient.prototype.get_stack = function(pos_type, serverpos) {
+    /* TODO */
+}
+
+KansasClient.prototype.get_front_url = function(id) {
+    /* TODO */
+}
+
+KansasClient.prototype.get_back_url = function(id) {
+    /* TODO */
+}
+
+KansasClient.prototype.newBulkMoveTxn = function() {
+    /* TODO */
+}
+
+KansasClient.prototype._onOpen = function() {
+    console.log("ws:open");
+    this._state = 'opened';
+};
+
+KansasClient.prototype._onClose = function() {
+    console.log("ws:close");
+    this._state = 'offline'
+    this._ws = null;
+    this._notify('disconnected');
+}
+
+KansasClient.prototype._reset = function(state) {
+    /* TODO reset local cache using state */
+    this._notify('reset');
+}
+
+KansasClient.prototype._eventHandlers = {
+    _default: function(e) {
+        console.log("Unhandled response: " + JSON.stringify(e));
+    },
+    broadcast_resp: function() {
+        /* Ignore */
+    },
+    error: function(e) {
+        this._notify('error', e.data);
+    },
+    broadcast_message: function(e) {
+        this._notify('broadcast', e.data);
+    },
+    list_games_resp: function(e) {
+        this._notify('listgames', e.data);
+    },
+    connect_resp: function(e) {
+        this._state = 'connected';
+        this._reset(e.data[0]);
+    },
+    resync_resp: function(e) {
+        this._reset(e.data[0]);
+    },
+    reset: function(e) {
+        this._reset(e.data[0]);
+    },
+    stackupdate: function(e) {
+        /* TODO update local cache */
+        this._notify('stackchanged', e.data.op.dest_key);
+    },
+    bulkupdate: function(e) {
+        /* TODO update local cache */
+        /* TODO call hooks on all changed stacks */
+    },
+    presence: function(e) {
+        this._notify('presence', e.data);
+    },
+}
+
+KansasClient.prototype._notify = function(hook, arg) {
+    console.log('invoke hook: ' + hook);
+    this._hooks[hook](arg);
+}
+
+KansasClient.prototype._hooks = {
+    error: function(data) {},
+    broadcast: function(data) {},
+    listgames: function(data) {},
+    stackchanged: function(data) {},
+    reset: function() {},
+    disconnected: function() {},
 }
