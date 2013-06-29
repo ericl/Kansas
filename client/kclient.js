@@ -18,18 +18,20 @@
  *  See kclient._hooks for more information on adding hooks.
  *
  *  to query game state:
- *      kclient.get_ids() -> list[int]
- *      kclient.get_pos(id) -> (type: str, pos: any)
- *      kclient.get_stack(pos_type, pos) -> list[int]
- *      kclient.get_front_url(id) -> str
- *      kclient.get_back_url(id) -> str
+ *      kclient.listAll() -> list[int]
+ *      kclient.getPos(id) -> (type: str, pos: any)
+ *      kclient.getStack(pos_type, pos) -> list[int]
+ *      kclient.getFrontUrl(id) -> str
+ *      kclient.getBackUrl(id) -> str
  *
- *  "low-level" mutation method for game state:
- *      kclient.newBulkMoveTxn()
- *          .update(id1, pos_type_a, pos_a, server_orient_a)
- *          .update(id2, pos_type_a, pos_a, server_orient_b)
- *          .update(id3, pos_type_b, pos_b, server_orient_c)
- *          .commit()
+ *  low-level mutation methods for game state:
+ *  (generally, prefer using KansasView for mutations)
+ *      kclient.applyStackOp(pos_type, pos, op);
+ *      kclient.newBulkMoveMessage()
+ *          .append(id1, pos_type_a, pos_a, server_orient_a)
+ *          .append(id2, pos_type_a, pos_a, server_orient_b)
+ *          .append(id3, pos_type_b, pos_b, server_orient_c)
+ *          .send();
  */
 function KansasClient(hostname, ip_port) {
     this.hostname = hostname;
@@ -63,23 +65,23 @@ KansasClient.prototype.connect = function(onOpen) {
     return this;
 }
 
-KansasClient.prototype.get_ids = function() {
+KansasClient.prototype.listAll = function() {
     /* TODO */
 }
 
-KansasClient.prototype.get_pos = function(id) {
+KansasClient.prototype.getPos = function(id) {
     /* TODO */
 }
 
-KansasClient.prototype.get_stack = function(pos_type, pos) {
+KansasClient.prototype.getStack = function(pos_type, pos) {
     /* TODO */
 }
 
-KansasClient.prototype.get_front_url = function(id) {
+KansasClient.prototype.getFrontUrl = function(id) {
     /* TODO */
 }
 
-KansasClient.prototype.get_back_url = function(id) {
+KansasClient.prototype.getBackUrl = function(id) {
     /* TODO */
 }
 

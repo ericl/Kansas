@@ -4,7 +4,7 @@
  *
  * Usage:
  *      var view = KansasView(kclient, 2, [0, 0]);
- *      kclient.get_coord(id) -> (int, int)
+ *      kclient.getCoord(id) -> (int, int)
  *
  *  to mutate game state:
  *      view.startBulkMove()
@@ -30,7 +30,7 @@ function KansasView(kclient, rotation, translation) {
     this.translation = translation;
 }
 
-KansasView.prototype.get_coord = function(id) {
+KansasView.prototype.getCoord = function(id) {
     /* TODO */
 }
 
