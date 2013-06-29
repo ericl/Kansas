@@ -2515,6 +2515,7 @@ $(document).ready(function() {
             },
 
             stackupdate: function(e) {
+                /* TODO deprecated, use bulkmove only */
                 hideSpinner();
                 log("Stack update: " + JSON.stringify(e.data));
                 var clientKey = toClientKey(e.data.op.dest_key);

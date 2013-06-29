@@ -1,0 +1,392 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Kansas Test</title>
+    <meta name="viewport" content="target-densitydpi=device-dpi user-scalable=no, initial-scale=0.5, maximum-scale=0.5, minimum-scale=0.5" />
+    <script type="text/javascript" src="third_party/jquery-1.8.3.min.js"></script>
+    <script type="text/javascript" src="third_party/jquery.animate-enhanced.min.js"></script>
+    <script type="text/javascript" src="third_party/jquery.websocket-0.0.1.js"></script>
+    <script type="text/javascript" src="third_party/jquery-ui-1.9.2.custom.min.js"></script>
+    <script type="text/javascript" src="client/kclient.js"></script>
+    <script type="text/javascript" src="client/kview.js"></script>
+    <script type="text/javascript" src="client/app.js"></script>
+    <style>
+        html, body {
+            border: 0;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #arena {
+            background-color: #474747;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0px;
+            border: 0;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+        }
+
+        #hand {
+            width: 100%;
+            background-color: #257390;
+            border-top: 2px solid #33b5e5;
+            position: absolute;
+            bottom: 0px;
+            height: 220px;
+            padding: 0;
+            margin: 0;
+            z-index: 2500000;
+            opacity: 0.80;
+            /* hides white line on android */
+            margin-bottom: -2px !important;
+        }
+
+        .ui-selectable-helper {
+            position: absolute;
+            border: 3px dashed #33b5e5;
+            z-index: 4500000 !important;
+        }
+
+        .collapsed {
+            height: 60px !important;
+            background-color: #000000 !important;
+            border-top: 2px solid #555 !important;
+        }
+
+        .active {
+            background-color: #257390 !important;
+            border-top: 2px solid #33b5e5 !important;
+        }
+
+        .dragging {
+/*            border-top: 2px solid #33b5e5 !important; */
+        }
+
+        li.confirm {
+            background-color: #550000 !important;
+        }
+
+        li.confirm:hover, li.confirm.hover {
+            background-color: #aa0000 !important;
+        }
+
+        .card {
+            -webkit-backface-visibility: hidden;
+            position: fixed;
+            border-radius: 6px;
+            border: 3px solid black;
+            width: 92px;
+            height: 131px;
+        }
+        
+        ol, ul {
+            list-style: none;
+        }
+
+        .hoverlink {
+            font-weight: bold;
+            font-size: 15pt;
+            line-height: 15pt;
+            vertical-align: middle;
+        }
+
+        .hoverdesc {
+            line-height: 25pt;
+            font-size: 10pt;
+            vertical-align: middle;
+        }
+
+        li:hover, li.hover {
+            cursor: pointer;
+            background-color: #257491;
+        }
+
+        .hoverlink:hover, .hoverlink.hover {
+            cursor: pointer;
+        }
+
+        .hoverlink.poison-source {
+            color: #33b5e5 !important;
+        }
+
+        li.poison-source {
+            background-color: #257491 !important;
+            color: white !important;
+        }
+
+        .disabled:hover {
+            cursor: default !important;
+        }
+
+        .hoverRotate {
+            transform: rotate(5deg) translate(7%, 7%);
+            -moz-transform: rotate(5deg) translate(7%, 7%);
+            -ms-transform: rotate(5deg) translate(7%, 7%);
+            -o-transform: rotate(5deg) translate(7%, 7%);
+            -webkit-transform: rotate(5deg) translate(7%, 7%);
+            margin-bottom: 80px;
+        }
+
+        .flipped {
+            transform: rotate(180deg);
+            -moz-transform: rotate(180deg);
+            -ms-transform: rotate(180deg);
+            -o-transform: rotate(180deg);
+            -webkit-transform: rotate(180deg);
+        }
+
+        .rotated.flipped {
+            margin-top: 25px;
+            margin-left: -10px;
+            transform: rotate(-90deg) translate(20%, 14%);
+            -moz-transform: rotate(-90deg) translate(20%, 14%);
+            -ms-transform: rotate(-90deg) translate(20%, 14%);
+            -o-transform: rotate(-90deg) translate(20%, 14%);
+            -webkit-transform: rotate(-90deg) translate(20%, 14%);
+        }
+
+        .rotated {
+            margin-top: 25px;
+            margin-left: -10px;
+            transform: rotate(90deg) translate(-20%, -14%);
+            -moz-transform: rotate(90deg) translate(-20%, -14%);
+            -ms-transform: rotate(90deg) translate(-20%, -14%);
+            -o-transform: rotate(90deg) translate(-20%, -14%);
+            -webkit-transform: rotate(90deg) translate(-20%, -14%);
+        }
+
+        li {
+            color: white;
+            line-height: 75px;
+            height: 75px;
+            vertical-align: middle;
+            font-size: 20pt;
+            font-family: sans-serif;
+            text-align: left;
+            border-bottom: 2px solid #2e2e30;
+            margin-bottom: -9px;
+            margin-top: 5px;
+            padding-left: 10px;
+        }
+
+        li.top {
+            border-top: 2px solid #404144;
+        }
+
+        li.bottom {
+            border-bottom: none;
+            margin-bottom: 5px;
+        }
+        
+        .header {
+            color: #bebebe;
+            font-weight: bold;
+            font-family: sans-serif;
+            font-size: 12pt;
+        }
+
+        div.hovermenu {
+            left: 50%;
+            border-radius: 8px;
+            right: 50%;
+            top: 30%;
+            bottom: 75%;
+            border: 8px solid black;
+            position: absolute;
+            z-index: 90000000 !important;
+            display: none;
+            background-color: black;
+        }
+
+        .hovermenu img {
+            z-index: 90000005 !important;
+            color: white !important;
+        }
+
+        .disabled {
+            color: #4c4c4c !important;
+            background-color: transparent !important;
+            pointer-events: none;
+        }
+
+        div.hovernote {
+            color: #bebebe;
+            font-family: sans-serif;
+            text-align: center;
+            padding-bottom: 4pt;
+            padding-top: 2pt;
+            background-color: #000;
+            width: auto;
+            position: absolute;
+            top: 518px !important;
+            width: 100%;
+            font-style: italic;
+            margin-left: -8px;
+            border-right: 8px solid black;
+            border-left: 8px solid black;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        .highlight {
+            border: 3px solid #33b5e5;
+        }
+
+        .snappoint {
+            border: 3px solid #33b5e5 !important;
+        }
+
+        .selecting {
+            border: 3px solid #33b5e5 !important;
+        }
+
+        #selectionbox {
+            position: fixed;
+            border: 4px solid #33b5e5 !important;
+            display: none;
+            z-index: 4500000;
+            background-color: rgba(25, 200, 230, 0.3);
+        }
+
+        #selectionbox span {
+            position: absolute;
+            bottom: -28pt;
+            right: -5px;
+            color: #eee;
+            font-weight: bold;
+            font-size: 18pt;
+            font-family: sans-serif;
+        }
+
+        #selectionarea {
+            position: fixed;
+            pointer-events: none;
+            border: 5px solid #404040 !important;
+            display: none;
+            z-index: 0;
+            background-color: #373737;
+        }
+
+        .uuid_frame {
+            position: fixed;
+            border: 3px solid orange;
+            pointer-events: none;
+            border-radius: 5px;
+            z-index: 5500000;
+            font-family: sans;
+        }
+
+        .uuid_frame span {
+            position: absolute;
+            padding: 4px 4px 0px 0px;
+            background-color: orange;
+            border-radius: 2px;
+            color: white;
+        }
+
+        .flipName span {
+            padding: 4px 4px 0px 0px !important;
+            bottom: -2px !important;
+            right: 0px !important;
+            transform: rotate(180deg);
+            -moz-transform: rotate(180deg);
+            -ms-transform: rotate(180deg);
+            -o-transform: rotate(180deg);
+            -webkit-transform: rotate(180deg);
+        }
+
+        #divider {
+            position: absolute;
+            border-top: 2px solid #666;
+            left: 4%;
+            width: 90%;
+            height: 0px;
+            padding: 0;
+            margin: 10px;
+        }
+
+        .blueglow {
+            box-shadow: inset 0px 0px 0px 10px #33b5e5;
+        }
+
+        #homescreen {
+            background-color: #fffbdf;
+            font-family: sans;
+            position: absolute;
+            width: 550px;
+            top: 10%;
+            left: 50%;
+            margin: 0px 0 0 -300px;
+            padding: 0px 20px 20px 20px;
+            z-index: 9800000;
+        }
+
+        .home-hidden {
+            display: none;
+        }
+
+        .gamechoice {
+            padding-bottom: 10px;
+        }
+
+        #presence {
+            float: right;
+            color: gray;
+            font-size: small;
+            padding: .5em;
+        }
+    </style>
+  </head>
+  <body>
+  <div id="homescreen">
+    <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
+    <h3>Player Settings</h3>
+    <input id="username" type=textbox value="Anonymous" name="name">
+    <input id="player1" type="radio" name="users" checked>Player 1
+    <input id="player2" type="radio" name="users">Player 2
+    <h3>Choose Game</h3>
+    <div id="gamelist"><span id="gamelist_loading">Loading...</span></div>
+    <div class="gamechoice">
+      <input id="gamename" type=textbox>
+      <button id="newgame">New Game</button>
+      <br>
+      <input type="checkbox" id="private">Private Game
+    </div>
+  </div>
+  <textarea style="display: none; position: absolute; z-index: 9999999; right: 0" id="console" rows=15 cols=60></textarea><br>
+  <div id="arena">
+    <div style="display: none; float: left;" class="connected">
+<!--
+        <button id="sync">Force Sync</button>
+        <button id="reset">Reset Game</button>
+-->
+        <button id="debug">Toggle Debug</button>
+        <button id="end">End Game</button>
+        <button id="leave">Leave Game</button>
+        <button id="add">Add</button>
+        
+        
+    </div>
+    <div id="presence"></div>
+    <br>
+            <textarea id="addtext" value="" style="display: none; z-index: 99999999" rows = 15></textarea>
+    </br>
+    <div id="spinner" class="home-hidden" style="font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding: 12px; background-color: #FFFBDF; font-size: 25pt;">Loading...</div>
+    <div id="stats" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 0; padding: 12px; color: white; background-color: green; font-size: 25pt;">Error.</div>
+    <div id="error" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 1; padding: 12px; color: white; background-color: red; font-size: 25pt;">Error.</div>
+    <div id="selectionbox"><span></span></div>
+    <div id="selectionarea"></div>
+    <div id="hand" class="collapsed home-hidden"></div>
+    
+  </div>
+  <div id="divider" style="display: none"></div>
+  </body>
+</html>
+

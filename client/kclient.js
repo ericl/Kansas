@@ -47,6 +47,8 @@ function KansasClient(hostname, ip_port) {
 }
 
 KansasClient.prototype.bind = function(name, fn) {
+    if (this._hooks[name] === undefined)
+        throw "hook '" + name + "' not defined";
     this._hooks[name] = fn
     return this;
 }
@@ -55,13 +57,15 @@ KansasClient.prototype.send = function(tag, data) {
     this._ws.send(tag, data);
 }
 
-KansasClient.prototype.connect = function(onOpen) {
-    this._state = 'offline';
+KansasClient.prototype.connect = function() {
+    if (this._state != 'offline')
+        throw "can only connect from 'offline' state";
+    this._state = 'opening';
     this._ws = $.websocket(
-        "ws:///" + hostname + ":" + ip_port + "/kansas",
-        { open: this._onOpen,
-          close: this._onClose,
-          events: this._eventHandlers});
+        "ws:///" + this.hostname + ":" + this.ip_port + "/kansas",
+        { open: this._onOpen(this),
+          close: this._onClose(this),
+          events: this._eventHandlers(this)});
     return this;
 }
 
@@ -89,60 +93,67 @@ KansasClient.prototype.newBulkMoveTxn = function() {
     /* TODO */
 }
 
-KansasClient.prototype._onOpen = function() {
-    console.log("ws:open");
-    this._state = 'opened';
-};
+KansasClient.prototype._onOpen = function(that) {
+    return function() {
+        console.log("ws:open");
+        that._state = 'opened';
+        that._notify('opened');
+    };
+}
 
-KansasClient.prototype._onClose = function() {
-    console.log("ws:close");
-    this._state = 'offline'
-    this._ws = null;
-    this._notify('disconnected');
+KansasClient.prototype._onClose = function(that) {
+    return function() {
+        console.log("ws:close");
+        that._state = 'offline'
+        that._ws = null;
+        that._notify('disconnected');
+    };
+}
+
+KansasClient.prototype._eventHandlers = function(that) {
+    return {
+        _default: function(e) {
+            console.log("Unhandled response: " + JSON.stringify(e));
+        },
+        broadcast_resp: function() {
+            /* Ignore */
+        },
+        error: function(e) {
+            that._notify('error', e.data);
+        },
+        broadcast_message: function(e) {
+            that._notify('broadcast', e.data);
+        },
+        list_games_resp: function(e) {
+            that._notify('listgames', e.data);
+        },
+        connect_resp: function(e) {
+            that._state = 'connected';
+            that._reset(e.data[0]);
+        },
+        resync_resp: function(e) {
+            that._reset(e.data[0]);
+        },
+        reset: function(e) {
+            that._reset(e.data[0]);
+        },
+        stackupdate: function(e) {
+            /* TODO update local cache */
+            that._notify('stackchanged', e.data.op.dest_key);
+        },
+        bulkupdate: function(e) {
+            /* TODO update local cache */
+            /* TODO call hooks on all changed stacks */
+        },
+        presence: function(e) {
+            that._notify('presence', e.data);
+        },
+    };
 }
 
 KansasClient.prototype._reset = function(state) {
     /* TODO reset local cache using state */
     this._notify('reset');
-}
-
-KansasClient.prototype._eventHandlers = {
-    _default: function(e) {
-        console.log("Unhandled response: " + JSON.stringify(e));
-    },
-    broadcast_resp: function() {
-        /* Ignore */
-    },
-    error: function(e) {
-        this._notify('error', e.data);
-    },
-    broadcast_message: function(e) {
-        this._notify('broadcast', e.data);
-    },
-    list_games_resp: function(e) {
-        this._notify('listgames', e.data);
-    },
-    connect_resp: function(e) {
-        this._state = 'connected';
-        this._reset(e.data[0]);
-    },
-    resync_resp: function(e) {
-        this._reset(e.data[0]);
-    },
-    reset: function(e) {
-        this._reset(e.data[0]);
-    },
-    stackupdate: function(e) {
-        /* TODO update local cache */
-        this._notify('stackchanged', e.data.op.dest_key);
-    },
-    bulkupdate: function(e) {
-        /* TODO update local cache */
-        /* TODO call hooks on all changed stacks */
-    },
-    presence: function(e) {
-        this._notify('presence', e.data);
-    },
 }
 
 KansasClient.prototype._notify = function(hook, arg) {
@@ -151,9 +162,11 @@ KansasClient.prototype._notify = function(hook, arg) {
 }
 
 KansasClient.prototype._hooks = {
+    opened: function() {},
     error: function(data) {},
     broadcast: function(data) {},
     listgames: function(data) {},
+    presence: function(data) {},
     stackchanged: function(data) {},
     reset: function() {},
     disconnected: function() {},
