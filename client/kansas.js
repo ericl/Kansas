@@ -13,8 +13,6 @@
  * which again will be received by other clients in a globally consistent order.
  */
 
-// TODO refactor this mudball
-
 // Default settings for websocket connection.
 var kWSPort = 8080
 var hostname = window.location.hostname || "localhost"
