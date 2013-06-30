@@ -454,7 +454,12 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         this.view = new KansasView(
             client, 2, [-kCardWidth, -kCardHeight], getBBox());
     }
+    this._redrawDivider();
+
 }
+KansasUI.prototype._redrawDivider = function() {
+    $('#divider').css("top", this.view.height/2);
+};
 
 /* Returns absolute url of a resource. */
 KansasUI.prototype._toResource = function(url) {
