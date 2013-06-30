@@ -1,4 +1,14 @@
-/* Demo app exercising kclient and kview. To replace kansas.js eventually. */
+/* Home screen implementation that supports two-player games in general. */
+
+(function() {  /* begin namespace twoplayerhome */
+
+if (typeof KansasClient === 'undefined') {
+    throw "Error: KansasClient must be defined to use this module."
+}
+
+if (typeof kansas_ui === 'undefined') {
+    throw "Error: kansas_ui must be defined to use this module."
+}
 
 // Default settings for websocket connection.
 var kWSPort = 8080
@@ -8,58 +18,9 @@ var uuid = "p_" + Math.random().toString().substring(5);
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
 var user = "Anonymous";
-var hand_user = "Player 1";
 
 // Kansas client.
 var client = null;
-var view = null;
-
-// Geometry of cards.
-var kCardWidth = 92;
-var kCardHeight = 131;
-var kCardBorder = 4;
-var kRotatedOffsetLeft = -10;
-var kRotatedOffsetTop = 25;
-var kMinHandHeight = 90;
-var kHoverCardRatio = 3.95;
-var kHoverTapRatio = kHoverCardRatio * 0.875;
-var kSelectionBoxPadding = 15;
-var kMinSupportedHeight = 1000;
-
-/* Logs a message to the debug console */
-function log(msg) {
-    console.log(msg);
-}
-
-/* Logs warning to debug console */
-function warning(msg) {
-    console.log(msg);
-    if (!$("#error").is(":visible")) {
-        $("#error").text(msg).show();
-    }
-}
-
-/* Shows the "Loading..." spinner. */
-var spinnerShowQueued = false;
-function showSpinner() {
-    if (!spinnerShowQueued && !disconnected) {
-        spinnerShowQueued = true;
-        setTimeout(_reallyShowSpinner, 500);
-    }
-}
-
-function _reallyShowSpinner() {
-    if (spinnerShowQueued && !disconnected) {
-        $("#spinner").show();
-        spinnerShowQueued = false;
-    }
-}
-
-/* Hides the "Loading..." spinner. */
-function hideSpinner() {
-    spinnerShowQueued = false;
-    $("#spinner").hide();
-}
 
 function enterGame() {
     $("#homescreen").fadeOut('slow');
@@ -68,12 +29,8 @@ function enterGame() {
     user = $("#username").val();
     if ($("#player1").is(":checked")) {
         orient = "player1";
-        hand_user = "Player 1";
-        view = KansasView(client, 0, [0, 0]);
     } else {
         orient = "player2";
-        hand_user = "Player 2";
-        view = KansasView(client, 2, [-kCardWidth, -kCardHeight]);
     }
     document.title = user + ';' + orient + ';' + gameid;
     document.location.hash = document.title;
@@ -89,7 +46,13 @@ function enterGame() {
         gameid: gameid,
         uuid: uuid,
     });
+
+    kansas_ui.init(client, uuid, $("#player1").is(":checked"));
 };
+
+function handleError(msg) {
+    kansas_ui.warning("Server: " + msg);
+}
 
 function handleSocketOpen() {
     if (document.location.hash) {
@@ -103,24 +66,14 @@ function handleSocketOpen() {
             $("#player2").prop("checked", true);
         enterGame();
     } else {
-        log("client: "  + client);
+        kansas_ui.log("client: "  + client);
         client.send("list_games");
     }
 }
 
 function handleSocketClose() {
-    warning("Connection Error.");
-    hideSpinner();
-}
-
-function handleReset() {
-    alert("TODO: reset card state");
-}
-
-function handleStackChanged(key) {
-    var stack_t = key[0];
-    var stack_k = key[1];
-    console.log("stack redraw @ " + stack_t + ", " + stack_k);
+    kansas_ui.warning("Connection Error.");
+    kansas_ui.hideSpinner();
 }
 
 function handleListGames(data) {
@@ -196,7 +149,7 @@ $(document).ready(function() {
             $("#username").val(config.username);
         }
     } catch (err) {
-        log("could not parse cookie: " + document.cookie);
+        kansas_ui.log("could not parse cookie: " + document.cookie);
     }
 
     $("#gamename").val(new Date().toJSON());
@@ -207,10 +160,13 @@ $(document).ready(function() {
 
     client = new KansasClient(hostname, kWSPort)
         .bind('opened', handleSocketOpen)
+        .bind('error', handleError)
         .bind('disconnected', handleSocketClose)
         .bind('listgames', handleListGames)
-        .bind('stackchanged', handleStackChanged)
-        .bind('reset', handleReset)
+        .bind('broadcast', kansas_ui.handleBroadcast)
+        .bind('presence', kansas_ui.handlePresence)
+        .bind('stackchanged', kansas_ui.handleStackChanged)
+        .bind('reset', kansas_ui.handleReset)
         .connect();
 
     $("#newgame").click(function() {
@@ -226,3 +182,5 @@ $(document).ready(function() {
         enterGame();
     });
 });
+
+})();  /* end namespace twoplayerhome */

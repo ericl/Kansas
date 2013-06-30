@@ -18,6 +18,7 @@
  *          .unrotate(id7)
  *          .commit()
  */
+
 function KansasView(kclient, rotation, translation) {
     if (translation.length != 2) {
         throw "translation must be of form [int, int]";

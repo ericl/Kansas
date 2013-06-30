@@ -33,6 +33,11 @@
  *          .append(id3, pos_type_b, pos_b, server_orient_c)
  *          .send();
  */
+
+if (typeof kansas_ui === 'undefined') {
+    throw "Error: kansas_ui must be defined to use this module."
+}
+
 function KansasClient(hostname, ip_port) {
     this.hostname = hostname;
     this.ip_port = ip_port;
@@ -52,10 +57,12 @@ KansasClient.prototype.bind = function(name, fn) {
 }
 
 KansasClient.prototype.send = function(tag, data) {
+    kansas_ui.showSpinner();
     this._ws.send(tag, data);
 }
 
 KansasClient.prototype.connect = function() {
+    kansas_ui.showSpinner();
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";
     this._state = 'opening';
@@ -100,7 +107,7 @@ KansasClient.prototype.newBulkMoveTxn = function() {
 
 KansasClient.prototype._onOpen = function(that) {
     return function() {
-        console.log("ws:open");
+        kansas_ui.log("ws:open");
         that._state = 'opened';
         that._notify('opened');
     };
@@ -108,7 +115,7 @@ KansasClient.prototype._onOpen = function(that) {
 
 KansasClient.prototype._onClose = function(that) {
     return function() {
-        console.log("ws:close");
+        kansas_ui.log("ws:close");
         that._state = 'offline'
         that._ws = null;
         that._notify('disconnected');
@@ -132,10 +139,11 @@ function removeFromArray(arr, item) {
 KansasClient.prototype._eventHandlers = function(that) {
     return {
         _default: function(e) {
-            console.log("Unhandled response: " + JSON.stringify(e));
+            kansas_ui.hideSpinner();
+            kansas_ui.log("Unhandled response: " + JSON.stringify(e));
         },
         broadcast_resp: function() {
-            /* Ignore */
+            kansas_ui.hideSpinner();
         },
         error: function(e) {
             that._notify('error', e.data);
@@ -220,17 +228,18 @@ KansasClient.prototype._reset = function(state) {
 }
 
 KansasClient.prototype._notify = function(hook, arg) {
-    console.log('invoke hook: ' + hook);
+    kansas_ui.hideSpinner();
+    kansas_ui.log('invoke hook: ' + hook);
     this._hooks[hook](arg);
 }
 
 KansasClient.prototype._hooks = {
     opened: function() {},
     error: function(data) {},
-    broadcast: function(data) {},
+    disconnected: function() {},
     listgames: function(data) {},
+    broadcast: function(data) {},
     presence: function(data) {},
     stackchanged: function(data) {},
     reset: function() {},
-    disconnected: function() {},
 }
