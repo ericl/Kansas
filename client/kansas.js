@@ -450,7 +450,7 @@ function removeFromArray(arr, item) {
 function log(msg) {
     if (loggingEnabled) {
         var console = $('#console');
-        console.append(msg + "\n");
+        console.append(JSON.stringify(msg) + "\n");
         console.scrollTop(console[0].scrollHeight - console.outerHeight());
     }
 }

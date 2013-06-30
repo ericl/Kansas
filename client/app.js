@@ -28,17 +28,12 @@ var kMinSupportedHeight = 1000;
 
 /* Logs a message to the debug console */
 function log(msg) {
-    if (loggingEnabled) {
-        var console = $('#console');
-        console.append(msg + "\n");
-        console.scrollTop(console[0].scrollHeight - console.outerHeight());
-    }
+    console.log(msg);
 }
 
 /* Logs warning to debug console */
 function warning(msg) {
     console.log(msg);
-    log(msg);
     if (!$("#error").is(":visible")) {
         $("#error").text(msg).show();
     }
@@ -108,7 +103,7 @@ function handleSocketOpen() {
             $("#player2").prop("checked", true);
         enterGame();
     } else {
-        console.log("client: "  + client);
+        log("client: "  + client);
         client.send("list_games");
     }
 }
@@ -119,7 +114,13 @@ function handleSocketClose() {
 }
 
 function handleReset() {
-    alert("TODO: reset game state");
+    alert("TODO: reset card state");
+}
+
+function handleStackChanged(key) {
+    var stack_t = key[0];
+    var stack_k = key[1];
+    console.log("stack redraw @ " + stack_t + ", " + stack_k);
 }
 
 function handleListGames(data) {
@@ -195,7 +196,7 @@ $(document).ready(function() {
             $("#username").val(config.username);
         }
     } catch (err) {
-        console.log("could not parse cookie: " + document.cookie);
+        log("could not parse cookie: " + document.cookie);
     }
 
     $("#gamename").val(new Date().toJSON());
@@ -208,6 +209,7 @@ $(document).ready(function() {
         .bind('opened', handleSocketOpen)
         .bind('disconnected', handleSocketClose)
         .bind('listgames', handleListGames)
+        .bind('stackchanged', handleStackChanged)
         .bind('reset', handleReset)
         .connect();
 

@@ -519,6 +519,8 @@ class KansasGameState(object):
         loc_type, loc = self.index[card]
         del self.index[card]
         self.data[loc_type][loc].remove(card)
+        if len(self.data[loc_type][loc]) == 0:
+            del self.data[loc_type][loc]
         
     def add_card(self, card):
         loc = card['loc']
