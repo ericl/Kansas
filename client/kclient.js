@@ -26,6 +26,7 @@
  *      kclient.getStackTop(pos_type, pos) -> int
  *      kclient.stackIndex(id|jquery) -> int in [0, max_int]
  *      kclient.stackHeight(id|jquery) -> int in [1, max_int] or 0
+ *      kclient.stackOf(id|jquery) -> list[int]
  *      kclient.getSmallUrl(id|jquery) -> str
  *      kclient.getFrontUrl(id|jquery) -> str
  *      kclient.getBackUrl(id|jquery) -> str
@@ -163,6 +164,13 @@ KansasClient.prototype.stackIndex = function(id) {
     } else {
         return stack.indexOf(id);
     }
+}
+
+KansasClient.prototype.stackOf = function(id) {
+    id = toId(id);
+    var pos = this.getPos(id);
+    var stack = this.getStack(pos[0], pos[1]);
+    return stack;
 }
 
 KansasClient.prototype.stackHeight = function(id) {
