@@ -34,27 +34,26 @@ function KansasView(kclient, rotation, translation, bbox) {
     this.translation = translation;
     this.width = bbox[0];
     this.height = bbox[1];
+    this.maxGridIndex = 0x7ff;
 }
 
 (function() {  /* begin namespace kview */
 
-var kMaxGridIndex = 0x7ff;
-
 function keyFromCoords(view, x, y) {
     var xRatio = Math.min(1, Math.max(0, x / view.width));
     var yRatio = Math.min(1, Math.max(0, y / view.height));
-    return Math.ceil(xRatio * kMaxGridIndex)
-        | Math.ceil(yRatio * kMaxGridIndex) << 16;
+    return Math.ceil(xRatio * view.maxGridIndex)
+        | Math.ceil(yRatio * view.maxGridIndex) << 16;
 }
 
 /* Extracts x-coord from key. */
 function keyToX(view, key) {
-    return ((key & 0xffff) / kMaxGridIndex) * view.width;
+    return ((key & 0xffff) / view.maxGridIndex) * view.width;
 }
 
 /* Extracts y-coord from key. */
 function keyToY(view, key) {
-    return ((key >> 16) / kMaxGridIndex) * view.height;
+    return ((key >> 16) / view.maxGridIndex) * view.height;
 }
 
 /* Translates x from server view to geometry on screen. */
@@ -114,7 +113,7 @@ function toCanonicalY(view, y, invert) {
 }
 
 /* Translates locations from geometry on screen to server view. */
-function toCanonicalKey(clientKey) {
+KansasView.prototype.toCanonicalKey = function(clientKey) {
     if (isNaN(clientKey)) {
         return clientKey;
     }
@@ -132,7 +131,7 @@ KansasView.prototype.getCoord = function(id) {
     var canonicalKey = parseInt(pos[1]);
     var x = keyToX(this, canonicalKey);
     var y = keyToY(this, canonicalKey);
-    return [toClientX(view, x), toClientY(view, y)];
+    return [toClientX(this, x), toClientY(this, y)];
 }
 
 function KansasViewTxn(client, view) {

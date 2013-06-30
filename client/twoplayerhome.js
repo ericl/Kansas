@@ -35,6 +35,8 @@ function enterGame() {
         username: user,
     });
 
+    kansas_ui.init(client, uuid, user, $("#player1").is(":checked"));
+
     /* Enforces that this function is only run once. */
     enterGame = function() {};
     client.send("connect", {
@@ -42,8 +44,6 @@ function enterGame() {
         gameid: gameid,
         uuid: uuid,
     });
-
-    kansas_ui.init(client, uuid, $("#player1").is(":checked"));
 };
 
 function handleError(msg) {
@@ -159,10 +159,10 @@ $(document).ready(function() {
         .bind('error', handleError)
         .bind('disconnected', handleSocketClose)
         .bind('listgames', handleListGames)
-        .bind('broadcast', kansas_ui.handleBroadcast)
-        .bind('presence', kansas_ui.handlePresence)
-        .bind('stackchanged', kansas_ui.handleStackChanged)
-        .bind('reset', kansas_ui.handleReset)
+        .bind('broadcast', function(x) { kansas_ui.handleBroadcast(x); })
+        .bind('presence', function(x) { kansas_ui.handlePresence(x); })
+        .bind('stackchanged', function(x) { kansas_ui.handleStackChanged(x); })
+        .bind('reset', function(x) { kansas_ui.handleReset(x); })
         .connect();
 
     if (clients.length == 0)

@@ -19,13 +19,15 @@
  *
  *  to query game state:
  *      kclient.listAll() -> list[int]
- *      kclient.getPos(id) -> (type: str, pos: any)
- *      kclient.getOrient(id) -> int
+ *      kclient.getPos(id|jquery) -> (type: str, pos: any)
+ *      kclient.getOrient(id|jquery) -> int
  *      kclient.getStack(pos_type, pos) -> list[int]
- *      kclient.heightOf(id) -> int in [0, max_int]
- *      kclient.heightOfStack(id) -> int in [1, max_int]
- *      kclient.getFrontUrl(id) -> str
- *      kclient.getBackUrl(id) -> str
+ *      kclient.stackIndex(id|jquery) -> int in [0, max_int]
+ *      kclient.stackHeight(id|jquery) -> int in [1, max_int]
+ *      kclient.getSmallUrl(id|jquery) -> str
+ *      kclient.getFrontUrl(id|jquery) -> str
+ *      kclient.getBackUrl(id|jquery) -> str
+ *      kclient.getZ(id|jquery) -> int
  *
  *  low-level mutation methods for game state:
  *  (generally, prefer using KansasView for mutations)
@@ -104,21 +106,33 @@ KansasClient.prototype.listAll = function() {
     return acc;
 }
 
+function toId(id) {
+    if (isNaN(id)) {
+        /* converts jquery selection to integer id */
+        id = parseInt(id.prop("id").substr(5));
+    }
+    return id;
+}
+
 KansasClient.prototype.getPos = function(id) {
+    id = toId(id);
     return this._game.index[id];
 }
 
 KansasClient.prototype.getOrient = function(id) {
+    id = toId(id);
     return this._game.state.orientations[id];
 }
 
-KansasClient.prototype.heightOf = function(id) {
+KansasClient.prototype.stackIndex = function(id) {
+    id = toId(id);
     var pos = this.getPos(id);
     var stack = this.getStack(pos[0], pos[1]);
     return stack.indexOf(id);
 }
 
-KansasClient.prototype.heightOfStack = function(id) {
+KansasClient.prototype.stackHeight = function(id) {
+    id = toId(id);
     var pos = this.getPos(id);
     var stack = this.getStack(pos[0], pos[1]);
     return stack.length;
@@ -128,11 +142,23 @@ KansasClient.prototype.getStack = function(pos_type, pos) {
     return this._game.state[pos_type][pos];
 }
 
+KansasClient.prototype.getSmallUrl = function(id) {
+    id = toId(id);
+    return this._game.state.urls_small[id] || this.getFrontUrl(id);
+}
+
+KansasClient.prototype.getZ = function(id) {
+    id = toId(id);
+    return this._game.state.zIndex[id];
+}
+
 KansasClient.prototype.getFrontUrl = function(id) {
+    id = toId(id);
     return this._game.state.urls[id];
 }
 
 KansasClient.prototype.getBackUrl = function(id) {
+    id = toId(id);
     return this._game.state.back_urls[id] || this._game.state.default_back_url;
 }
 
