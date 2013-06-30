@@ -1,14 +1,10 @@
 /* Home screen implementation that supports two-player games in general. */
 
-(function() {  /* begin namespace twoplayerhome */
+/* XXX for exposing clients to world for debugging */
+var clients = [];
+var c0 = null;
 
-if (typeof KansasClient === 'undefined') {
-    throw "Error: KansasClient must be defined to use this module."
-}
-
-if (typeof kansas_ui === 'undefined') {
-    throw "Error: kansas_ui must be defined to use this module."
-}
+function setupTwoPlayerHome(kansas_ui) {  /* begin setupTwoPlayerHome */
 
 // Default settings for websocket connection.
 var kWSPort = 8080
@@ -158,7 +154,7 @@ $(document).ready(function() {
         $("#homescreen").hide();
     }
 
-    client = new KansasClient(hostname, kWSPort)
+    client = new KansasClient(hostname, kWSPort, kansas_ui)
         .bind('opened', handleSocketOpen)
         .bind('error', handleError)
         .bind('disconnected', handleSocketClose)
@@ -168,6 +164,10 @@ $(document).ready(function() {
         .bind('stackchanged', kansas_ui.handleStackChanged)
         .bind('reset', kansas_ui.handleReset)
         .connect();
+
+    if (clients.length == 0)
+        c0 = client;
+    clients.push(client);
 
     $("#newgame").click(function() {
         if ($("#gamename").val())
@@ -183,4 +183,4 @@ $(document).ready(function() {
     });
 });
 
-})();  /* end namespace twoplayerhome */
+}  /* end setupTwoPlayerHome */

@@ -3,7 +3,7 @@
  *
  * Usage:
  *
- *  var kclient = KansasClient(hostname, ip_port)
+ *  var kclient = KansasClient(hostname, ip_port, kansas_ui)
  *      .bind('stackchanged', ...)
  *      .bind('disconnected', ...)
  *      ...
@@ -20,7 +20,10 @@
  *  to query game state:
  *      kclient.listAll() -> list[int]
  *      kclient.getPos(id) -> (type: str, pos: any)
+ *      kclient.getOrient(id) -> int
  *      kclient.getStack(pos_type, pos) -> list[int]
+ *      kclient.heightOf(id) -> int in [0, max_int]
+ *      kclient.heightOfStack(id) -> int in [1, max_int]
  *      kclient.getFrontUrl(id) -> str
  *      kclient.getBackUrl(id) -> str
  *
@@ -34,13 +37,10 @@
  *          .send();
  */
 
-if (typeof kansas_ui === 'undefined') {
-    throw "Error: kansas_ui must be defined to use this module."
-}
-
-function KansasClient(hostname, ip_port) {
+function KansasClient(hostname, ip_port, kansas_ui) {
     this.hostname = hostname;
     this.ip_port = ip_port;
+    this.ui = kansas_ui;
     this._ws = null;
     this._state = 'offline';
     this._game = {
@@ -76,12 +76,12 @@ KansasClient.prototype.bind = function(name, fn) {
 }
 
 KansasClient.prototype.send = function(tag, data) {
-    kansas_ui.showSpinner();
+    this.ui.showSpinner();
     this._ws.send(tag, data);
 }
 
 KansasClient.prototype.connect = function() {
-    kansas_ui.showSpinner();
+    this.ui.showSpinner();
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";
     this._state = 'opening';
@@ -108,6 +108,22 @@ KansasClient.prototype.getPos = function(id) {
     return this._game.index[id];
 }
 
+KansasClient.prototype.getOrient = function(id) {
+    return this._game.state.orientations[id];
+}
+
+KansasClient.prototype.heightOf = function(id) {
+    var pos = this.getPos(id);
+    var stack = this.getStack(pos[0], pos[1]);
+    return stack.indexOf(id);
+}
+
+KansasClient.prototype.heightOfStack = function(id) {
+    var pos = this.getPos(id);
+    var stack = this.getStack(pos[0], pos[1]);
+    return stack.length;
+}
+
 KansasClient.prototype.getStack = function(pos_type, pos) {
     return this._game.state[pos_type][pos];
 }
@@ -126,7 +142,7 @@ KansasClient.prototype.newBulkMoveMessage = function() {
 
 KansasClient.prototype._onOpen = function(that) {
     return function() {
-        kansas_ui.log("ws:open");
+        that.ui.log("ws:open");
         that._state = 'opened';
         that._notify('opened');
     };
@@ -134,7 +150,7 @@ KansasClient.prototype._onOpen = function(that) {
 
 KansasClient.prototype._onClose = function(that) {
     return function() {
-        kansas_ui.log("ws:close");
+        that.ui.log("ws:close");
         that._state = 'offline'
         that._ws = null;
         that._notify('disconnected');
@@ -158,11 +174,11 @@ function removeFromArray(arr, item) {
 KansasClient.prototype._eventHandlers = function(that) {
     return {
         _default: function(e) {
-            kansas_ui.hideSpinner();
-            kansas_ui.log("Unhandled response: " + JSON.stringify(e));
+            that.ui.hideSpinner();
+            that.ui.log("Unhandled response: " + JSON.stringify(e));
         },
         broadcast_resp: function() {
-            kansas_ui.hideSpinner();
+            that.ui.hideSpinner();
         },
         error: function(e) {
             that._notify('error', e.data);
@@ -247,8 +263,8 @@ KansasClient.prototype._reset = function(state) {
 }
 
 KansasClient.prototype._notify = function(hook, arg) {
-    kansas_ui.hideSpinner();
-    kansas_ui.log('invoke hook: ' + hook);
+    this.ui.hideSpinner();
+    this.ui.log('invoke hook: ' + hook);
     this._hooks[hook](arg);
 }
 

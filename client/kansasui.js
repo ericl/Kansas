@@ -1,6 +1,6 @@
 /* Manages card rendering and user input / output.
  *
- * Required methods for 'kansas_ui' module:
+ * Defined methods for 'kansas_ui' module:
  *
  *      kansas_ui.init(client: KansasClient, uuid: str, isPlayer1: bool)
  *          Called when the client has been connected to a game.
@@ -16,42 +16,40 @@
  *      kansas_ui.warning(msg)
  */
 
-var kansas_ui = new Object();
-var dbg = null; /* Exposes kansas client for debugging. */
+function KansasUI() {};
 
 (function() {  /* begin namespace kansasui */
 
-    kansas_ui.init = function(client, uuid, isPlayer1) {
-        dbg = client;
-        alert("kansas ui init " + uuid + " " + isPlayer1);
-    };
+KansasUI.prototype.init = function(client, uuid, isPlayer1) {
+    alert("kansas ui init " + uuid + " " + isPlayer1);
+};
 
-    kansas_ui.handleReset = function() {
-    };
+KansasUI.prototype.handleReset = function() {
+};
 
-    kansas_ui.handleStackChanged = function(key) {
-        var dest_t = key[0];
-        var dest_k = key[0];
-    };
+KansasUI.prototype.handleStackChanged = function(key) {
+    var dest_t = key[0];
+    var dest_k = key[0];
+};
 
-    kansas_ui.handleBroadcast = function(data) {
-    };
+KansasUI.prototype.handleBroadcast = function(data) {
+};
 
-    kansas_ui.handlePresence = function(data) {
-    };
+KansasUI.prototype.handlePresence = function(data) {
+};
 
-    kansas_ui.showSpinner = function() {
-    };
+KansasUI.prototype.showSpinner = function() {
+};
 
-    kansas_ui.hideSpinner = function() {
-    };
+KansasUI.prototype.hideSpinner = function() {
+};
 
-    kansas_ui.warning = function(msg) {
-        console.log("WARNING: " + msg);
-    };
+KansasUI.prototype.warning = function(msg) {
+    console.log("WARNING: " + msg);
+};
 
-    kansas_ui.log = function(msg) {
-        console.log(msg);
-    };
+KansasUI.prototype.log = function(msg) {
+    console.log(msg);
+};
 
 })();  /* end namespace kansasui */
