@@ -1,7 +1,11 @@
 /* Manages card rendering and user input / output.
  *
  * Required methods for 'kansas_ui' module:
+ *
  *      kansas_ui.init(client: KansasClient, uuid: str, isPlayer1: bool)
+ *          Called when the client has been connected to a game.
+ *          No new methods should be bound to the client by kansasui.
+ *
  *      kansas_ui.handleReset()
  *      kansas_ui.handleStackChanged(key: [str, str|int])
  *      kansas_ui.handleBroadcast(data: json)
