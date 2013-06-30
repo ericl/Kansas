@@ -97,9 +97,11 @@ KansasClient.prototype.bind = function(name, fn) {
 }
 
 KansasClient.prototype.send = function(tag, data) {
-    this.ui.log("send: " + tag + "::" + JSON.stringify(data));
+    this.ui.vlog(3, "send: " + tag + "::" + JSON.stringify(data));
     this.ui.showSpinner();
-    this._ws.send(tag, data);
+    if (this._ws != null) {
+        this._ws.send(tag, data);
+    }
 }
 
 KansasClient.prototype.connect = function() {
@@ -156,7 +158,11 @@ KansasClient.prototype.stackIndex = function(id) {
     id = toId(id);
     var pos = this.getPos(id);
     var stack = this.getStack(pos[0], pos[1]);
-    return stack.indexOf(id);
+    if (stack == undefined) {
+        return -1;
+    } else {
+        return stack.indexOf(id);
+    }
 }
 
 KansasClient.prototype.stackHeight = function(id) {
@@ -206,7 +212,7 @@ KansasClient.prototype.newBulkMoveTxn = function() {
 
 KansasClient.prototype._onOpen = function(that) {
     return function() {
-        that.ui.log("ws:open");
+        that.ui.vlog(3, "ws:open");
         that._state = 'opened';
         that._notify('opened');
     };
@@ -214,7 +220,7 @@ KansasClient.prototype._onOpen = function(that) {
 
 KansasClient.prototype._onClose = function(that) {
     return function() {
-        that.ui.log("ws:close");
+        that.ui.vlog(3, "ws:close");
         that._state = 'offline'
         that._ws = null;
         that._notify('disconnected');
@@ -239,7 +245,7 @@ KansasClient.prototype._eventHandlers = function(that) {
     return {
         _default: function(e) {
             that.ui.hideSpinner();
-            that.ui.log("Unhandled response: " + JSON.stringify(e));
+            that.ui.vlog(3, "Unhandled response: " + JSON.stringify(e));
         },
         broadcast_resp: function() {
             that.ui.hideSpinner();
@@ -291,10 +297,13 @@ KansasClient.prototype._eventHandlers = function(that) {
                     var old_k = update.old_key;
 
                     stacksTouched[JSON.stringify([old_t, old_k])] = true;
-                    removeFromArray(that._game.state[old_t][old_k], id);
+                    if (old_t != dest_t || old_k != dest_k) {
+                        removeFromArray(that._game.state[old_t][old_k], id);
+                    }
                     that._game.index[id] = [dest_t, dest_k];
 
-                    if (that._game.state[old_t][old_k].length == 0) {
+                    if (that._game.state[old_t][old_k] &&
+                            that._game.state[old_t][old_k].length == 0) {
                         delete that._game.state[old_t][old_k];
                     }
                 }
@@ -329,7 +338,7 @@ KansasClient.prototype._reset = function(state) {
 
 KansasClient.prototype._notify = function(hook, arg) {
     this.ui.hideSpinner();
-    this.ui.log('invoke hook: ' + hook);
+    this.ui.vlog(3, 'invoke hook: ' + hook);
     this._hooks[hook](arg);
 }
 

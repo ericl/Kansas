@@ -62,7 +62,7 @@ function handleSocketOpen() {
             $("#player2").prop("checked", true);
         enterGame();
     } else {
-        kansas_ui.log("client: "  + client);
+        kansas_ui.vlog(3, "client: "  + client);
         client.send("list_games");
     }
 }
@@ -145,7 +145,7 @@ $(document).ready(function() {
             $("#username").val(config.username);
         }
     } catch (err) {
-        kansas_ui.log("could not parse cookie: " + document.cookie);
+        kansas_ui.vlog(3, "could not parse cookie: " + document.cookie);
     }
 
     $("#gamename").val(new Date().toJSON());

@@ -12,7 +12,7 @@
  *      kansas_ui.handlePresence(data: json)
  *      kansas_ui.showSpinner()
  *      kansas_ui.hideSpinner()
- *      kansas_ui.log(msg)
+ *      kansas_ui.vlog(level: int, msg)
  *      kansas_ui.warning(msg)
  */
 
@@ -40,6 +40,7 @@ function KansasUI() {
     this.animationCount = 0;
     this.zraises = 0;
     this.spinnerShowQueued = false;
+    this.nextBoardZIndex = 200;
 }
 
 (function() {  /* begin namespace kansasui */
@@ -47,17 +48,17 @@ function KansasUI() {
 // TODO detect mobile devices better
 var onMobile = navigator.platform.indexOf("android") >= 0;
 
+var LOGLEVEL = 2;
 var kAnimationLength = 400;
 
 // Workaround for https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
 // TODO fix this - this makes for a terrible UI experience.
-var XXX_jitter = 1;
+var XXX_jitter = onMobile ? 1 : 0;
 
 // Minimum zIndexes for various states.
 var kHandZIndex = 4000000;
 var kDraggingZIndex = 4400000;
 var nextHandZIndex = kHandZIndex;
-var nextBoardZIndex = 200;
 
 // Geometry of cards.
 var kCardWidth = 92;
@@ -133,7 +134,7 @@ KansasUI.prototype._startDragProgress = function(target) {
 
 /* Unselects all selected items, and hides hover menu. */
 KansasUI.prototype._removeFocus = function(doAnimation) {
-    this.log("unfocus")
+    this.vlog(3, "unfocus");
     removeHoverMenu(doAnimation);
     this._setSnapPoint(null);
     hideSelectionBox();
@@ -257,11 +258,14 @@ KansasUI.prototype._findSnapPoint = function(target) {
     var that = this;
 
     $.each(this.client.listStacks('board'), function(i, pos) {
-        var coord = that.view.posToCoord(pos);
-        var stack = that.client.getStack('board', pos);
-        if (stack.length == 1 && stack[0] == cid) {
-            return;
+        if (that.client.getStackTop('board', pos) == cid) {
+            var stack = that.client.getStack('board', pos);
+            if (stack.length <= 1) {
+                that.vlog(1, "ignoring pos " + pos);
+                return;
+            }
         }
+        var coord = that.view.posToCoord(pos);
         var cx = coord[0], cy = coord[1];
         var dx = Math.abs(cx - x);
         var dy = Math.abs(cy - y);
@@ -282,11 +286,18 @@ KansasUI.prototype._findSnapPoint = function(target) {
     });
 
     if (closest == null) {
-        this.log("No snap point for: " + target.prop("id"));
+        this.vlog(2, "No snap point for: " + target.prop("id"));
         return null;
     } else {
         var snap = this.client.getStackTop('board', closest);
-        this.log("Snap point found for: " + target.prop("id")
+        if (snap == cid) {
+            var stack = that.client.getStack('board', closest);
+            if (stack.length <= 1) {
+                throw "should not have allowed this";
+            }
+            snap = stack[stack.length - 2];
+        }
+        this.vlog(2, "Snap point found for: " + target.prop("id")
             + ": card_" + snap);
         return $("#card_" + snap);
     }
@@ -327,7 +338,7 @@ function heightOf(stackIndex, stackCount) {
  */
 KansasUI.prototype._updateFocus = function(target, noSnap) {
     if (target.length == 0) {
-        log("Whoops, no focus.");
+        vlog(3, "Whoops, no focus.");
         this._removeFocus();
         return;
     }
@@ -346,7 +357,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
     this._setSnapPoint(snap);
 
     if (target.hasClass("inHand")) {
-        log("Target in hand - removing focus to keep movement private.");
+        vlog(3, "Target in hand - removing focus to keep movement private.");
         ws.send("broadcast",
             {
                 "subtype": "frameupdate",
@@ -361,12 +372,12 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
     if (isCard) {
         if (snap == null) {
             if (hasDraggedOffStart) {
-                log("Rendering free-dragging card.");
+                vlog(3, "Rendering free-dragging card.");
                 sizingInfo = [[
                     target.hasClass("rotated"),
                     this.view.toCanonicalKey(this._keyFromTargetLocation(target)), 0]];
             } else {
-                this.log("Rendering just-selected card on stack.");
+                this.vlog(3, "Rendering just-selected card on stack.");
                 var count = this.client.stackHeight(target);
                 sizingInfo = [[
                     target.hasClass("rotated"),
@@ -374,7 +385,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                     heightOf(count - 1, count)]];
             }
         } else {
-            this.log("Rendering card snapping to stack");
+            this.vlog(3, "Rendering card snapping to stack");
             var count = this.client.stackHeight(snap);
             sizingInfo = [[
                 snap.hasClass("rotated"),
@@ -382,14 +393,14 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                 heightOf(count, count + 1)]];
         }
     } else if (snap != null) {
-        log("Rendering selection snapped to stack @ " + snap.data("dest_key"));
+        vlog(3, "Rendering selection snapped to stack @ " + snap.data("dest_key"));
         var count = this.client.stackHeight(snap);
         sizingInfo = [[
             snap.hasClass("rotated"),
             this.view.toCanonicalKey(snap.data("dest_key")),
             heightOf(count, count + 1)]];
     } else if (sizingInfo != null) {
-        log("Rendering free-dragging selection");
+        vlog(3, "Rendering free-dragging selection");
         var delta = selectionBoxOffset();
         var dx = delta[2];
         var dy = delta[3];
@@ -399,7 +410,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
             return [[info[0], this.view.toCanonicalKey(current), info[2]]];
         });
     } else {
-        log("Not rendering selection in hand.");
+        vlog(3, "Not rendering selection in hand.");
         return;
     }
 
@@ -475,11 +486,10 @@ function deactivateHand() {
 }
 
 /* Ensures cards are all at hand level. */
-function fastZToBoard(card) {
-    if (card.zIndex() >= kHandZIndex) {
-        card.zIndex(nextBoardZIndex);
-        nextBoardZIndex += 1;
-    }
+KansasUI.prototype._raiseCard = function(card) {
+    this.vlog(2, "raise card " + this.nextBoardZIndex + " " + card.prop("id"));
+    card.zIndex(this.nextBoardZIndex);
+    this.nextBoardZIndex += 1;
 }
 
 /* Returns all cards in the same stack as memberCard or optKey. */
@@ -509,65 +519,21 @@ function unpickle(imgNode, cdata) {
     imgNode.css("top", cdata[4]);
 }
 
-/* Ensures card has the max z of the stack it is in.
- * Precondition: stack is already z-sorted except for card. */
-KansasUI.prototype._fastZRaiseInStack = function(card) {
-    var reverseSortedStack = this._stackOf(card)
-        .not("#" + card.prop("id"))
-        .sort(function(a, b) {
-            return $(b).zIndex() - $(a).zIndex();
-        });
-    if (reverseSortedStack.length < 1) {
-        this.log("no sorting necessary");
-        return;
-    }
-    this.zraises += 1;
-    var assignedSlot = null;
-    var displacedCard = card;
-    var displacedAttrs = pickle(card);
-    // Pushes card down until z-index of stack is sorted again.
-    for (i in reverseSortedStack) {
-        var nextCard = $(reverseSortedStack[i]);
-        if (nextCard.zIndex() > displacedCard.zIndex()) {
-            if (assignedSlot == null) {
-                assignedSlot = displacedCard;
-            }
-            var nextCardAttrs = pickle(nextCard);
-            unpickle(nextCard, displacedAttrs);
-            unpickle(displacedCard, nextCardAttrs);
-            displacedAttrs = nextCardAttrs;
-        } else {
-            break;
-        }
-    }
-    return assignedSlot == null ? card : assignedSlot;
-}
-
 /* Forces a re-render of the entire stack at the location. */
 KansasUI.prototype._redrawStack = function(clientKey, fixIndexes) {
     if (isNaN(clientKey)) {
-        this.log("convert redrawStack - redrawHand @ " + clientKey);
+        this.vlog(3, "convert redrawStack - redrawHand @ " + clientKey);
         this._redrawHand();
         return;
     }
 
     var stack = this._stackOf(null, clientKey);
-    if (fixIndexes) {
-        stack.sort(function(a, b) {
-            return $(a).data("stack_index") - $(b).data("stack_index");
-        });
-    }
 
     /* Recomputes position of each card in the stack. */
-    var i = 0;
     var that = this;
     stack.each(function() {
         var cd = $(this);
-        if (fixIndexes) {
-            cd.data("stack_index", i);
-            i += 1;
-        }
-        that.log("redraw " + cd);
+        that.vlog(3, "redraw " + cd.prop("id"));
         that._redrawCard(cd);
     });
 }
@@ -580,10 +546,13 @@ KansasUI.prototype._redrawCard = function(card) {
     var x = coord[0];
     var y = coord[1];
     var idx = this.client.stackIndex(card);
-    var count = Math.max(idx + 1, this.client.stackHeight);
+    if (idx < 0) {
+        idx = this.client.stackHeight(card);
+    }
+    var count = Math.max(idx + 1, this.client.stackHeight(card));
     var newX = x + heightOf(idx, count);
     var newY = y + heightOf(idx, count);
-    updateCardFlipState(card, newY);
+    updateCardFlipState(card, y);
     var xChanged = parseInt(newX) != parseInt(card.css('left'));
     var yChanged = parseInt(newY) != parseInt(card.css('top'));
     XXX_jitter *= -1;
@@ -593,7 +562,7 @@ KansasUI.prototype._redrawCard = function(card) {
             left: newX + (xChanged ? 0 : XXX_jitter),
             top: newY + (yChanged ? 0 : XXX_jitter),
             opacity: 1.0,
-            avoidTransforms: card.hasClass("rotated") || card.hasClass("flipped"),
+            avoidTransforms: !onMobile || card.hasClass("rotated") || card.hasClass("flipped"),
         }, this.animationLength / 2);
     }
     card.removeClass("inHand");
@@ -613,7 +582,7 @@ KansasUI.prototype._initCards = function(sel) {
     });
 
     sel.bind("dragstart", function(event, ui) {
-        that.log("dragstart");
+        that.vlog(3, "dragstart");
         var card = $(event.currentTarget);
         dragging = true;
         draggingId = card.prop("id");
@@ -643,6 +612,7 @@ KansasUI.prototype._initCards = function(sel) {
         that._updateDragProgress(card, true);
         that.dragging = false;
         that._removeFocus();
+        that._raiseCard(card);
         $("#hand").removeClass("dragging");
 
         var txn = that.view.startBulkMove();
@@ -658,7 +628,7 @@ KansasUI.prototype._initCards = function(sel) {
                 txn.moveOnto(card, snap);
             } else {
                 txn.move(card, card.offset().left, card.offset().top);
-                that.log("offset: " + card.offset().left + "," + card.offset().top);
+                that.vlog(3, "offset: " + card.offset().left + "," + card.offset().top);
             }
         }
 
@@ -669,7 +639,7 @@ KansasUI.prototype._initCards = function(sel) {
     });
 
     sel.mousedown(function(event) {
-        that.log("----------");
+        that.vlog(3, "----------");
         var card = $(event.currentTarget);
         dragStartKey = card.data("dest_key");
         hasDraggedOffStart = false;
@@ -686,7 +656,7 @@ KansasUI.prototype._initCards = function(sel) {
         var card = $(event.currentTarget);
         if (!dragging) {
             if ($(".selecting").length != 0) {
-                that.log("skipping mouseup when selecting");
+                that.vlog(3, "skipping mouseup when selecting");
             } else if (card.hasClass("inHand")
                     && $("#hand").hasClass("collapsed")) {
                 // Expands hand if a card is clicked while collapsed.
@@ -712,13 +682,13 @@ KansasUI.prototype._initCards = function(sel) {
 KansasUI.prototype.handleReset = function() {
     this.gameReady = true;
     this.animationLength = 0;
-    this.log("Reset all local state.");
+    this.vlog(3, "Reset all local state.");
     $(".uuid_frame").remove();
     $(".card").remove();
     var that = this;
 
     function createImageNode(cid) {
-        nextBoardZIndex = Math.max(nextBoardZIndex, that.client.getZ(cid) + 1);
+        that.nextBoardZIndex = Math.max(that.nextBoardZIndex, that.client.getZ(cid) + 1);
         var url = that.client.getSmallUrl(cid);
         if (that.client.getOrient(cid) < 0) {
             url = that.client.getBackUrl(cid);
@@ -779,8 +749,10 @@ KansasUI.prototype.warning = function(msg) {
     console.log("WARNING: " + msg);
 }
 
-KansasUI.prototype.log = function(msg) {
-    console.log(msg);
+KansasUI.prototype.vlog = function(i, msg) {
+    if (parseInt(i) <= LOGLEVEL) {
+        console.log('[' + i + '] ' + msg);
+    }
 }
 
 })();  /* end namespace kansasui */
