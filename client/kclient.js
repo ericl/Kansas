@@ -49,6 +49,25 @@ function KansasClient(hostname, ip_port) {
     };
 }
 
+function KansasBulkMove(client) {
+    this.moves = [];
+    this.client = client;
+}
+
+KansasBulkMove.prototype.append = function(id, dest_type, dest, orient) {
+    this.moves.push({
+        card: id,
+        dest_prev_type: this.client.getPos(id)[0],
+        dest_type: dest_type,
+        dest_key: dest,
+        dest_orient: orient,
+    });
+}
+
+KansasBulkMove.prototype.send = function() {
+    this.client.send("bulkmove", {moves: this.moves});
+}
+
 KansasClient.prototype.bind = function(name, fn) {
     if (this._hooks[name] === undefined)
         throw "hook '" + name + "' not defined";
@@ -101,8 +120,8 @@ KansasClient.prototype.getBackUrl = function(id) {
     return this._game.state.back_urls[id] || this._game.state.default_back_url;
 }
 
-KansasClient.prototype.newBulkMoveTxn = function() {
-    /* TODO */
+KansasClient.prototype.newBulkMoveMessage = function() {
+    return new KansasBulkMove(this);
 }
 
 KansasClient.prototype._onOpen = function(that) {

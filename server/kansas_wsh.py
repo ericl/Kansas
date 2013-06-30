@@ -723,7 +723,8 @@ class KansasGameHandler(KansasHandler):
                         'old_type': src_type,
                         'old_key': src_key,
                     })
-                except:
+                except Exception, e:
+                    logging.exception(e);
                     logging.warning("Ignoring bad move: " + str(move));
             msg = []
             for (dest_t, dest_k), updates in updatebuffer.iteritems():
