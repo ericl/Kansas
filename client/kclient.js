@@ -59,6 +59,8 @@ function KansasBulkMove(client) {
 }
 
 KansasBulkMove.prototype.append = function(id, dest_type, dest, orient) {
+    if (dest_type == 'board')
+        dest = parseInt(dest);
     this.moves.push({
         card: parseInt(id),
         dest_prev_type: this.client.getPos(id)[0],

@@ -123,7 +123,7 @@ jQuery.fn.zIndex = function() {
         zChanges += 1;
     }
     return originalZIndex.apply(this, arguments);
-};
+}
 
 /**
  * When cards are stacked on each other we want to provide a 3d-illusion.

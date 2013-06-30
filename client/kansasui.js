@@ -40,7 +40,7 @@ function KansasUI() {
     this.animationCount = 0;
     this.zraises = 0;
     this.spinnerShowQueued = false;
-};
+}
 
 (function() {  /* begin namespace kansasui */
 
@@ -443,7 +443,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         this.view = new KansasView(
             client, 2, [-kCardWidth, -kCardHeight], getBBox());
     }
-};
+}
 
 /* Returns absolute url of a resource. */
 KansasUI.prototype._toResource = function(url) {

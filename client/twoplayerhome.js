@@ -44,7 +44,7 @@ function enterGame() {
         gameid: gameid,
         uuid: uuid,
     });
-};
+}
 
 function handleError(msg) {
     kansas_ui.warning("Server: " + msg);
