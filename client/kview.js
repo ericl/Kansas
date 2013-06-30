@@ -5,6 +5,7 @@
  * Usage:
  *      var view = KansasView(kclient, 2, [0, 0], [800, 600]);
  *      kclient.getCoord(id|jquery) -> (int, int)
+ *      kclient.posToCoord(pos: int) -> (int, int)
  *
  *  to mutate game state:
  *      view.startBulkMove()
@@ -35,6 +36,7 @@ function KansasView(kclient, rotation, translation, bbox) {
     this.width = bbox[0];
     this.height = bbox[1];
     this.maxGridIndex = 0x7ff;
+    this.warning = this.client.ui.warning;
 }
 
 (function() {  /* begin namespace kview */
@@ -80,7 +82,7 @@ function toCanonicalX(view, x, invert) {
             x = view.width - x;
             break;
         default:
-            warning("Unsupported client rotation: " + view.rotation);
+            view.warning("Unsupported client rotation: " + view.rotation);
             break;
     }
     if (!invert) {
@@ -103,7 +105,7 @@ function toCanonicalY(view, y, invert) {
             y = view.height - y;
             break;
         default:
-            warning("Unsupported client rotation: " + clientRotation);
+            view.warning("Unsupported client rotation: " + clientRotation);
             break;
     }
     if (!invert) {
@@ -119,7 +121,7 @@ KansasView.prototype.toCanonicalKey = function(clientKey) {
     }
     var x = keyToX(clientKey);
     var y = keyToY(clientKey);
-    return keyFromCoords(toCanonicalX(x), toCanonicalY(y));
+    return keyFromCoords(this, toCanonicalX(this, x), toCanonicalY(this, y));
 }
 
 function toId(id) {
@@ -130,17 +132,20 @@ function toId(id) {
     return id;
 }
 
-KansasView.prototype.getCoord = function(id) {
-    id = toId(id);
-    var pos = this.client.getPos(id);
+KansasView.prototype.posToCoord = function(board_pos) {
+    if (isNaN(board_pos))
+        throw "cannot coordinatify position: " + board_pos;
 
-    if (pos[0] != 'board' || isNaN(pos[1]))
-        throw "cannot coordinatify position: " + pos[1];
-
-    var canonicalKey = parseInt(pos[1]);
+    var canonicalKey = parseInt(board_pos);
     var x = keyToX(this, canonicalKey);
     var y = keyToY(this, canonicalKey);
     return [toClientX(this, x), toClientY(this, y)];
+}
+
+
+KansasView.prototype.getCoord = function(id) {
+    id = toId(id);
+    return this.posToCoord(this.client.getPos(id)[1]);
 }
 
 function KansasViewTxn(client, view) {
@@ -150,12 +155,12 @@ function KansasViewTxn(client, view) {
     this.committed = false;
 }
 
-function initEmptyMove(buf, id, client) {
+KansasViewTxn.prototype._initEmptyMove = function(buf, id) {
     if (buf[id] === undefined) {
         buf[id] = {
-            dest_type: client.getPos(id)[0],
-            dest_key: client.getPos(id)[1],
-            dest_orient: client.getOrient(id),
+            dest_type: this.client.getPos(id)[0],
+            dest_key: this.client.getPos(id)[1],
+            dest_orient: this.client.getOrient(id),
         };
     }
 }
@@ -163,16 +168,20 @@ function initEmptyMove(buf, id, client) {
 KansasViewTxn.prototype.move = function(id, x, y) {
     id = toId(id);
     var buf = this.movebuffer;
-    initEmptyMove(buf, id, client);
+    this._initEmptyMove(buf, id);
     buf[id].dest_type = 'board';
-    buf[id].dest_key = keyFromCoords(toCanonicalX(x), toCanonicalY(y));
+    buf[id].dest_key = keyFromCoords(
+        this.view,
+        toCanonicalX(this.view, x),
+        toCanonicalY(this.view, y));
     return this;
 }
 
 KansasViewTxn.prototype.moveOnto = function(id, id_target) {
     id = toId(id);
+    id_target = toId(id_target);
     var buf = this.movebuffer;
-    initEmptyMove(buf, id, client);
+    this._initEmptyMove(buf, id);
     buf[id].dest_type = this.client.getPos(id_target)[0];
     buf[id].dest_key = this.client.getPos(id_target)[1];
     return this;
@@ -181,7 +190,7 @@ KansasViewTxn.prototype.moveOnto = function(id, id_target) {
 KansasViewTxn.prototype.moveToHand = function(id, hand_id) {
     id = toId(id);
     var buf = this.movebuffer;
-    initEmptyMove(buf, id, client);
+    this._initEmptyMove(buf, id);
     buf[id].dest_type = 'hands';
     buf[id].dest_key = hand_id;
     return this;
@@ -192,7 +201,7 @@ KansasViewTxn.prototype.flip = function(id) {
     var orient = this.client.getOrient(card);
     if (orient > 0) {
         var buf = this.movebuffer;
-        initEmptyMove(buf, id, client);
+        this._initEmptyMove(buf, id);
         buf[id].orientation = - orient;
     }
     return this;
@@ -203,7 +212,7 @@ KansasViewTxn.prototype.unflip = function(id) {
     var orient = this.client.getOrient(card);
     if (orient < 0) {
         var buf = this.movebuffer;
-        initEmptyMove(buf, id, client);
+        this._initEmptyMove(buf, id);
         buf[id].orientation = - orient;
     }
     return this;
@@ -214,7 +223,7 @@ KansasViewTxn.prototype.rotate = function(id) {
     var orient = getOrient(card);
     if (Math.abs(orient) == 1) {
         var buf = this.movebuffer;
-        initEmptyMove(buf, id, client);
+        this._initEmptyMove(buf, id);
         buf[id].orientation = Math.abs(Math.abs(orient) / orient * 2);
     }
     return this;
@@ -225,7 +234,7 @@ KansasViewTxn.prototype.unrotate = function(id) {
     var orient = getOrient(card);
     if (Math.abs(orient) != 1) {
         var buf = this.movebuffer;
-        initEmptyMove(buf, id, client);
+        this._initEmptyMove(buf, id);
         buf[id].orientation = Math.abs(orient) / orient;
     }
     return this;

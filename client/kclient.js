@@ -19,11 +19,13 @@
  *
  *  to query game state:
  *      kclient.listAll() -> list[int]
+ *      kclient.listStacks(pos_type) -> list[any]
  *      kclient.getPos(id|jquery) -> (type: str, pos: any)
  *      kclient.getOrient(id|jquery) -> int
  *      kclient.getStack(pos_type, pos) -> list[int]
+ *      kclient.getStackTop(pos_type, pos) -> int
  *      kclient.stackIndex(id|jquery) -> int in [0, max_int]
- *      kclient.stackHeight(id|jquery) -> int in [1, max_int]
+ *      kclient.stackHeight(id|jquery) -> int in [1, max_int] or 0
  *      kclient.getSmallUrl(id|jquery) -> str
  *      kclient.getFrontUrl(id|jquery) -> str
  *      kclient.getBackUrl(id|jquery) -> str
@@ -58,7 +60,7 @@ function KansasBulkMove(client) {
 
 KansasBulkMove.prototype.append = function(id, dest_type, dest, orient) {
     this.moves.push({
-        card: id,
+        card: parseInt(id),
         dest_prev_type: this.client.getPos(id)[0],
         dest_type: dest_type,
         dest_key: dest,
@@ -93,6 +95,7 @@ KansasClient.prototype.bind = function(name, fn) {
 }
 
 KansasClient.prototype.send = function(tag, data) {
+    this.ui.log("send: " + tag + "::" + JSON.stringify(data));
     this.ui.showSpinner();
     this._ws.send(tag, data);
 }
@@ -117,6 +120,14 @@ KansasClient.prototype.listAll = function() {
     }
     for (key in this._game.state.hands) {
         acc.push.apply(acc, this._game.state.hands[key]);
+    }
+    return acc;
+}
+
+KansasClient.prototype.listStacks = function(ns) {
+    var acc = [];
+    for (key in this._game.state[ns]) {
+        acc.push(key);
     }
     return acc;
 }
@@ -150,11 +161,20 @@ KansasClient.prototype.stackHeight = function(id) {
     id = toId(id);
     var pos = this.getPos(id);
     var stack = this.getStack(pos[0], pos[1]);
-    return stack.length;
+    if (stack == undefined) {
+        return 0;
+    } else {
+        return stack.length;
+    }
 }
 
 KansasClient.prototype.getStack = function(pos_type, pos) {
     return this._game.state[pos_type][pos];
+}
+
+KansasClient.prototype.getStackTop = function(pos_type, pos) {
+    var stack = this.getStack(pos_type, pos);
+    return stack[stack.length - 1];
 }
 
 KansasClient.prototype.getSmallUrl = function(id) {

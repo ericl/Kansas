@@ -29,6 +29,7 @@ function KansasUI() {
     this.frameHideQueued = {};
     this.activeCard = null;
     this.draggingId = null;
+    this.dragging = false;
     this.dragStartKey = null;
     this.hasDraggedOffStart = false;
     this.hoverCardId = null;
@@ -195,7 +196,7 @@ KansasUI.prototype._xKeyComponent = function(target) {
     if (target.prop("id") != draggingId) {
       left -= heightOf(
         this.client.stackIndex(target),
-        this.client.stackHeight(target) || 0);
+        this.client.stackHeight(target));
     }
     // Compensates for rotated targets.
     if (target.hasClass("card")) {
@@ -213,7 +214,7 @@ KansasUI.prototype._yKeyComponent = function(target) {
     if (target.prop("id") != draggingId) {
         tp -= heightOf(
             this.client.stackIndex(target),
-            this.client.stackHeight(target) || 0);
+            this.client.stackHeight(target));
     }
     // Compensates for rotated targets.
     if (target.hasClass("card")) {
@@ -226,14 +227,13 @@ KansasUI.prototype._yKeyComponent = function(target) {
 
 /* Returns card at top of stack to snap to or NULL. */
 KansasUI.prototype._findSnapPoint = function(target) {
+
     // Enforces that selections with more than 1 stack do not snap.
-    var selectionSource = null;
     if (target.prop("id") == "selectionbox") {
         var seen = {};
         var numStacks = 0;
         $(".selecting").each(function(i) {
-            var key = $(this).data("dest_key");
-            selectionSource = key;
+            var key = this.client.getPos($(this))[1];
             if (!seen[key]) {
                 seen[key] = true;
                 numStacks += 1;
@@ -243,48 +243,52 @@ KansasUI.prototype._findSnapPoint = function(target) {
             return null;
         }
     }
+
     var kSnapThresholdPixels = 100;
     var kAxisThresholdPixels = 50;
     var targetId = target.prop("id");
+    var cid = parseInt(targetId.substr(5));
     var x = target.offset().left;
     var y = target.offset().top;
     var w = target.width();
     var h = target.height();
     var minDist = Infinity;
     var closest = null;
-    $(".card").each(function(i) {
-        var node = $(this);
-        if (!node.hasClass("inHand")
-                && node.prop("id") != targetId
-                && node.data("dest_key") != selectionSource) {
-            var cx = node.offset().left;
-            var cy = node.offset().top;
-            var dx = Math.abs(cx - x);
-            var dy = Math.abs(cy - y);
-            var dist = Math.sqrt(
-                Math.pow(dx, 2)
-                + Math.pow(dy, 2));
-            if (((dist < kSnapThresholdPixels
-                    && (dx < kAxisThresholdPixels || dy < kAxisThresholdPixels))
-                    || ( // Checks if node is completely contained.
-                        cx + kCardWidth < x + w &&
-                        cy + kCardHeight < y + h &&
-                        x < cx && y < cy
-                    ))
-                    && dist < minDist) {
-                minDist = dist;
-                closest = node;
-            }
+    var that = this;
+
+    $.each(this.client.listStacks('board'), function(i, pos) {
+        var coord = that.view.posToCoord(pos);
+        var stack = that.client.getStack('board', pos);
+        if (stack.length == 1 && stack[0] == cid) {
+            return;
+        }
+        var cx = coord[0], cy = coord[1];
+        var dx = Math.abs(cx - x);
+        var dy = Math.abs(cy - y);
+        var dist = Math.sqrt(
+            Math.pow(dx, 2)
+            + Math.pow(dy, 2));
+        if (((dist < kSnapThresholdPixels
+                && (dx < kAxisThresholdPixels || dy < kAxisThresholdPixels))
+                || ( // Checks if node is completely contained.
+                    cx + kCardWidth < x + w &&
+                    cy + kCardHeight < y + h &&
+                    x < cx && y < cy
+                ))
+                && dist < minDist) {
+            minDist = dist;
+            closest = pos;
         }
     });
+
     if (closest == null) {
         this.log("No snap point for: " + target.prop("id"));
         return null;
     } else {
-        var snap = topOf(stackOf(closest).not(target));
+        var snap = this.client.getStackTop('board', closest);
         this.log("Snap point found for: " + target.prop("id")
-            + ": " + snap.data("dest_key"));
-        return snap;
+            + ": card_" + snap);
+        return $("#card_" + snap);
     }
 }
 
@@ -370,8 +374,8 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                     heightOf(count - 1, count)]];
             }
         } else {
-            log("Rendering card snapping to stack");
-            var count = stackDepthCache[snap.data("dest_key")] || 0;
+            this.log("Rendering card snapping to stack");
+            var count = this.client.stackHeight(snap);
             sizingInfo = [[
                 snap.hasClass("rotated"),
                 this.view.toCanonicalKey(snap.data("dest_key")),
@@ -379,7 +383,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
         }
     } else if (snap != null) {
         log("Rendering selection snapped to stack @ " + snap.data("dest_key"));
-        var count = stackDepthCache[snap.data("dest_key")] || 0;
+        var count = this.client.stackHeight(snap);
         sizingInfo = [[
             snap.hasClass("rotated"),
             this.view.toCanonicalKey(snap.data("dest_key")),
@@ -576,7 +580,7 @@ KansasUI.prototype._redrawCard = function(card) {
     var x = coord[0];
     var y = coord[1];
     var idx = this.client.stackIndex(card);
-    var count = Math.max(idx + 1, this.client.stackHeight || 0);
+    var count = Math.max(idx + 1, this.client.stackHeight);
     var newX = x + heightOf(idx, count);
     var newY = y + heightOf(idx, count);
     updateCardFlipState(card, newY);
@@ -629,7 +633,7 @@ KansasUI.prototype._initCards = function(sel) {
 
     sel.bind("drag", function(event, ui) {
         var card = $(event.currentTarget);
-        dragging = true;
+        that.dragging = true;
         card.stop();
         that._updateDragProgress(card);
     });
@@ -637,61 +641,31 @@ KansasUI.prototype._initCards = function(sel) {
     sel.bind("dragstop", function(event, ui) {
         var card = $(event.currentTarget);
         that._updateDragProgress(card, true);
-        $("#hand").removeClass("dragging");
-        dragging = false;
+        that.dragging = false;
         that._removeFocus();
-        var cardId = parseInt(card.prop("id").substr(5));
-        var orient = that.client.getOrient(card);
-        if (card.hasClass("inHand")) {
-            var dest_prev_type = "hands";
-        } else {
-            var dest_prev_type = "board";
-        }
+        $("#hand").removeClass("dragging");
+
+        var txn = that.view.startBulkMove();
+
         if ($("#hand").hasClass("active")) {
             deferDeactivateHand();
-            var dest_type = "hands";
-            var dest_key = hand_user;
+            txn.moveToHand(card, hand_user);
             // Assumes the server will put the card at the end of the stack.
-            setOrientProperties(card, 1)
-            that._redrawHand();
+            setOrientProperties(card, 1);
         } else {
-            var dest_type = "board";
             var snap = that._findSnapPoint(card);
-            var oldKey = that.client.getPos(card)[1];
             if (snap != null) {
-                var dest_key = parseInt(that._findSnapPoint(card).data("dest_key"));
+                txn.moveOnto(card, snap);
             } else {
-                var dest_key = that._keyFromTargetLocation(card);
+                txn.move(card, card.offset().left, card.offset().top);
                 that.log("offset: " + card.offset().left + "," + card.offset().top);
-                that.log("dest key computed is : " + dest_key);
             }
-            if (dest_prev_type == "hands") {
-                that.log("hand: " + JSON.stringify(handCache));
-            }
-            fastZToBoard(card);
-            card = that._fastZRaiseInStack(card);
-//            that._redrawStack(oldKey, true);
-//            that._redrawStack(dest_key, false);
-        }
-        that.log("Sending card move to " + dest_key);
-        that.showSpinner();
-
-        /* Fixes orientation if the card is moved to the hand. */
-        if (dest_type == "hands") {
-            if (dest_prev_type == "board")
-                orient = 1;
-            else if (orient > 0)
-                orient = 1;
-            else
-                orient = -1;
         }
 
-        that.client.newBulkMoveTxn()
-            .append(cardId, dest_type, dest_key, orient)
-            .commit();
+        txn.commit();
 
-        draggingId = null;
-        dragStartKey = null;
+        that.draggingId = null;
+        that.dragStartKey = null;
     });
 
     sel.mousedown(function(event) {
@@ -766,19 +740,19 @@ KansasUI.prototype.handleReset = function() {
     $(".card").fadeIn();
     this._initCards($(".card"));
     this.animationLength = kAnimationLength;
-};
+}
 
 KansasUI.prototype.handleStackChanged = function(key) {
     var dest_t = key[0];
     var dest_k = key[1];
     this._redrawStack(dest_k, true);
-};
+}
 
 KansasUI.prototype.handleBroadcast = function(data) {
-};
+}
 
 KansasUI.prototype.handlePresence = function(data) {
-};
+}
 
 KansasUI.prototype.showSpinner = function() {
     if (!this.client)
@@ -787,7 +761,7 @@ KansasUI.prototype.showSpinner = function() {
         this.spinnerShowQueued = true;
         setTimeout(this._reallyShowSpinner, 500);
     }
-};
+}
 
 KansasUI.prototype._reallyShowSpinner = function() {
     if (this.spinnerShowQueued && this.client._state != 'offline') {
@@ -799,14 +773,14 @@ KansasUI.prototype._reallyShowSpinner = function() {
 KansasUI.prototype.hideSpinner = function() {
     this.spinnerShowQueued = false;
     $("#spinner").hide();
-};
+}
 
 KansasUI.prototype.warning = function(msg) {
     console.log("WARNING: " + msg);
-};
+}
 
 KansasUI.prototype.log = function(msg) {
     console.log(msg);
-};
+}
 
 })();  /* end namespace kansasui */
