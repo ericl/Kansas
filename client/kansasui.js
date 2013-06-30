@@ -23,7 +23,7 @@ function KansasUI() {
     this.uuid = null;
     this.hand_user = null;
     this.gameReady = false;
-    this.animationLimit = 0;
+    this.animationLength = 0;
     this.lastFrameLocation = 0;
     this.lastFrameUpdate = 0;
     this.frameHideQueued = {};
@@ -35,6 +35,10 @@ function KansasUI() {
     this.oldSnapCard = null;
     this.containmentHint = null;
     this.selectedSet = [];
+    this.updateCount = 0;
+    this.animationCount = 0;
+    this.zraises = 0;
+    this.spinnerShowQueued = false;
 };
 
 (function() {  /* begin namespace kansasui */
@@ -43,6 +47,10 @@ function KansasUI() {
 var onMobile = navigator.platform.indexOf("android") >= 0;
 
 var kAnimationLength = 400;
+
+// Workaround for https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
+// TODO fix this - this makes for a terrible UI experience.
+var XXX_jitter = 1;
 
 // Minimum zIndexes for various states.
 var kHandZIndex = 4000000;
@@ -175,6 +183,7 @@ function removeHoverMenu(doAnimation) {
 }
 
 /* Produces a location key from a jquery selection. */
+// TODO move into KansasView... somehow?
 KansasUI.prototype._keyFromTargetLocation = function(target) {
     return this._xKeyComponent(target) | (this._yKeyComponent(target) << 16);
 }
@@ -469,6 +478,123 @@ function fastZToBoard(card) {
     }
 }
 
+/* Returns all cards in the same stack as memberCard or optKey. */
+KansasUI.prototype._stackOf = function(memberCard, optKey) {
+    var client = this.client;
+    var key = (optKey === undefined) ? memberCard.data("dest_key") : optKey;
+    return $(".card").filter(function() {
+        return client.getPos($(this))[1] == key;
+    });
+}
+
+function pickle(card) {
+    return [
+        card.prop("src"),
+        card.prop("id"),
+        card.attr("class"),
+        card.css("left"),
+        card.css("top"),
+    ];
+}
+
+function unpickle(imgNode, cdata) {
+    imgNode.prop("src", cdata[0]);
+    imgNode.prop("id", cdata[1]);
+    imgNode.attr("class", cdata[2]);
+    imgNode.css("left", cdata[3]);
+    imgNode.css("top", cdata[4]);
+}
+
+/* Ensures card has the max z of the stack it is in.
+ * Precondition: stack is already z-sorted except for card. */
+KansasUI.prototype._fastZRaiseInStack = function(card) {
+    var reverseSortedStack = this._stackOf(card)
+        .not("#" + card.prop("id"))
+        .sort(function(a, b) {
+            return $(b).zIndex() - $(a).zIndex();
+        });
+    if (reverseSortedStack.length < 1) {
+        this.log("no sorting necessary");
+        return;
+    }
+    this.zraises += 1;
+    var assignedSlot = null;
+    var displacedCard = card;
+    var displacedAttrs = pickle(card);
+    // Pushes card down until z-index of stack is sorted again.
+    for (i in reverseSortedStack) {
+        var nextCard = $(reverseSortedStack[i]);
+        if (nextCard.zIndex() > displacedCard.zIndex()) {
+            if (assignedSlot == null) {
+                assignedSlot = displacedCard;
+            }
+            var nextCardAttrs = pickle(nextCard);
+            unpickle(nextCard, displacedAttrs);
+            unpickle(displacedCard, nextCardAttrs);
+            displacedAttrs = nextCardAttrs;
+        } else {
+            break;
+        }
+    }
+    return assignedSlot == null ? card : assignedSlot;
+}
+
+/* Forces a re-render of the entire stack at the location. */
+KansasUI.prototype._redrawStack = function(clientKey, fixIndexes) {
+    if (isNaN(clientKey)) {
+        this.log("convert redrawStack - redrawHand @ " + clientKey);
+        this._redrawHand();
+        return;
+    }
+
+    var stack = this._stackOf(null, clientKey);
+    if (fixIndexes) {
+        stack.sort(function(a, b) {
+            return $(a).data("stack_index") - $(b).data("stack_index");
+        });
+    }
+
+    /* Recomputes position of each card in the stack. */
+    var i = 0;
+    var that = this;
+    stack.each(function() {
+        var cd = $(this);
+        if (fixIndexes) {
+            cd.data("stack_index", i);
+            i += 1;
+        }
+        that.log("redraw " + cd);
+        that._redrawCard(cd);
+    });
+}
+
+/* Animates a card move to a destination on the board. */
+KansasUI.prototype._redrawCard = function(card) {
+    this.updateCount += 1;
+    var key = this.client.getPos(card)[1];
+    var coord = this.view.getCoord(card);
+    var x = coord[0];
+    var y = coord[1];
+    var idx = this.client.stackIndex(card);
+    var count = Math.max(idx + 1, this.client.stackHeight || 0);
+    var newX = x + heightOf(idx, count);
+    var newY = y + heightOf(idx, count);
+    updateCardFlipState(card, newY);
+    var xChanged = parseInt(newX) != parseInt(card.css('left'));
+    var yChanged = parseInt(newY) != parseInt(card.css('top'));
+    XXX_jitter *= -1;
+    if (xChanged || yChanged) {
+        this.animationCount += 1;
+        card.animate({
+            left: newX + (xChanged ? 0 : XXX_jitter),
+            top: newY + (yChanged ? 0 : XXX_jitter),
+            opacity: 1.0,
+            avoidTransforms: card.hasClass("rotated") || card.hasClass("flipped"),
+        }, this.animationLength / 2);
+    }
+    card.removeClass("inHand");
+}
+
 KansasUI.prototype._initCards = function(sel) {
     var that = this;
     var client = this.client;
@@ -515,7 +641,7 @@ KansasUI.prototype._initCards = function(sel) {
         dragging = false;
         that._removeFocus();
         var cardId = parseInt(card.prop("id").substr(5));
-        var orient = card.data("orient");
+        var orient = that.client.getOrient(card);
         if (card.hasClass("inHand")) {
             var dest_prev_type = "hands";
         } else {
@@ -526,13 +652,12 @@ KansasUI.prototype._initCards = function(sel) {
             var dest_type = "hands";
             var dest_key = hand_user;
             // Assumes the server will put the card at the end of the stack.
-            handCache.push(cardId);
             setOrientProperties(card, 1)
-            redrawHand();
+            that._redrawHand();
         } else {
             var dest_type = "board";
             var snap = that._findSnapPoint(card);
-            var oldKey = card.data("dest_key");
+            var oldKey = that.client.getPos(card)[1];
             if (snap != null) {
                 var dest_key = parseInt(that._findSnapPoint(card).data("dest_key"));
             } else {
@@ -541,16 +666,15 @@ KansasUI.prototype._initCards = function(sel) {
                 that.log("dest key computed is : " + dest_key);
             }
             if (dest_prev_type == "hands") {
-                removeFromArray(handCache, cardId);
                 that.log("hand: " + JSON.stringify(handCache));
             }
             fastZToBoard(card);
-            card = fastZRaiseInStack(card);
-            redrawStack(oldKey, true);
-            redrawStack(dest_key, false);
+            card = that._fastZRaiseInStack(card);
+//            that._redrawStack(oldKey, true);
+//            that._redrawStack(dest_key, false);
         }
         that.log("Sending card move to " + dest_key);
-        showSpinner();
+        that.showSpinner();
 
         /* Fixes orientation if the card is moved to the hand. */
         if (dest_type == "hands") {
@@ -562,13 +686,10 @@ KansasUI.prototype._initCards = function(sel) {
                 orient = -1;
         }
 
-        ws.send("bulkmove",
-            {moves:
-                [{card: cardId,
-                  dest_prev_type: dest_prev_type,
-                  dest_type: dest_type,
-                  dest_key: this.view.toCanonicalKey(dest_key),
-                  dest_orient: orient}]});
+        that.client.newBulkMoveTxn()
+            .append(cardId, dest_type, dest_key, orient)
+            .commit();
+
         draggingId = null;
         dragStartKey = null;
     });
@@ -596,7 +717,7 @@ KansasUI.prototype._initCards = function(sel) {
                     && $("#hand").hasClass("collapsed")) {
                 // Expands hand if a card is clicked while collapsed.
                 $("#hand").removeClass("collapsed");
-                redrawHand();
+                that._redrawHand();
             } else if (hoverCardId != card.prop("id")) {
                 // Taps/untaps by middle-click.
                 if (event.which == 2) {
@@ -616,7 +737,7 @@ KansasUI.prototype._initCards = function(sel) {
 
 KansasUI.prototype.handleReset = function() {
     this.gameReady = true;
-    this.animationLimit = 0;
+    this.animationLength = 0;
     this.log("Reset all local state.");
     $(".uuid_frame").remove();
     $(".card").remove();
@@ -639,16 +760,18 @@ KansasUI.prototype.handleReset = function() {
         var cid = cards[i];
         var card = createImageNode(cid);
         updateCardFlipState(card, this.view.getCoord(cid)[1]);
+        this._redrawCard(card);
     }
 
     $(".card").fadeIn();
     this._initCards($(".card"));
-    this.animationLimit = kAnimationLength;
+    this.animationLength = kAnimationLength;
 };
 
 KansasUI.prototype.handleStackChanged = function(key) {
     var dest_t = key[0];
-    var dest_k = key[0];
+    var dest_k = key[1];
+    this._redrawStack(dest_k, true);
 };
 
 KansasUI.prototype.handleBroadcast = function(data) {
@@ -658,9 +781,24 @@ KansasUI.prototype.handlePresence = function(data) {
 };
 
 KansasUI.prototype.showSpinner = function() {
+    if (!this.client)
+        return;
+    if (!this.spinnerShowQueued && this.client._state != 'offline') {
+        this.spinnerShowQueued = true;
+        setTimeout(this._reallyShowSpinner, 500);
+    }
 };
 
+KansasUI.prototype._reallyShowSpinner = function() {
+    if (this.spinnerShowQueued && this.client._state != 'offline') {
+        $("#spinner").show();
+        this.spinnerShowQueued = false;
+    }
+}
+
 KansasUI.prototype.hideSpinner = function() {
+    this.spinnerShowQueued = false;
+    $("#spinner").hide();
 };
 
 KansasUI.prototype.warning = function(msg) {

@@ -4,7 +4,7 @@
  *
  * Usage:
  *      var view = KansasView(kclient, 2, [0, 0], [800, 600]);
- *      kclient.getCoord(id) -> (int, int)
+ *      kclient.getCoord(id|jquery) -> (int, int)
  *
  *  to mutate game state:
  *      view.startBulkMove()
@@ -122,7 +122,16 @@ KansasView.prototype.toCanonicalKey = function(clientKey) {
     return keyFromCoords(toCanonicalX(x), toCanonicalY(y));
 }
 
+function toId(id) {
+    if (isNaN(id)) {
+        /* converts jquery selection to integer id */
+        id = parseInt(id.prop("id").substr(5));
+    }
+    return id;
+}
+
 KansasView.prototype.getCoord = function(id) {
+    id = toId(id);
     var pos = this.client.getPos(id);
 
     if (pos[0] != 'board' || isNaN(pos[1]))
@@ -152,6 +161,7 @@ function initEmptyMove(buf, id, client) {
 }
 
 KansasViewTxn.prototype.move = function(id, x, y) {
+    id = toId(id);
     var buf = this.movebuffer;
     initEmptyMove(buf, id, client);
     buf[id].dest_type = 'board';
@@ -160,6 +170,7 @@ KansasViewTxn.prototype.move = function(id, x, y) {
 }
 
 KansasViewTxn.prototype.moveOnto = function(id, id_target) {
+    id = toId(id);
     var buf = this.movebuffer;
     initEmptyMove(buf, id, client);
     buf[id].dest_type = this.client.getPos(id_target)[0];
@@ -168,6 +179,7 @@ KansasViewTxn.prototype.moveOnto = function(id, id_target) {
 }
 
 KansasViewTxn.prototype.moveToHand = function(id, hand_id) {
+    id = toId(id);
     var buf = this.movebuffer;
     initEmptyMove(buf, id, client);
     buf[id].dest_type = 'hands';
@@ -176,6 +188,7 @@ KansasViewTxn.prototype.moveToHand = function(id, hand_id) {
 }
 
 KansasViewTxn.prototype.flip = function(id) {
+    id = toId(id);
     var orient = this.client.getOrient(card);
     if (orient > 0) {
         var buf = this.movebuffer;
@@ -186,6 +199,7 @@ KansasViewTxn.prototype.flip = function(id) {
 }
 
 KansasViewTxn.prototype.unflip = function(id) {
+    id = toId(id);
     var orient = this.client.getOrient(card);
     if (orient < 0) {
         var buf = this.movebuffer;
@@ -196,6 +210,7 @@ KansasViewTxn.prototype.unflip = function(id) {
 }
 
 KansasViewTxn.prototype.rotate = function(id) {
+    id = toId(id);
     var orient = getOrient(card);
     if (Math.abs(orient) == 1) {
         var buf = this.movebuffer;
@@ -206,6 +221,7 @@ KansasViewTxn.prototype.rotate = function(id) {
 }
 
 KansasViewTxn.prototype.unrotate = function(id) {
+    id = toId(id);
     var orient = getOrient(card);
     if (Math.abs(orient) != 1) {
         var buf = this.movebuffer;
@@ -218,12 +234,12 @@ KansasViewTxn.prototype.unrotate = function(id) {
 KansasViewTxn.prototype.commit = function() {
     if (this.committed)
         throw "bulk move already committed";
-    var bulkmove = this.client.newBulkMoveMessage();
+    var bulkmove = this.client.newBulkMoveTxn();
     for (id in this.movebuffer) {
         var move = this.movebuffer[id];
         bulkmove.append(id, move.dest_type, move.dest_key, move.dest_orient);
     }
-    bulkmove.send();
+    bulkmove.commit();
     this.committed = true;
 }
 

@@ -32,11 +32,11 @@
  *  low-level mutation methods for game state:
  *  (generally, prefer using KansasView for mutations)
  *      kclient.applyStackOp(pos_type, pos, op);
- *      kclient.newBulkMoveMessage()
+ *      kclient.newBulkMoveTxn()
  *          .append(id1, pos_type_a, pos_a, server_orient_a)
  *          .append(id2, pos_type_a, pos_a, server_orient_b)
  *          .append(id3, pos_type_b, pos_b, server_orient_c)
- *          .send();
+ *          .commit();
  */
 
 function KansasClient(hostname, ip_port, kansas_ui) {
@@ -64,9 +64,24 @@ KansasBulkMove.prototype.append = function(id, dest_type, dest, orient) {
         dest_key: dest,
         dest_orient: orient,
     });
+    return this;
 }
 
-KansasBulkMove.prototype.send = function() {
+KansasBulkMove.prototype.commit = function() {
+    var state = this.client._game.state;
+
+    for (i in this.moves) {
+        var move = this.moves[i];
+        var id = move.card;
+        var oldpos = this.client.getPos(id);
+        removeFromArray(state[oldpos[0]][oldpos[1]], id);
+        if (!state[move.dest_type] || !state[move.dest_type][move.dest_key])
+            state[move.dest_type][move.dest_key] = [];
+        state[move.dest_type][move.dest_key].push(id);
+        state.orientations[id] = move.dest_orient;
+        this.client._game.index[id] = [move.dest_type, move.dest_key];
+    }
+
     this.client.send("bulkmove", {moves: this.moves});
 }
 
@@ -147,6 +162,7 @@ KansasClient.prototype.getSmallUrl = function(id) {
     return this._game.state.urls_small[id] || this.getFrontUrl(id);
 }
 
+/* TODO get rid of this what does it even provide. */
 KansasClient.prototype.getZ = function(id) {
     id = toId(id);
     return this._game.state.zIndex[id];
@@ -162,7 +178,7 @@ KansasClient.prototype.getBackUrl = function(id) {
     return this._game.state.back_urls[id] || this._game.state.default_back_url;
 }
 
-KansasClient.prototype.newBulkMoveMessage = function() {
+KansasClient.prototype.newBulkMoveTxn = function() {
     return new KansasBulkMove(this);
 }
 
@@ -254,6 +270,7 @@ KansasClient.prototype._eventHandlers = function(that) {
 
                     stacksTouched[JSON.stringify([old_t, old_k])] = true;
                     removeFromArray(that._game.state[old_t][old_k], id);
+                    that._game.index[id] = [dest_t, dest_k];
 
                     if (that._game.state[old_t][old_k].length == 0) {
                         delete that._game.state[old_t][old_k];
