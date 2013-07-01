@@ -309,6 +309,7 @@ KansasClient.prototype._eventHandlers = function(that) {
                         removeFromArray(that._game.state[old_t][old_k], id);
                     }
                     that._game.index[id] = [dest_t, dest_k];
+                    that._game.state.orientations[id] = update.move.dest_orient;
 
                     if (that._game.state[old_t][old_k] &&
                             that._game.state[old_t][old_k].length == 0) {

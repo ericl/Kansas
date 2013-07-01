@@ -193,6 +193,7 @@ KansasViewTxn.prototype.moveToHand = function(id, hand_id) {
     this._initEmptyMove(buf, id);
     buf[id].dest_type = 'hands';
     buf[id].dest_key = hand_id;
+    buf[id].dest_orient = 1;
     return this;
 }
 
