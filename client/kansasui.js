@@ -16,6 +16,8 @@
  *      kansas_ui.warning(msg)
  */
 
+/* TODO replace .inHand class with client.inHand(id|jquery{set}) ? */
+
 function KansasUI() {
     this.view = null;
     this.client = null;
@@ -1999,13 +2001,15 @@ KansasUI.prototype._initCards = function(sel) {
         var card = $(event.currentTarget);
         if (!that.dragging) {
             if ($(".selecting").length != 0) {
-                that.vlog(3, "skipping mouseup when selecting");
-            } else if (card.hasClass("inHand")
+                that.vlog(2, "skipping mouseup when selecting");
+            } else if (that.client.getPos(card)[0] == "hands"
                     && $("#hand").hasClass("collapsed")) {
                 // Expands hand if a card is clicked while collapsed.
                 $("#hand").removeClass("collapsed");
                 that._redrawHand();
+                that.vlog(2, "expand hand");
             } else if (that.hoverCardId != card.prop("id")) {
+                that.vlog(2, "case 3");
                 // Taps/untaps by middle-click.
                 if (event.which == 2) {
                     that._toggleRotateCard(card);
@@ -2014,6 +2018,7 @@ KansasUI.prototype._initCards = function(sel) {
                     that._showHoverMenu(card);
                 }
             } else {
+                that.vlog(2, "case 4");
                 removeFocus();
             }
         }
