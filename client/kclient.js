@@ -59,9 +59,18 @@ function KansasBulkMove(client) {
     this.client = client;
 }
 
+function toId(id) {
+    if (isNaN(id)) {
+        /* converts jquery selection to integer id */
+        id = parseInt(id.prop("id").substr(5));
+    }
+    return id;
+}
+
 KansasBulkMove.prototype.append = function(id, dest_type, dest, orient) {
     if (dest_type == 'board')
         dest = parseInt(dest);
+    id = toId(id);
     this.moves.push({
         card: parseInt(id),
         dest_prev_type: this.client.getPos(id)[0],
@@ -86,6 +95,7 @@ KansasBulkMove.prototype.commit = function() {
         state.orientations[id] = move.dest_orient;
         this.client._game.index[id] = [move.dest_type, move.dest_key];
     }
+    this.client.ui.vlog(0, JSON.stringify(this.moves));
 
     this.client.send("bulkmove", {moves: this.moves});
 }
@@ -110,11 +120,12 @@ KansasClient.prototype.connect = function() {
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";
     this._state = 'opening';
+    var that = this;
     this._ws = $.websocket(
         "ws:///" + this.hostname + ":" + this.ip_port + "/kansas",
-        { open: this._onOpen(this),
-          close: this._onClose(this),
-          events: this._eventHandlers(this)});
+        { open: function() { that._onOpen.call(that); },
+          close: function() { that._onClose.call(that); },
+          events: this._eventHandlers(that) });
     return this;
 }
 
@@ -135,14 +146,6 @@ KansasClient.prototype.listStacks = function(ns) {
         acc.push(key);
     }
     return acc;
-}
-
-function toId(id) {
-    if (isNaN(id)) {
-        /* converts jquery selection to integer id */
-        id = parseInt(id.prop("id").substr(5));
-    }
-    return id;
 }
 
 KansasClient.prototype.getPos = function(id) {
@@ -218,21 +221,16 @@ KansasClient.prototype.newBulkMoveTxn = function() {
     return new KansasBulkMove(this);
 }
 
-KansasClient.prototype._onOpen = function(that) {
-    return function() {
-        that.ui.vlog(3, "ws:open");
-        that._state = 'opened';
-        that._notify('opened');
-    };
+KansasClient.prototype._onOpen = function() {
+    this.ui.vlog(3, "ws:open");
+    this._state = 'opened';
+    this._notify('opened');
 }
 
-KansasClient.prototype._onClose = function(that) {
-    return function() {
-        that.ui.vlog(3, "ws:close");
-        that._state = 'offline'
-        that._ws = null;
-        that._notify('disconnected');
-    };
+KansasClient.prototype._onClose = function() {
+    this.ui.vlog(3, "ws:close");
+    this._state = 'offline'
+    this._notify('disconnected');
 }
 
 /**

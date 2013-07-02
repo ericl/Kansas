@@ -563,7 +563,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                 heightOf(count, count + 1)]];
         }
     } else if (snap != null) {
-        vlog(3, "Rendering selection snapped to stack @ " + snap.data("dest_key"));
+        this.vlog(3, "Rendering selection snapped to stack @ " + snap.data("dest_key"));
         var count = this.client.stackHeight(snap);
         sizingInfo = [[
             snap.hasClass("rotated"),
@@ -821,28 +821,10 @@ KansasUI.prototype._highRes = function(card, reverse) {
 }
 
 /* Sets and broadcasts the visible orientation of the card. */
-function changeOrient(card, orient) {
-    setOrientProperties(card, orient);
-    updateFocus(card);
-
-    var cardId = parseInt(card.prop("id").substr(5));
-    var dest_type = "board";
-    var dest_prev_type = "board";
-    var dest_key = parseInt(card.data("dest_key"));
-    if (card.hasClass("inHand")) {
-        dest_type = "hands";
-        dest_key = hand_user;
-        dest_prev_type = "hands";
-    }
-    log("Sending orient change.");
-    showSpinner();
-    ws.send("bulkmove",
-        {moves: [{
-            card: cardId,
-            dest_type: dest_type,
-            dest_key: toCanonicalKey(dest_key),
-            dest_prev_type: dest_type,
-            dest_orient: orient}]});
+KansasUI.prototype._changeOrient = function(card, orient) {
+    this._setOrientProperties(card, orient);
+    this._updateFocus(card);
+    this.view.startBulkMove().setOrient(card, orient).commit();
 }
 
 /* Remove selected cards. */
@@ -868,9 +850,9 @@ KansasUI.prototype._toggleRotateCard = function(card) {
 
 /* Rotates card to 90deg. */
 KansasUI.prototype._rotateCard = function(card) {
-    var orient = getOrient(card);
+    var orient = this.client.getOrient(card);
     if (Math.abs(orient) == 1) {
-        changeOrient(card, Math.abs(orient) / orient * 2);
+        this._changeOrient(card, Math.abs(orient) / orient * 2);
         $(".hovermenu")
             .children("img")
             .height(kCardHeight * kHoverTapRatio)
@@ -883,7 +865,7 @@ KansasUI.prototype._rotateCard = function(card) {
 KansasUI.prototype._unrotateCard = function(card) {
     var orient = getOrient(card);
     if (Math.abs(orient) != 1) {
-        changeOrient(card, Math.abs(orient) / orient);
+        this._changeOrient(card, Math.abs(orient) / orient);
         $(".hovermenu")
             .children("img")
             .removeClass("hoverRotate")
@@ -896,7 +878,7 @@ KansasUI.prototype._unrotateCard = function(card) {
 KansasUI.prototype.flipCard = function(card) {
     var orient = getOrient(card);
     if (orient > 0) {
-        changeOrient(card, -getOrient(card));
+        this._changeOrient(card, -this.client.getOrient(card));
         $(".hovermenu").children("img").prop("src", card.data("back"));
     }
 }
@@ -905,7 +887,7 @@ KansasUI.prototype.flipCard = function(card) {
 KansasUI.prototype._unflipCard = function(card) {
     var orient = this.client.getOrient(card);
     if (orient < 0) {
-        changeOrient(card, -getOrient(card));
+        this._changeOrient(card, -this.client.getOrient(card));
         $(".hovermenu").children("img").prop("src", card.data("front_full"));
     }
 }
@@ -1252,7 +1234,8 @@ KansasUI.prototype._menuForSelection = function(selectedSet) {
 }
 
 KansasUI.prototype._menuForCard = function(card) {
-    this.vlog(2, "Hover menu for #" + hoverCardId + "@" + card.data("dest_key"));
+    this.vlog(2, "Hover menu for #" + hoverCardId
+        + "@" + this.client.getPos(card)[1]);
     var numCards = this.client.stackHeight(card);
     var i = numCards - this.client.stackIndex(card);
     var src = this._toResource(this._highRes(card));
@@ -1553,7 +1536,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         target.addClass("poison-source");
         that.disableArenaEvents = true;
         var oldButtons = $(".hovermenu li");
-        var action = that.eventTable[target.data("key")](activeCard);
+        var action = that.eventTable[target.data("key")].call(that, activeCard);
         switch (action) {
             case "keepmenu": 
                 oldButtons.not(target).addClass("disabled");

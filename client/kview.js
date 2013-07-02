@@ -17,6 +17,7 @@
  *          .unflip(id5)
  *          .rotate(id6)
  *          .unrotate(id7)
+ *          .setOrient(id8, orient)
  *          .commit()
  */
 
@@ -203,7 +204,7 @@ KansasViewTxn.prototype.flip = function(id) {
     if (orient > 0) {
         var buf = this.movebuffer;
         this._initEmptyMove(buf, id);
-        buf[id].orientation = - orient;
+        buf[id].dest_orient = - orient;
     }
     return this;
 }
@@ -214,7 +215,7 @@ KansasViewTxn.prototype.unflip = function(id) {
     if (orient < 0) {
         var buf = this.movebuffer;
         this._initEmptyMove(buf, id);
-        buf[id].orientation = - orient;
+        buf[id].dest_orient = - orient;
     }
     return this;
 }
@@ -225,8 +226,17 @@ KansasViewTxn.prototype.rotate = function(id) {
     if (Math.abs(orient) == 1) {
         var buf = this.movebuffer;
         this._initEmptyMove(buf, id);
-        buf[id].orientation = Math.abs(Math.abs(orient) / orient * 2);
+        buf[id].dest_orient = Math.abs(Math.abs(orient) / orient * 2);
     }
+    return this;
+}
+
+KansasViewTxn.prototype.setOrient = function(id, orient) {
+    id = toId(id);
+    var buf = this.movebuffer;
+    this._initEmptyMove(buf, id);
+    buf[id].dest_orient = orient;
+    console.log("orientis " + orient);
     return this;
 }
 
@@ -236,7 +246,7 @@ KansasViewTxn.prototype.unrotate = function(id) {
     if (Math.abs(orient) != 1) {
         var buf = this.movebuffer;
         this._initEmptyMove(buf, id);
-        buf[id].orientation = Math.abs(orient) / orient;
+        buf[id].dest_orient = Math.abs(orient) / orient;
     }
     return this;
 }
