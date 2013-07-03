@@ -1955,6 +1955,7 @@ KansasUI.prototype._initCards = function(sel) {
             if (snap != null) {
                 txn.moveOnto(card, snap);
             } else {
+                /* TODO correct for rotated cards */
                 txn.move(card, card.offset().left, card.offset().top);
                 that.vlog(3, "offset: " + card.offset().left + "," + card.offset().top);
             }
