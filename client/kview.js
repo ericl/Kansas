@@ -236,7 +236,6 @@ KansasViewTxn.prototype.setOrient = function(id, orient) {
     var buf = this.movebuffer;
     this._initEmptyMove(buf, id);
     buf[id].dest_orient = orient;
-    console.log("orientis " + orient);
     return this;
 }
 

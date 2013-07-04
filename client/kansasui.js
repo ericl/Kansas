@@ -163,7 +163,7 @@ KansasUI.prototype._computeContainmentHint = function(selectedSet, bb) {
         }
         has[card.prop("id")] = true;
         return [[card.hasClass("rotated"),
-                 that.view.toCanonicalKey(that.client.getPos(card)[1]),
+                 that.client.getPos(card)[1],
                  heightOf(
                     card.data("stack_index"),
                     that.client.stackHeight(card))]];
@@ -551,7 +551,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                 var count = this.client.stackHeight(target);
                 sizingInfo = [[
                     target.hasClass("rotated"),
-                    this.view.toCanonicalKey(target.data("dest_key")),
+                    this.client.getPos(target)[1],
                     heightOf(count - 1, count)]];
             }
         } else {
@@ -559,7 +559,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
             var count = this.client.stackHeight(snap);
             sizingInfo = [[
                 snap.hasClass("rotated"),
-                this.view.toCanonicalKey(snap.data("dest_key")),
+                this.client.getPos(snap)[1],
                 heightOf(count, count + 1)]];
         }
     } else if (snap != null) {
@@ -567,7 +567,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
         var count = this.client.stackHeight(snap);
         sizingInfo = [[
             snap.hasClass("rotated"),
-            this.view.toCanonicalKey(snap.data("dest_key")),
+            this.client.getPos(snap)[1],
             heightOf(count, count + 1)]];
     } else if (sizingInfo != null) {
         vlog(3, "Rendering free-dragging selection");
@@ -739,7 +739,7 @@ function handleFrameUpdateBroadcast(e) {
 function handleSelectionMoved(selectedSet, dx, dy) {
     var snap = findSnapPoint($("#selectionbox"));
     if (snap != null) {
-        var dest_key = toCanonicalKey(parseInt(snap.data("dest_key")));
+        var dest_key = this.client.getPos(snap)[1];
         var innerFn = function(card) {
             var cardId = parseInt(card.prop("id").substr(5));
             return {card: cardId,
@@ -863,7 +863,7 @@ KansasUI.prototype._rotateCard = function(card) {
 
 /* Rotates card to 0deg. */
 KansasUI.prototype._unrotateCard = function(card) {
-    var orient = getOrient(card);
+    var orient = this.client.getOrient(card);
     if (Math.abs(orient) != 1) {
         this._changeOrient(card, Math.abs(orient) / orient);
         $(".hovermenu")
@@ -875,8 +875,8 @@ KansasUI.prototype._unrotateCard = function(card) {
 }
 
 /* Shows back of card. */
-KansasUI.prototype.flipCard = function(card) {
-    var orient = getOrient(card);
+KansasUI.prototype._flipCard = function(card) {
+    var orient = this.client.getOrient(card);
     if (orient > 0) {
         this._changeOrient(card, -this.client.getOrient(card));
         $(".hovermenu").children("img").prop("src", card.data("back"));
@@ -902,7 +902,6 @@ KansasUI.prototype._peekCard = function(card) {
 
 /* Requests a stack inversion from the server. */
 KansasUI.prototype.invertStack = function(memberCard) {
-    var dest_key = parseInt(memberCard.data("dest_key"));
     var stack = stackOf(memberCard);
     var bottom = bottomOf(stack);
     $(".hovermenu").children("img").prop("src", this._highRes(bottom, true));
@@ -910,12 +909,11 @@ KansasUI.prototype.invertStack = function(memberCard) {
     showSpinner();
     ws.send("stackop", {op_type: "invert",
                         dest_type: "board",
-                        dest_key: toCanonicalKey(dest_key)});
+                        dest_key: this.client.getPos(memberCard)[1]});
 }
 
 /* Requests a stack reverse from the server. */
 KansasUI.prototype._reverseStack = function(memberCard) {
-    var dest_key = parseInt(memberCard.data("dest_key"));
     var stack = stackOf(memberCard);
     var bottom = bottomOf(stack);
     $(".hovermenu").children("img").prop("src", highRes(bottom));
@@ -923,7 +921,7 @@ KansasUI.prototype._reverseStack = function(memberCard) {
     showSpinner();
     ws.send("stackop", {op_type: "reverse",
                         dest_type: "board",
-                        dest_key: toCanonicalKey(dest_key)});
+                        dest_key: this.client.getPos(memberCard)[1]});
 }
 
 function shuffleSelectionConfirm() {
@@ -1419,21 +1417,18 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     }
 
     $("#sync").mouseup(function(e) {
-        showSpinner();
-        ws.send("resync");
+        this.client.send("resync");
     });
 
     $("#reset").mouseup(function(e) {
         if (confirm("Are you sure you want to reset the game?")) {
-            showSpinner();
-            ws.send("reset");
+            this.client.send("reset");
         }
     });
 
     $("#end").mouseup(function(e) {
         if (confirm("Are you sure you want to end the game?")) {
-            showSpinner();
-            ws.send("end");
+            that.client.send("end");
             $("#error").remove();
             document.location.hash = "";
             document.location.reload();
@@ -1536,7 +1531,8 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         target.addClass("poison-source");
         that.disableArenaEvents = true;
         var oldButtons = $(".hovermenu li");
-        var action = that.eventTable[target.data("key")].call(that, activeCard);
+        var fn = that.eventTable[target.data("key")];
+        var action = fn.call(that, activeCard);
         switch (action) {
             case "keepmenu": 
                 oldButtons.not(target).addClass("disabled");
@@ -1896,6 +1892,35 @@ KansasUI.prototype._redrawCard = function(card) {
     card.removeClass("inHand");
 }
 
+/* Returns the y-key of the card in the client view. */
+function normalizedY(target) {
+    var offset = target.offset();
+    var tp = offset.top;
+    if (target.prop("id") != draggingId) {
+        tp -= heightOf(target.data("stack_index"),
+            stackDepthCache[target.data("dest_key")] || 0);
+    }
+    // Compensates for rotated targets.
+    if (target.hasClass("card")) {
+        tp -= parseInt(target.css("margin-top"));
+    }
+    return tp;
+}
+
+function normalizedX(target) {
+    var offset = target.offset();
+    var left = offset.left;
+    if (target.prop("id") != draggingId) {
+      left -= heightOf(target.data("stack_index"),
+        stackDepthCache[target.data("dest_key")] || 0);
+    }
+    // Compensates for rotated targets.
+    if (target.hasClass("card")) {
+        left -= parseInt(target.css("margin-left"));
+    }
+    return left;
+}
+
 KansasUI.prototype._initCards = function(sel) {
     var that = this;
     var client = this.client;
@@ -1955,9 +1980,7 @@ KansasUI.prototype._initCards = function(sel) {
             if (snap != null) {
                 txn.moveOnto(card, snap);
             } else {
-                /* TODO correct for rotated cards */
-                txn.move(card, card.offset().left, card.offset().top);
-                that.vlog(3, "offset: " + card.offset().left + "," + card.offset().top);
+                txn.move(card, normalizedX(card), normalizedY(card));
             }
         }
 
