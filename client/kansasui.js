@@ -69,7 +69,7 @@ var kAnimationLength = 400;
 // TODO detect mobile devices better
 var onMobile = navigator.platform.indexOf("android") >= 0;
 var disableAccel = !onMobile; /* use higher quality when possible */
-// Workaround for https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
+// Bug @ https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
 // TODO fix this - this makes for a terrible UI experience.
 var XXX_jitter = onMobile ? 1 : 0;
 
@@ -281,7 +281,9 @@ KansasUI.prototype._startDragProgress = function(target) {
     lastFrameLocation = this._keyFromTargetLocation(target);
     if (target.hasClass("card")) {
         this.client.send("broadcast",
-            {"subtype": "dragstart", "uuid": this.uuid, "card": target.prop("id")});
+            {"subtype": "dragstart",
+             "uuid": this.uuid,
+             "card": target.prop("id")});
     } else if (target.prop("id") == "selectionbox") {
         // TODO send some other appropriate dragging hint
     }
@@ -564,7 +566,8 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                 heightOf(count, count + 1)]];
         }
     } else if (snap != null) {
-        this.vlog(3, "Rendering selection snapped to stack @ " + snap.data("dest_key"));
+        this.vlog(3, "Rendering selection snapped to stack @ "
+            + snap.data("dest_key"));
         var count = this.client.stackHeight(snap);
         sizingInfo = [[
             snap.hasClass("rotated"),
@@ -1154,10 +1157,12 @@ KansasUI.prototype._menuForSelection = function(selectedSet) {
         + height + 'px; width: ' + width + 'px;"'
         + '></img>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
-        + '<span class="header" style="margin-left: -130px">&nbsp;SELECTION</span>"'
+        + '<span class="header" style="margin-left: -130px">'
+        + '&nbsp;SELECTION</span>"'
         + cardContextMenu
         + '</ul>'
-        + '<div class="hovernote"><span class="hoverdesc">' + selectedSet.length
+        + '<div class="hovernote"><span class="hoverdesc">'
+        + selectedSet.length
         + ' cards selected</span></div>'
         + '</div>');
 
@@ -2026,12 +2031,14 @@ KansasUI.prototype.handleReset = function() {
     var that = this;
 
     function createImageNode(cid) {
-        that.nextBoardZIndex = Math.max(that.nextBoardZIndex, that.client.getZ(cid) + 1);
+        that.nextBoardZIndex = Math.max(
+            that.nextBoardZIndex, that.client.getZ(cid) + 1);
         var url = that.client.getSmallUrl(cid);
         if (that.client.getOrient(cid) < 0) {
             url = that.client.getBackUrl(cid);
         }
-        var img = '<img style="z-index: ' + that.client.getZ(cid) + '; display: none"'
+        var img = '<img style="z-index: '
+            + that.client.getZ(cid) + '; display: none"'
             + ' id="card_' + cid + '"'
             + ' class="card" src="' + that._toResource(url) + '">'
         return $(img).appendTo("#arena");
