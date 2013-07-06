@@ -181,10 +181,12 @@ KansasViewTxn.prototype.move = function(id, x, y) {
 KansasViewTxn.prototype.moveOnto = function(id, id_target) {
     id = toId(id);
     id_target = toId(id_target);
+    var p0 = this.client.getPos(id);
+    var p1 = this.client.getPos(id_target);
     var buf = this.movebuffer;
     this._initEmptyMove(buf, id);
-    buf[id].dest_type = this.client.getPos(id_target)[0];
-    buf[id].dest_key = this.client.getPos(id_target)[1];
+    buf[id].dest_type = p1[0];
+    buf[id].dest_key = p1[1];
     return this;
 }
 
@@ -200,7 +202,7 @@ KansasViewTxn.prototype.moveToHand = function(id, hand_id) {
 
 KansasViewTxn.prototype.flip = function(id) {
     id = toId(id);
-    var orient = this.client.getOrient(card);
+    var orient = this.client.getOrient(id);
     if (orient > 0) {
         var buf = this.movebuffer;
         this._initEmptyMove(buf, id);
@@ -211,7 +213,7 @@ KansasViewTxn.prototype.flip = function(id) {
 
 KansasViewTxn.prototype.unflip = function(id) {
     id = toId(id);
-    var orient = this.client.getOrient(card);
+    var orient = this.client.getOrient(id);
     if (orient < 0) {
         var buf = this.movebuffer;
         this._initEmptyMove(buf, id);
@@ -222,11 +224,11 @@ KansasViewTxn.prototype.unflip = function(id) {
 
 KansasViewTxn.prototype.rotate = function(id) {
     id = toId(id);
-    var orient = getOrient(card);
+    var orient = this.client.getOrient(id);
     if (Math.abs(orient) == 1) {
         var buf = this.movebuffer;
         this._initEmptyMove(buf, id);
-        buf[id].dest_orient = Math.abs(Math.abs(orient) / orient * 2);
+        buf[id].dest_orient = Math.abs(orient) / orient * 2;
     }
     return this;
 }
@@ -241,7 +243,7 @@ KansasViewTxn.prototype.setOrient = function(id, orient) {
 
 KansasViewTxn.prototype.unrotate = function(id) {
     id = toId(id);
-    var orient = getOrient(card);
+    var orient = this.client.getOrient(id);
     if (Math.abs(orient) != 1) {
         var buf = this.movebuffer;
         this._initEmptyMove(buf, id);
@@ -254,6 +256,7 @@ KansasViewTxn.prototype.commit = function() {
     if (this.committed)
         throw "bulk move already committed";
     var bulkmove = this.client.newBulkMoveTxn();
+    console.log("movebuf " +  JSON.stringify(this.movebuffer));
     for (id in this.movebuffer) {
         var move = this.movebuffer[id];
         bulkmove.append(id, move.dest_type, move.dest_key, move.dest_orient);

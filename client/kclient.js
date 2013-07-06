@@ -89,13 +89,14 @@ KansasBulkMove.prototype.commit = function() {
         var id = move.card;
         var oldpos = this.client.getPos(id);
         removeFromArray(state[oldpos[0]][oldpos[1]], id);
-        if (!state[move.dest_type] || !state[move.dest_type][move.dest_key])
+        if (!state[move.dest_type])
+            state[move.dest_type] = {};
+        if (!state[move.dest_type][move.dest_key])
             state[move.dest_type][move.dest_key] = [];
         state[move.dest_type][move.dest_key].push(id);
         state.orientations[id] = move.dest_orient;
         this.client._game.index[id] = [move.dest_type, move.dest_key];
     }
-    this.client.ui.vlog(0, JSON.stringify(this.moves));
 
     this.client.send("bulkmove", {moves: this.moves});
 }
