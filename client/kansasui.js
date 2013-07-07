@@ -247,9 +247,9 @@ KansasUI.prototype._createSelection = function(items, popupMenu) {
     var bb = computeBoundingBox(selectedSet);
     var minX = bb[0], minY = bb[1], maxX = bb[2], maxY = bb[3];
     if (this.client.inHand(selectedSet)) {
-        containmentHint = null;
+        this.containmentHint = null;
     } else {
-        containmentHint = this._computeContainmentHint(selectedSet, bb);
+        this.containmentHint = this._computeContainmentHint(selectedSet, bb);
     }
     var boxAndArea = $("#selectionbox, #selectionarea");
     boxAndArea.css("left", minX - kSelectionBoxPadding);
@@ -290,7 +290,7 @@ KansasUI.prototype._startDragProgress = function(target) {
              "uuid": this.uuid,
              "card": target.prop("id")});
     } else if (target.prop("id") == "selectionbox") {
-        // TODO send some other appropriate dragging hint
+        // TODO send an appropriate dragging hint (fading etc.)
     }
     this._updateFocus(target);
 }
@@ -355,44 +355,22 @@ KansasUI.prototype._keyFromTargetLocation = function(target) {
 
 /* Returns the x-key of the card in the client view. */
 KansasUI.prototype._xKeyComponent = function(target) {
-    var offset = target.offset();
-    var left = offset.left;
-    if (target.prop("id") != this.draggingId
-            && target.hasClass("card")) {
-      left -= heightOf(
-        this.client.stackIndex(target),
-        this.client.stackHeight(target));
-    }
-    // Compensates for rotated targets.
-    if (target.hasClass("card")) {
-        left -= parseInt(target.css("margin-left"));
-    }
-    // Normalize to grid width.
+    var left = this._normalizedX(target);
     var ratio = Math.min(1, Math.max(0, left / this.view.width));
     return Math.ceil(ratio * this.view.maxGridIndex);
 }
 
 /* Returns the y-key of the card in the client view. */
 KansasUI.prototype._yKeyComponent = function(target) {
-    var offset = target.offset();
-    var tp = offset.top;
-    if (target.prop("id") != this.draggingId
-            && target.hasClass("card")) {
-        tp -= heightOf(
-            this.client.stackIndex(target),
-            this.client.stackHeight(target));
-    }
-    // Compensates for rotated targets.
-    if (target.hasClass("card")) {
-        tp -= parseInt(target.css("margin-top"));
-    }
-    // Normalize to grid height.
+    var tp = this._normalizedY(target);
     var ratio = Math.min(1, Math.max(0, tp / this.view.height));
     return Math.ceil(ratio * this.view.maxGridIndex);
 }
 
 /* Returns card at top of stack to snap to or NULL. */
 KansasUI.prototype._findSnapPoint = function(target) {
+
+    var forbiddenKey = null;
 
     // Enforces that selections with more than 1 stack do not snap.
     if (target.prop("id") == "selectionbox") {
@@ -401,6 +379,7 @@ KansasUI.prototype._findSnapPoint = function(target) {
         var that = this;
         $(".selecting").each(function(i) {
             var key = that.client.getPos($(this))[1];
+            forbiddenKey = key;
             if (!seen[key]) {
                 seen[key] = true;
                 numStacks += 1;
@@ -424,10 +403,14 @@ KansasUI.prototype._findSnapPoint = function(target) {
     var that = this;
 
     $.each(this.client.listStacks('board'), function(i, pos) {
+        if (pos == forbiddenKey) {
+            that.vlog(3, "ignoring forbidden pos " + pos);
+            return;
+        }
         if (that.client.getStackTop('board', pos) == cid) {
             var stack = that.client.getStack('board', pos);
             if (stack.length <= 1) {
-                that.vlog(1, "ignoring pos " + pos);
+                that.vlog(3, "ignoring pos " + pos);
                 return;
             }
         }
@@ -452,7 +435,7 @@ KansasUI.prototype._findSnapPoint = function(target) {
     });
 
     if (closest == null) {
-        this.vlog(2, "No snap point for: " + target.prop("id"));
+        this.vlog(3, "No snap point for: " + target.prop("id"));
         return null;
     } else {
         var snap = this.client.getStackTop('board', closest);
@@ -552,12 +535,13 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
     if (isCard) {
         if (snap == null) {
             if (this.hasDraggedOffStart) {
-                this.vlog(3, "Rendering free-dragging card.");
+                this.vlog(2, "Rendering free-dragging card.");
                 sizingInfo = [[
                     target.hasClass("rotated"),
-                    this.view.toCanonicalKey(this._keyFromTargetLocation(target)), 0]];
+                    this._keyFromTargetLocation(target),
+                    0]];
             } else {
-                this.vlog(3, "Rendering just-selected card on stack.");
+                this.vlog(2, "Rendering just-selected card on stack.");
                 var count = this.client.stackHeight(target);
                 sizingInfo = [[
                     target.hasClass("rotated"),
@@ -565,10 +549,10 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                     heightOf(count - 1, count)]];
             }
         } else {
-            this.vlog(3, "Rendering card snapping to stack");
+            this.vlog(2, "Rendering card snapping to stack");
             var count = this.client.stackHeight(snap);
             sizingInfo = [[
-                snap.hasClass("rotated"),
+                target.hasClass("rotated"),
                 this.client.getPos(snap)[1],
                 heightOf(count, count + 1)]];
         }
@@ -579,14 +563,15 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
             this.client.getPos(snap)[1],
             heightOf(count, count + 1)]];
     } else if (sizingInfo != null) {
-        vlog(3, "Rendering free-dragging selection");
+        this.vlog(2, "Rendering free-dragging selection");
         var delta = selectionBoxOffset();
         var dx = delta[2];
         var dy = delta[3];
+        var view = this.view;
         sizingInfo = $.map(sizingInfo, function(info) {
-            var orig = toClientKey(info[1]);
-            var current = keyFromCoords(keyToX(orig) + dx, keyToY(orig) + dy);
-            return [[info[0], this.view.toCanonicalKey(current), info[2]]];
+            var orig = view.posToCoord(info[1]);
+            var updated = view.coordToPos(orig[0] + dx, orig[1] + dy);
+            return [[info[0], updated, info[2]]];
         });
     } else {
         this.vlog(3, "Not rendering selection in hand.");
@@ -644,45 +629,46 @@ function extremes(stack) {
 }
 
 /* Invoked on receipt of a drag_start broadcast. */
-function handleDragStartBroadcast(e) {
-    var card = $("#" + e.data.card);
+KansasUI.prototype._handleDragStartBroadcast = function(data) {
+    var card = $("#" + data.card);
     $.each(card.attr("class").split(" "), function(i, cls) {
         if (cls.substring(0,9) == "faded_by_") {
             card.removeClass(cls);
         }
     });
-    card.addClass("faded_by_" + e.data.uuid);
+    card.addClass("faded_by_" + data.uuid);
     card.css("opacity", 0.6);
 }
 
 /* Invoked on receipt of a frame_update broadcast. */
-function handleFrameUpdateBroadcast(e) {
-    var frame = $("#" + e.data.uuid);
-    if (frame.length == 0 && !e.data.hide ) {
+KansasUI.prototype._handleFrameUpdateBroadcast = function(data) {
+    var frame = $("#" + data.uuid);
+    if (frame.length == 0 && !data.hide ) {
         var node = '<div class="uuid_frame" id="'
-            + e.data.uuid + '"><span>'
-            + e.data.name + '</span></div>';
+            + data.uuid + '"><span>'
+            + data.name + '</span></div>';
         $("#arena").append(node);
-        frame = $("#" + e.data.uuid);
+        frame = $("#" + data.uuid);
     } else {
-        frame.children("span").text(e.data.name);
+        frame.children("span").text(data.name);
     }
-    if (e.data.hide) {
-        frameHideQueued[e.data.uuid] = true;
+    var that = this;
+    if (data.hide) {
+        this.frameHideQueued[data.uuid] = true;
         setTimeout(function() {
-            if (frameHideQueued[e.data.uuid]) {
+            if (that.frameHideQueued[data.uuid]) {
                 frame.hide();
-                $(".faded_by_" + e.data.uuid).css("opacity", 1);
-                frameHideQueued[e.data.uuid] = false;
+                $(".faded_by_" + data.uuid).css("opacity", 1);
+                that.frameHideQueued[data.uuid] = false;
             }
         }, 1500);
     } else {
-        frameHideQueued[e.data.uuid] = false;
-        var flipName = clientRotation != e.data.native_rotation;
-        var init = e.data.sizing_info.pop();
-        var initKey = toClientKey(init[1]);
-        var minX = keyToX(initKey) + init[2] + (init[0] ? kRotatedOffsetLeft : 0);
-        var minY = keyToY(initKey) + init[2] + (init[0] ? kRotatedOffsetTop : 0);
+        this.frameHideQueued[data.uuid] = false;
+        var flipName = this.view.rotation != data.native_rotation;
+        var init = data.sizing_info.pop();
+        var pos = this.view.posToCoord(init[1]);
+        var minX = pos[0] + init[2] + (init[0] ? kRotatedOffsetLeft : 0);
+        var minY = pos[1] + init[2] + (init[0] ? kRotatedOffsetTop : 0);
         function getW(info) {
             return (info[0] ? kCardHeight : kCardWidth);
         }
@@ -691,10 +677,10 @@ function handleFrameUpdateBroadcast(e) {
         }
         var maxX = minX + 2 * kCardBorder + getW(init);
         var maxY = minY + 2 * kCardBorder + getH(init);
-        $.each(e.data.sizing_info, function(i, val) {
-            var key = toClientKey(val[1]);
-            var x = keyToX(key) + val[2];
-            var y = keyToY(key) + val[2];
+        $.each(data.sizing_info, function(i, val) {
+            var pos = that.view.posToCoord(val[1]);
+            var x = pos[0] + val[2];
+            var y = pos[1] + val[2];
             var dx = val[0] ? kRotatedOffsetLeft : 0;
             var dy = val[0] ? kRotatedOffsetTop : 0;
             minX = Math.min(minX, x + dx);
@@ -704,10 +690,10 @@ function handleFrameUpdateBroadcast(e) {
             maxX = Math.max(maxX, x + dx + w);
             maxY = Math.max(maxY, y + dy + h);
         });
-        frame.width(maxX - minX - 6 + 2 * e.data.border);
-        frame.height(maxY - minY - 6 + 2 * e.data.border);
-        frame.css("left", minX - e.data.border);
-        frame.css("top", minY - e.data.border);
+        frame.width(maxX - minX - 6 + 2 * data.border);
+        frame.height(maxY - minY - 6 + 2 * data.border);
+        frame.css("left", minX - data.border);
+        frame.css("top", minY - data.border);
         if (flipName) {
             frame.addClass("flipName");
         } else {
@@ -997,7 +983,7 @@ KansasUI.prototype._stackNext = function(memberCard) {
     var nextId = this.client.stackOf(memberCard)[idx];
     var next = $("#card_" + nextId);
     this.activeCard = next;
-    showHoverMenu(next);
+    this._showHoverMenu(next);
     return "keepmenu";
 }
 
@@ -1005,9 +991,9 @@ KansasUI.prototype._stackNext = function(memberCard) {
 KansasUI.prototype._stackPrev = function(memberCard) {
     var idx = this.client.stackIndex(memberCard) + 1;
     var prevId = this.client.stackOf(memberCard)[idx];
-    var prev = $("#card_" + nextId);
+    var prev = $("#card_" + prevId);
     this.activeCard = prev;
-    showHoverMenu(prev);
+    this._showHoverMenu(prev);
     return "keepmenu";
 }
 
@@ -1216,7 +1202,7 @@ KansasUI.prototype._menuForCard = function(card) {
 }
 
 /* Moves a card offscreen - used for hiding hands of other players. */
-function moveOffscreen(card) {
+KansasUI.prototype._moveOffscreen = function(card) {
     var kOffscreenY = -300;
     var destX = 200;
     if (parseInt(card.css("top")) != kOffscreenY) {
@@ -1227,10 +1213,9 @@ function moveOffscreen(card) {
             top: kOffscreenY,
             opacity: 1.0,
             avoidTransforms: disableAccel,
-        }, animationLength);
+        }, this.animationLength);
     }
 }
-
 
 /* Changes the visible orientation the card */
 KansasUI.prototype._setOrientProperties = function(card, orient) {
@@ -1708,7 +1693,11 @@ KansasUI.prototype._fastZShuffle = function(cardIds) {
 KansasUI.prototype._redrawStack = function(pos) {
     if (isNaN(pos)) {
         this.vlog(1, "convert redrawStack - redrawHand @ " + pos);
-        this._redrawHand();
+        if (pos == this.hand_user) {
+            this._redrawHand();
+        } else {
+            this._redrawOtherHands();
+        }
         return;
     }
 
@@ -1721,6 +1710,20 @@ KansasUI.prototype._redrawStack = function(pos) {
             that.vlog(3, "redraw " + cid);
             that._redrawCard(card);
         });
+    }
+}
+
+KansasUI.prototype._redrawOtherHands = function() {
+    this.vlog(1, "redrawOtherHands");
+    var hands = this.client.listStacks('hands');
+    for (i in hands) {
+        var user = hands[i];
+        if (user != this.hand_user) {
+            var hand = this.client.getStack('hands', user);
+            for (j in hand) {
+                this._moveOffscreen($("#card_" + hand[j]));
+            }
+        }
     }
 }
 
@@ -1828,7 +1831,8 @@ KansasUI.prototype._redrawCard = function(card) {
 KansasUI.prototype._normalizedY = function(target) {
     var offset = target.offset();
     var tp = offset.top;
-    if (target.prop("id") != this.draggingId) {
+    if (target.prop("id") != this.draggingId
+            && target.hasClass("card")) {
         tp -= heightOf(
             this.client.stackIndex(target),
             this.client.stackHeight(target));
@@ -1843,7 +1847,8 @@ KansasUI.prototype._normalizedY = function(target) {
 KansasUI.prototype._normalizedX = function(target) {
     var offset = target.offset();
     var left = offset.left;
-    if (target.prop("id") != this.draggingId) {
+    if (target.prop("id") != this.draggingId
+            && target.hasClass("card")) {
       left -= heightOf(
         this.client.stackIndex(target),
         this.client.stackHeight(target));
@@ -1872,7 +1877,7 @@ KansasUI.prototype._initCards = function(sel) {
         that.vlog(3, "dragstart");
         var card = $(event.currentTarget);
         that.dragging = true;
-        draggingId = card.prop("id");
+        that.draggingId = card.prop("id");
         $("#hand").addClass("dragging");
         that._removeHoverMenu();
         if (that.client.inHand(card)) {
@@ -2002,6 +2007,7 @@ KansasUI.prototype.handleReset = function() {
         }
     }
     this._redrawHand();
+    this._redrawOtherHands();
 
     $(".card").fadeIn();
     this._initCards($(".card"));
@@ -2016,9 +2022,39 @@ KansasUI.prototype.handleStackChanged = function(key) {
 }
 
 KansasUI.prototype.handleBroadcast = function(data) {
+    switch (data.subtype) {
+        case "dragstart":
+            this._handleDragStartBroadcast(data);
+            break;
+        case "frameupdate":
+            this._handleFrameUpdateBroadcast(data);
+            break;
+    }
 }
 
 KansasUI.prototype.handlePresence = function(data) {
+    this.vlog(1, "Presence changed: " + JSON.stringify(data));
+
+    var present = {};
+    for (i in data) {
+        present[data[i].uuid] = true;
+    }
+
+    var myuuid = this.uuid;
+    $("#presence").text("Online: " +
+        $.map(data, function(d) {
+            if (d.uuid == myuuid)
+                return d.name + " (self)";
+            else
+                return d.name;
+        }).join(", "));
+
+    /* Removes frames of clients no longer present. */
+    $.each($(".uuid_frame"), function(i) {
+        var frame = $(this);
+        if (!present[frame.prop("id")])
+            frame.hide();
+    });
 }
 
 KansasUI.prototype.showSpinner = function() {

@@ -4,8 +4,9 @@
  *
  * Usage:
  *      var view = KansasView(kclient, 2, [0, 0], [800, 600]);
- *      kclient.getCoord(id|jquery) -> (int, int)
- *      kclient.posToCoord(pos: int) -> (int, int)
+ *      view.getCoord(id|jquery) -> (int, int)
+ *      view.posToCoord(pos: int) -> (int, int)
+ *      view.coordToPos(x: int, y: int) -> pos: int
  *      view.resize([400, 600]);
  *
  *  to mutate game state:
@@ -144,6 +145,9 @@ KansasView.prototype.posToCoord = function(board_pos) {
     return [toClientX(this, x), toClientY(this, y)];
 }
 
+KansasView.prototype.coordToPos = function(x, y) {
+    return keyFromCoords(this, toCanonicalX(this, x), toCanonicalY(this, y));
+}
 
 KansasView.prototype.getCoord = function(id) {
     id = toId(id);
