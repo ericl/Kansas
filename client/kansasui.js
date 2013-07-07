@@ -1576,6 +1576,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $(window).resize(function() {
+        that.view.resize(getBBox());
         that._redrawHand();
         that._redrawBoard();
     });
@@ -1595,8 +1596,9 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
 /* Forces re-render of cards on board. */
 KansasUI.prototype._redrawBoard = function() {
-    for (key in stackDepthCache) {
-        redrawStack(key);
+    var stacks = this.client.listStacks('board');
+    for (i in stacks) {
+        this._redrawStack(stacks[i]);
     }
     this._redrawDivider();
 }

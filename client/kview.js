@@ -6,6 +6,7 @@
  *      var view = KansasView(kclient, 2, [0, 0], [800, 600]);
  *      kclient.getCoord(id|jquery) -> (int, int)
  *      kclient.posToCoord(pos: int) -> (int, int)
+ *      view.resize([400, 600]);
  *
  *  to mutate game state:
  *      view.startBulkMove()
@@ -147,6 +148,12 @@ KansasView.prototype.posToCoord = function(board_pos) {
 KansasView.prototype.getCoord = function(id) {
     id = toId(id);
     return this.posToCoord(this.client.getPos(id)[1]);
+}
+
+KansasView.prototype.resize = function(bbox) {
+    this.width = bbox[0];
+    this.height = bbox[1];
+    return this;
 }
 
 function KansasViewTxn(client, view) {
