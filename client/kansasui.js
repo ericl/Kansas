@@ -930,8 +930,10 @@ KansasUI.prototype._shuffleSelection = function() {
     var txn = this.view.startBulkMove();
     $.each(zSorted(selectedSet), function() {
         var card = $(this);
-        if (that.client.getPos(exemplar)[1] != that.client.getPos($(card))[1])
-            txn.moveOnto($(card), exemplar);
+        if (that.client.getPos(exemplar)[1] != that.client.getPos(card)[1])
+            txn.moveOnto(card, exemplar);
+        if (that.client.getOrient(card) != orient)
+            txn.setOrient(card, orient);
     });
     txn.commit();
     this.client.send("stackop", {op_type: "shuffle",
