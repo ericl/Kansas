@@ -27,6 +27,7 @@
  *      kclient.stackIndex(id|jquery) -> int in [0, max_int]
  *      kclient.stackHeight(id|jquery) -> int in [1, max_int] or 0
  *      kclient.stackOf(id|jquery) -> list[int]
+ *      kclient.inHand(id|jquery{set}) -> bool
  *      kclient.getSmallUrl(id|jquery) -> str
  *      kclient.getFrontUrl(id|jquery) -> str
  *      kclient.getBackUrl(id|jquery) -> str
@@ -102,8 +103,7 @@ KansasBulkMove.prototype.commit = function() {
         this.client._game.index[id] = [move.dest_type, move.dest_key];
     }
 
-    this.client.ui.vlog(2, "bulkmove: " + JSON.stringify(this.moves));
-
+    this.client.ui.vlog(3, "bulkmove: " + JSON.stringify(this.moves));
     this.client.send("bulkmove", {moves: this.moves});
 }
 
@@ -181,6 +181,26 @@ KansasClient.prototype.stackOf = function(id) {
     var pos = this.getPos(id);
     var stack = this.getStack(pos[0], pos[1]);
     return stack;
+}
+
+KansasClient.prototype.inHand = function(ids) {
+    if (isNaN(ids)) {
+        if (ids.length == 1) {
+            if (!ids.hasClass("card"))
+                return false;
+            return this.getPos(ids)[0] == "hands";
+        } else {
+            var inHand = false;
+            var that = this;
+            $.each(ids, function() {
+                if (that.getPos($(this))[0] == "hands")
+                    inHand = true;
+            });
+            return inHand;
+        }
+    } else {
+        return this.getPos(ids)[0] == "hands";
+    }
 }
 
 KansasClient.prototype.stackHeight = function(id) {

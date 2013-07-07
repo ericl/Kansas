@@ -16,8 +16,6 @@
  *      kansas_ui.warning(msg)
  */
 
-/* TODO replace .inHand class with client.inHand(id|jquery{set}) ? */
-
 function KansasUI() {
     this.view = null;
     this.client = null;
@@ -248,7 +246,7 @@ KansasUI.prototype._createSelection = function(items, popupMenu) {
     }
     var bb = computeBoundingBox(selectedSet);
     var minX = bb[0], minY = bb[1], maxX = bb[2], maxY = bb[3];
-    if (selectedSet.hasClass("inHand")) {
+    if (this.client.inHand(selectedSet)) {
         containmentHint = null;
     } else {
         containmentHint = this._computeContainmentHint(selectedSet, bb);
@@ -538,7 +536,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
     var snap = noSnap ? null : this._findSnapPoint(target);
     this._setSnapPoint(snap);
 
-    if (target.hasClass("inHand")) {
+    if (this.client.inHand(target)) {
         this.vlog(3, "Target in hand - removing focus to keep movement private.");
         this.client.send("broadcast",
             {
@@ -786,29 +784,24 @@ KansasUI.prototype._handleSelectionClicked = function(selectedSet, event) {
 
 KansasUI.prototype._handleSelectionMovedFromHand = function(selectedSet, x, y) {
     var snap = this._findSnapPoint($("#selectionbox"));
-    if (snap != null) {
-        var fixedKey = parseInt(snap.data("dest_key"));
-    }
-    makeBulkMove(function(card) {
-        var cardId = parseInt(card.prop("id").substr(5));
-        var key = (snap != null) ? fixedKey : keyFromCoords(x, y);
-        return {card: cardId,
-                dest_prev_type: "hands",
-                dest_type: "board",
-                dest_key: toCanonicalKey(key),
-                dest_orient: getOrient(card)};
+    var txn = this.view.startBulkMove();
+    $.each(zSorted(selectedSet), function() {
+        if (snap != null) {
+            txn.moveOnto($(this), snap);
+        } else {
+            txn.move($(this), x, y);
+        }
     });
+    txn.commit();
 }
 
 KansasUI.prototype._handleSelectionMovedToHand = function(selectedSet) {
-    makeBulkMove(function(card) {
-        var cardId = parseInt(card.prop("id").substr(5));
-        return {card: cardId,
-                dest_prev_type: "board",
-                dest_type: "hands",
-                dest_key: hand_user,
-                dest_orient: getOrient(card)};
+    var txn = this.view.startBulkMove();
+    var user = this.hand_user;
+    $.each(zSorted(selectedSet), function() {
+        txn.moveToHand($(this), user);
     });
+    txn.commit();
 }
 
 /* Returns highest resolution image to display for card. */
@@ -1181,7 +1174,7 @@ KansasUI.prototype._menuForSelection = function(selectedSet) {
     if (allUnflipped) {
         $(".unflipall").addClass("disabled");
     }
-    if (selectedSet.hasClass("inHand")) {
+    if (this.client.inHand(selectedSet)) {
         $(".boardonly").addClass("disabled");
     }
     if (!allUntapped) {
@@ -1251,7 +1244,7 @@ KansasUI.prototype._menuForCard = function(card) {
         + '</div></div>');
 
     var newNode = $(html).appendTo("body");
-    if (card.hasClass("inHand")) {
+    if (this.client.inHand(card)) {
         $(".boardonly").addClass("disabled");
         $(".hovernote").hide();
     } else if (numCards > 1) {
@@ -1440,7 +1433,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         over: function(event, ui) {
             if (ui.draggable.hasClass("card")) {
                 var card = parseInt(ui.draggable.prop("id").substr(5));
-                if (!ui.draggable.hasClass("inHand")) {
+                if (!that.client.inHand(ui.draggable)) {
                     that._redrawHand();
                 }
                 that._activateHand();
@@ -1451,7 +1444,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 var card = parseInt(ui.draggable.prop("id").substr(5));
             }
             deactivateHand();
-            if (dragging && !$("#hand").hasClass("collapsed")) {
+            if (that.dragging && !$("#hand").hasClass("collapsed")) {
                 $("#hand").addClass("collapsed");
                 that._redrawHand();
             }
@@ -1534,9 +1527,9 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             var present = $(".selecting");
             var disallowed = null;
             if (present.length > 0) {
-                disallowed = !present.hasClass("inHand");
+                disallowed = !that.client.inHand(present);
             }
-            if (elem.hasClass("card") && disallowed !== elem.hasClass("inHand")) {
+            if (elem.hasClass("card") && disallowed !== that.client.inHand(elem)) {
                 elem.addClass("selecting");
             }
         },
@@ -1563,7 +1556,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             var y = delta[1];
             var dx = delta[2];
             var dy = delta[3];
-            if (selectedSet.hasClass("inHand")) {
+            if (that.client.inHand(selectedSet)) {
                 if (that.dragging) {
                     that._handleSelectionMovedFromHand(selectedSet, x, y);
                 } else {
@@ -1583,7 +1576,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         that._removeHoverMenu();
         $("#selectionbox span").css("opacity", 1);
         var box = $("#selectionbox");
-        if (selectedSet.hasClass("inHand")) {
+        if (that.client.inHand(selectedSet)) {
             $("#selectionarea").hide();
             var oldoffset = box.offset();
             box.width(kCardWidth + kSelectionBoxPadding * 2);
@@ -1879,7 +1872,6 @@ KansasUI.prototype._redrawCard = function(card) {
             avoidTransforms: disableAccel || card.hasClass("rotated") || card.hasClass("flipped"),
         }, this.animationLength / 2);
     }
-    card.removeClass("inHand");
 }
 
 /* Returns the y-key of the card in the client view. */
@@ -1933,7 +1925,7 @@ KansasUI.prototype._initCards = function(sel) {
         draggingId = card.prop("id");
         $("#hand").addClass("dragging");
         that._removeHoverMenu();
-        if (card.hasClass("inHand")) {
+        if (that.client.inHand(card)) {
             that.hasDraggedOffStart = true;
         } else {
             deactivateHand();
@@ -1989,7 +1981,7 @@ KansasUI.prototype._initCards = function(sel) {
         var card = $(event.currentTarget);
         dragStartKey = card.data("dest_key");
         that.hasDraggedOffStart = false;
-        if (card.hasClass("inHand")
+        if (that.client.inHand(card)
                 && $("#hand").hasClass("collapsed")) {
             that._removeFocus();
         } else {
