@@ -8,6 +8,8 @@
  *          No new methods should be bound to the client by kansasui.
  *
  *      kansas_ui.handleReset()
+ *      kansas_ui.handleAdd(ids: list[int])
+ *      kansas_ui.handleRemove(ids: list[int])
  *      kansas_ui.handleStackChanged(key: [str, str|int])
  *      kansas_ui.handleBroadcast(data: json)
  *      kansas_ui.handlePresence(data: json)
@@ -23,8 +25,6 @@ function KansasUI() {
     this.user = null;
     this.uuid = null;
     this.hand_user = null;
-    this.gameReady = false;
-    this.animationLength = 0;
     this.lastFrameLocation = 0;
     this.lastFrameUpdate = 0;
     this.frameHideQueued = {};
@@ -285,14 +285,12 @@ KansasUI.prototype._removeFocus = function(doAnimation) {
     hideSelectionBox();
     $(".card").removeClass("highlight");
     $(".card").css("box-shadow", "none");
-    if (this.gameReady) {
-        this.client.send("broadcast",
-            {
-                "subtype": "frameupdate",
-                "hide": true,
-                "uuid": this.uuid,
-            });
-    }
+    this.client.send("broadcast",
+        {
+            "subtype": "frameupdate",
+            "hide": true,
+            "uuid": this.uuid,
+        });
 }
 
 /* Highlights new snap-to card, and unhighlights old one. */
@@ -1195,7 +1193,7 @@ KansasUI.prototype._moveOffscreen = function(card) {
             left: destX,
             top: kOffscreenY,
             opacity: 1.0,
-        }, this.animationLength);
+        }, kAnimationLength);
     }
 }
 
@@ -1332,7 +1330,12 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 if (match != null) {
                 var count = match[1];
                     for (var j = 0; j < count; j++) {
-                        sendList[sendList.length] = {loc: 70321830, name: match[2]};
+                        sendList[sendList.length] = {
+                            loc: that.view.coordToPos(
+                                that.view.width / 2 - kCardWidth,
+                                that.view.height * 2 / 3
+                            ),
+                            name: match[2]};
                     }
                 }
             }
@@ -1762,7 +1765,7 @@ KansasUI.prototype._redrawHand = function() {
                 left: currentX,
                 top: currentY,
                 opacity: 1.0,
-            }, this.animationLength);
+            }, kAnimationLength);
         } else {
             skips += 1;
         }
@@ -1799,7 +1802,7 @@ KansasUI.prototype._redrawCard = function(card) {
             left: newX,
             top: newY,
             opacity: 1.0,
-        }, this.animationLength / 2);
+        }, kAnimationLength / 2);
     }
 }
 
@@ -1948,12 +1951,16 @@ KansasUI.prototype._initCards = function(sel) {
 }
 
 KansasUI.prototype.handleReset = function() {
-    this.gameReady = true;
-    this.animationLength = 0;
     this.vlog(3, "Reset all local state.");
     $(".uuid_frame").remove();
     $(".card").remove();
+    this.handleAdd(this.client.listAll());
+}
+
+KansasUI.prototype.handleAdd = function(cards) {
     var that = this;
+
+    this.vlog(1, "add cards: " + cards);
 
     function createImageNode(cid) {
         var url = that.client.getSmallUrl(cid);
@@ -1968,21 +1975,38 @@ KansasUI.prototype.handleReset = function() {
         return $(img).appendTo("#arena");
     }
 
-    var cards = this.client.listAll();
+    var stacksChanged = {};
+    var handChanged = false;
     for (i in cards) {
         var cid = cards[i];
         var card = createImageNode(cid);
         if (this.client.getPos(cid)[0] == 'board') {
-            updateCardFlipState(card, this.view.getCoord(cid)[1]);
-            this._redrawCard(card);
+            stacksChanged[this.client.getPos(cid)[1]] = 1;
+        } else {
+            handChanged = true;
         }
     }
-    this._redrawHand();
-    this._redrawOtherHands();
+    for (s in stacksChanged) {
+        this._redrawStack(s);
+    }
+    if (handChanged) {
+        this._redrawHand();
+        this._redrawOtherHands();
+    }
 
-    $(".card").fadeIn();
-    this._initCards($(".card"));
-    this.animationLength = kAnimationLength;
+    for (i in cards) {
+        var card = $("#card_" + cards[i]);
+        card.fadeIn();
+        this._initCards(card);
+    }
+}
+
+KansasUI.prototype.handleRemove = function(cards) {
+    this.vlog(1, "remove cards: " + cards);
+    for (i in cards) {
+        var cid = cards[i];
+        $("#card_" + cid).remove();
+    }
 }
 
 KansasUI.prototype.handleStackChanged = function(key) {
@@ -2033,7 +2057,8 @@ KansasUI.prototype.showSpinner = function() {
         return;
     if (!this.spinnerShowQueued && this.client._state != 'offline') {
         this.spinnerShowQueued = true;
-        setTimeout(this._reallyShowSpinner, 500);
+        var that = this;
+        setTimeout(function() { that._reallyShowSpinner(); }, 500);
     }
 }
 

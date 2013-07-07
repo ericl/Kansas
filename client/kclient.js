@@ -106,6 +106,15 @@ KansasBulkMove.prototype.commit = function() {
     this.client.send("bulkmove", {moves: this.moves});
 }
 
+KansasClient.prototype._removeEntry = function(pos, id) {
+    removeFromArray(this._game.state[pos[0]][pos[1]], id);
+    if (this._game.state[pos[0]][pos[1]] &&
+            this._game.state[pos[0]][pos[1]].length == 0) {
+        delete this._game.state[pos[0]][pos[1]];
+    }
+    delete this._game.index[id];
+}
+
 KansasClient.prototype.bind = function(name, fn) {
     if (this._hooks[name] === undefined)
         throw "hook '" + name + "' not defined";
@@ -271,7 +280,7 @@ KansasClient.prototype._eventHandlers = function(that) {
     return {
         _default: function(e) {
             that.ui.hideSpinner();
-            that.ui.vlog(3, "Unhandled response: " + JSON.stringify(e));
+            that.ui.vlog(0, "Unhandled response: " + JSON.stringify(e));
         },
         broadcast_resp: function() {
             that.ui.hideSpinner();
@@ -294,6 +303,32 @@ KansasClient.prototype._eventHandlers = function(that) {
         },
         reset: function(e) {
             that._reset(e.data[0]);
+        },
+        remove_resp: function(e) {
+            for (i in e.data) {
+                var id = e.data[i];
+                that._removeEntry(that.getPos(id), id);
+            }
+            that._notify('removed', e.data);
+        },
+        add_resp: function(e) {
+            var state = that._game.state;
+            var added = [];
+            for (i in e.data) {
+                var add = e.data[i];
+                var stack = state[add.pos[0]][add.pos[1]];
+                added.push(add.id);
+                if (!stack) {
+                    state[add.pos[0]][add.pos[1]] = [add.id];
+                } else {
+                    state[add.pos[0]][add.pos[1]].push(add.id);
+                }
+                state.orientations[add.id] = add.orient;
+                state.urls[add.id] = add.url;
+                state.urls_small[add.id] = add.small_url;
+                that._game.index[add.id] = add.pos;
+            }
+            that._notify('added', added);
         },
         stackupdate: function(e) {
             var op = e.data.op;
@@ -324,15 +359,10 @@ KansasClient.prototype._eventHandlers = function(that) {
 
                     stacksTouched[JSON.stringify([old_t, old_k])] = true;
                     if (old_t != dest_t || old_k != dest_k) {
-                        removeFromArray(that._game.state[old_t][old_k], id);
+                        that._removeEntry([old_t, old_k], id);
                     }
                     that._game.index[id] = [dest_t, dest_k];
                     that._game.state.orientations[id] = update.move.dest_orient;
-
-                    if (that._game.state[old_t][old_k] &&
-                            that._game.state[old_t][old_k].length == 0) {
-                        delete that._game.state[old_t][old_k];
-                    }
                 }
             }
 
@@ -378,4 +408,6 @@ KansasClient.prototype._hooks = {
     presence: function(data) {},
     stackchanged: function(data) {},
     reset: function() {},
+    removed: function(data) {},
+    added: function(data) {},
 }

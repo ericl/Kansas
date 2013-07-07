@@ -364,9 +364,12 @@ class CachingLoader(dict):
 
         self.highest_id += 1
         new_id = self.highest_id
-        self['urls'][new_id] = self.download(front_url)
+        large_path = self['urls'][new_id] = self.download(front_url)
+        small_path = large_path[:-4] + ('@%dx%d.jpg' % kSmallImageSize)
+        if not os.path.exists(small_path):
+            small_path = self.resize(large_path, small_path)
+        self['urls_small'][new_id] = small_path
         self['orientations'][new_id] = 1
-        # TODO add resource limit here
         return new_id
 
     def download(self, suffix):
@@ -426,12 +429,16 @@ class KansasGameState(object):
     def __init__(self):
         self.data = CachingLoader(BLANK_DECK)
         self.index = self.buildIndex()
-        self.assignZIndices()
+        self.initializeStacks(shuffle=True)
 
-    def assignZIndices(self):
+    def containsCard(self, card):
+        return card in self.index
+
+    def initializeStacks(self, shuffle=False):
         for loc, stack in self.data['board'].iteritems():
             assert type(loc) is int, "card locs must be int"
-            random.shuffle(stack)
+            if shuffle:
+                random.shuffle(stack)
             for card in stack:
                 if card not in self.data['orientations']:
                     self.data['orientations'][card] = -1
@@ -488,7 +495,7 @@ class KansasGameState(object):
 
     def remove_card(self, card):
         loc_type, loc = self.index[card]
-        del self.index[card]  # TODO remove from other parts of deck too
+        del self.index[card]
         self.data[loc_type][loc].remove(card)
         if len(self.data[loc_type][loc]) == 0:
             del self.data[loc_type][loc]
@@ -504,6 +511,7 @@ class KansasGameState(object):
         else:
             self.data['board'][loc] = [card_id]
         self.index[card_id] = ('board', loc)
+        return card_id
     
 
 class KansasHandler(object):
@@ -728,22 +736,31 @@ class KansasGameHandler(KansasHandler):
 
     def handle_remove(self, req, output):
         with self._lock:
-            logging.info("Starting mass excommunication.")
+            removed = set()
             for card in req:
-                self._state.remove_card(card)
+                if self._state.containsCard(card):
+                    removed.add(card)
+                    self._state.remove_card(card)
             self.broadcast(
                 set(self.streams.keys()),
-                'reset', self.snapshot())
+                'remove_resp', list(removed))
 
     def handle_add(self, req, output):
         with self._lock:
-            logging.info("Starting mass immigration.")
+            added = []
             for card in req:
-                self._state.add_card(card)
-            self._state.assignZIndices()
+                new_id = self._state.add_card(card)
+                added.append({
+                    'id': new_id,
+                    'orient': self._state.data['orientations'][new_id],
+                    'url': self._state.data['urls'][new_id],
+                    'small_url': self._state.data['urls_small'][new_id],
+                    'pos': self._state.index[new_id],
+                })
+            self._state.initializeStacks()
             self.broadcast(
                 set(self.streams.keys()),
-                'reset', self.snapshot())
+                'add_resp', added)
 
     def snapshot(self):
         with self._lock:

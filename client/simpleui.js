@@ -56,6 +56,14 @@ SimpleUI.prototype.handleReset = function() {
     textDump(this.client);
 }
 
+SimpleUI.prototype.handleAdd = function(cards) {
+    textDump(this.client);
+}
+
+SimpleUI.prototype.handleRemove = function(cards) {
+    textDump(this.client);
+}
+
 SimpleUI.prototype.handleStackChanged = function(key) {
     console.log("Stack mutation @ " + key);
     textDump(this.client);

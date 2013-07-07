@@ -164,6 +164,8 @@ $(document).ready(function() {
         .bind('presence', function(x) { kansas_ui.handlePresence(x); })
         .bind('stackchanged', function(x) { kansas_ui.handleStackChanged(x); })
         .bind('reset', function(x) { kansas_ui.handleReset(x); })
+        .bind('removed', function(x) { kansas_ui.handleRemove(x); })
+        .bind('added', function(x) { kansas_ui.handleAdd(x); })
         .connect();
 
     if (clients.length == 0)
