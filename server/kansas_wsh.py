@@ -34,7 +34,6 @@ BLANK_DECK = {
     'default_back_url': '/third_party/images/mtg_detail.jpg',
     'board': {},
     'hands': {},
-    'zIndex': {},
     'orientations': {},
     'urls_small': {},
     'urls': {},
@@ -292,8 +291,7 @@ BLANK_DECK = {'_deck0': 'steven',
           117: 'ddk/39.jpg',
           118: 'ddk/39.jpg',
           119: 'ddk/39.jpg'},
- 'urls_small': {},
- 'zIndex': {}}
+ 'urls_small': {}}
 
 
 # TODO split into loader module
@@ -367,6 +365,7 @@ class CachingLoader(dict):
         self.highest_id += 1
         new_id = self.highest_id
         self['urls'][new_id] = self.download(front_url)
+        self['orientations'][new_id] = 1
         return new_id
 
     def download(self, suffix):
@@ -427,27 +426,16 @@ class KansasGameState(object):
         self.data = CachingLoader(BLANK_DECK)
         self.index = self.buildIndex()
         self.assignZIndices()
-        self.assignOrientations()
 
     def assignZIndices(self):
-        if self.data['zIndex']:
-            i = max(self.data['zIndex'].values())
-        else:
-            i = 0
         for loc, stack in self.data['board'].iteritems():
             assert type(loc) is int, "card locs must be int"
             random.shuffle(stack)
             for card in stack:
-                if card not in self.data['zIndex']:
-                    self.data['zIndex'][card] = i
-                    i += 1
                 if card not in self.data['orientations']:
                     self.data['orientations'][card] = -1
         for user, hand in self.data['hands'].iteritems():
             for card in hand:
-                if card not in self.data['zIndex']:
-                    self.data['zIndex'][card] = i
-                    i += 1
                 if card not in self.data['orientations']:
                     self.data['orientations'][card] = -1
 
@@ -459,23 +447,6 @@ class KansasGameState(object):
         canonicalOrient = self.data['orientations'][stack[-1]]
         for card in stack:
             self.data['orientations'][card] = canonicalOrient
-
-    def reassignZ(self, stack):
-        i = min([self.data['zIndex'][s] for s in stack])
-        for card in stack:
-            self.data['zIndex'][card] = i
-            i += 1
-
-    def assignOrientations(self):
-        i = 0
-        for loc, stack in self.data['board'].iteritems():
-            for card in stack:
-                self.data['zIndex'][card] = i
-                i += 1
-        for user, hand in self.data['hands'].iteritems():
-            for card in hand:
-                self.data['zIndex'][card] = i
-                i += 1
 
     def buildIndex(self):
         index = {}
@@ -509,7 +480,6 @@ class KansasGameState(object):
                 self.data[dest_type][dest_key] = []
             self.data[dest_type][dest_key].append(card)
             self.index[card] = (dest_type, dest_key)
-            self.data['zIndex'][card] = max(self.data['zIndex'].values()) + 1
 
         self.data['orientations'][card] = dest_orient
 

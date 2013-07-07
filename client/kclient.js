@@ -228,12 +228,6 @@ KansasClient.prototype.getSmallUrl = function(id) {
     return this._game.state.urls_small[id] || this.getFrontUrl(id);
 }
 
-/* TODO get rid of this what does it even provide. */
-KansasClient.prototype.getZ = function(id) {
-    id = toId(id);
-    return this._game.state.zIndex[id];
-}
-
 KansasClient.prototype.getFrontUrl = function(id) {
     id = toId(id);
     return this._game.state.urls[id];

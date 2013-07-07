@@ -1341,7 +1341,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     $("#add").mouseup(function(e) {
         if ($('#addtext').css('display') == 'none') {
             $('#addtext').toggle();
-        }else {
+        } else {
             var cards = $('#addtext').val();
             cardNames = cards.split("\n");
             sendList = [];
@@ -1359,7 +1359,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             if (sendList.length > 500)
                 warning("Trying to add too many cards");
             else 
-                ws.send('add', sendList);
+                client.send('add', sendList);
             $('#addtext').toggle();
         }
     });
@@ -1986,16 +1986,15 @@ KansasUI.prototype.handleReset = function() {
     var that = this;
 
     function createImageNode(cid) {
-        that.nextBoardZIndex = Math.max(
-            that.nextBoardZIndex, that.client.getZ(cid) + 1);
         var url = that.client.getSmallUrl(cid);
         if (that.client.getOrient(cid) < 0) {
             url = that.client.getBackUrl(cid);
         }
         var img = '<img style="z-index: '
-            + that.client.getZ(cid) + '; display: none"'
+            + that.nextBoardZIndex + '; display: none"'
             + ' id="card_' + cid + '"'
             + ' class="card" src="' + that._toResource(url) + '">'
+        that.nextBoardZIndex += 1;
         return $(img).appendTo("#arena");
     }
 
