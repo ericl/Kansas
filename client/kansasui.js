@@ -605,34 +605,6 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
         });
 }
 
-/* Returns topmost card in stack. */
-function topOf(stack) {
-    var maxZ = -1;
-    var highest = null;
-    stack.each(function(i) {
-        var z = $(this).zIndex();
-        if (parseInt(z) > maxZ) {
-            maxZ = z;
-            highest = $(this);
-        }
-    });
-    return highest;
-}
-
-/* Returns topmost card in stack. */
-function bottomOf(stack) {
-    var minZ = Infinity;
-    var lowest = null;
-    stack.each(function(i) {
-        var z = $(this).zIndex();
-        if (parseInt(z) < minZ) {
-            minZ = z;
-            lowest = $(this);
-        }
-    });
-    return lowest;
-}
-
 /* Returns [topmost, lowermost, toprot, lowrot, topunrot, lowunrot] */
 function extremes(stack) {
     var result = [null, null, null, null, null, null];
@@ -896,26 +868,22 @@ KansasUI.prototype._peekCard = function(card) {
 
 /* Requests a stack inversion from the server. */
 KansasUI.prototype._invertStack = function(memberCard) {
-    var stack = stackOf(memberCard);
-    var bottom = bottomOf(stack);
+    var stack = this.client.stackOf(memberCard);
+    var bottom = stack[0];
     $(".hovermenu").children("img").prop("src", this._highRes(bottom, true));
-    this._createSelection(stack);
-    showSpinner();
-    ws.send("stackop", {op_type: "invert",
-                        dest_type: "board",
-                        dest_key: this.client.getPos(memberCard)[1]});
+    this.client.send("stackop", {op_type: "invert",
+                                 dest_type: "board",
+                                 dest_key: parseInt(this.client.getPos(memberCard)[1])});
 }
 
 /* Requests a stack reverse from the server. */
 KansasUI.prototype._reverseStack = function(memberCard) {
-    var stack = stackOf(memberCard);
-    var bottom = bottomOf(stack);
-    $(".hovermenu").children("img").prop("src", highRes(bottom));
-    this._createSelection(stack);
-    showSpinner();
-    ws.send("stackop", {op_type: "reverse",
-                        dest_type: "board",
-                        dest_key: this.client.getPos(memberCard)[1]});
+    var stack = this.client.stackOf(memberCard);
+    var bottom = stack[0];
+    $(".hovermenu").children("img").prop("src", this._highRes(bottom));
+    this.client.send("stackop", {op_type: "reverse",
+                                 dest_type: "board",
+                                 dest_key: parseInt(this.client.getPos(memberCard)[1])});
 }
 
 KansasUI.prototype._shuffleSelectionConfirm = function() {
