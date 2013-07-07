@@ -832,16 +832,6 @@ KansasUI.prototype._peekCard = function(card) {
     return "disablethis";
 }
 
-/* Requests a stack inversion from the server. */
-KansasUI.prototype._invertStack = function(memberCard) {
-    var stack = this.client.stackOf(memberCard);
-    var bottom = stack[0];
-    $(".hovermenu").children("img").prop("src", this._highRes(bottom, true));
-    this.client.send("stackop", {op_type: "invert",
-                                 dest_type: "board",
-                                 dest_key: parseInt(this.client.getPos(memberCard)[1])});
-}
-
 /* Requests a stack reverse from the server. */
 KansasUI.prototype._reverseStack = function(memberCard) {
     var stack = this.client.stackOf(memberCard);
@@ -1270,7 +1260,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         'unrotate': this._unrotateCard,
         'rotateall': this._rotateSelected,
         'unrotateall': this._unrotateSelected,
-        'flipstack': this._invertStack,
         'reversestack': this._reverseStack,
         'shufsel': this._shuffleSelection,
         'remove': this._removeCard,

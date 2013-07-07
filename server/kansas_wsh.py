@@ -667,10 +667,7 @@ class KansasGameHandler(KansasHandler):
             dest_k = req['dest_key']
             print dest_k, self._state.data[dest_t].keys()
             stack = self._state.data[dest_t][dest_k]
-            if req['op_type'] == 'invert':
-                stack.reverse()
-                self._state.reverseOrientations(stack)
-            elif req['op_type'] == 'reverse':
+            if req['op_type'] == 'reverse':
                 stack.reverse()
             elif req['op_type'] == 'shuffle':
                 self._state.resetOrientations(stack)
