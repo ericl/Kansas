@@ -13,6 +13,24 @@ SimpleUI.prototype.init = function(client) {
     $(".home-hidden").hide();
 }
 
+function imageDump(client, stack) {
+    var buf = "";
+    for (i in stack) {
+        var card = stack[i];
+        if (client.getOrient(card) > 0) {
+            var url = client.getSmallUrl(card);
+        } else {
+            var url = client.getBackUrl(card);
+        }
+        if (Math.abs(client.getOrient(card)) == 1) {
+            buf += '<img width=50px src="' + url + '">'
+        } else {
+            buf += '<img class=rotated style="margin-right: 20px" width=50px src="' + url + '">'
+        }
+    }
+    return buf;
+}
+
 function textDump(client) {
     console.log("Rerendering entire client state.");
     $("body").html(JSON.stringify(client._game.state));
@@ -22,7 +40,7 @@ function textDump(client) {
         var user = hands[i];
         var hand = client.getStack('hands', user);
         buf += "<h2>" + user + "</h2>";
-        buf += JSON.stringify(hand);
+        buf += imageDump(client, hand);
     }
     buf += "<h1>Board</h1>";
     var stacks = client.listStacks('board');
@@ -30,7 +48,7 @@ function textDump(client) {
         var pos = stacks[i];
         var stack = client.getStack('board', pos);
         buf += "<h2>Stack " + pos + "</h2>";
-        buf += JSON.stringify(stack);
+        buf += imageDump(client, stack);
     }
     $("body").html(buf);
 }

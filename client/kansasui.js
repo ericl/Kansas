@@ -59,7 +59,7 @@ jQuery.fn.zIndex = function() {
     return originalZIndex.apply(this, arguments);
 }
 
-var LOGLEVEL = 2;
+var LOGLEVEL = 1;
 var kAnimationLength = 400;
 
 // Minimum zIndexes for various states.
