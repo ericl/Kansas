@@ -117,16 +117,6 @@ function toCanonicalY(view, y, invert) {
     return y;
 }
 
-/* Translates locations from geometry on screen to server view. */
-KansasView.prototype.toCanonicalKey = function(clientKey) {
-    if (isNaN(clientKey)) {
-        return clientKey;
-    }
-    var x = keyToX(clientKey);
-    var y = keyToY(clientKey);
-    return keyFromCoords(this, toCanonicalX(this, x), toCanonicalY(this, y));
-}
-
 function toId(id) {
     if (isNaN(id)) {
         /* converts jquery selection to integer id */

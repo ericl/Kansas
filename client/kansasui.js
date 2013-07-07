@@ -62,13 +62,6 @@ jQuery.fn.zIndex = function() {
 var LOGLEVEL = 2;
 var kAnimationLength = 400;
 
-// TODO detect mobile devices better
-var onMobile = navigator.platform.indexOf("android") >= 0;
-var disableAccel = !onMobile; /* use higher quality when possible */
-// Bug @ https://github.com/benbarnett/jQuery-Animate-Enhanced/issues/97
-// TODO fix this - this makes for a terrible UI experience.
-var XXX_jitter = onMobile ? 1 : 0;
-
 // Minimum zIndexes for various states.
 var kHandZIndex = 4000000;
 var kDraggingZIndex = 4400000;
@@ -88,7 +81,7 @@ var kMinSupportedHeight = 1000;
 // Limits frame updates to 5fps.
 var kFrameUpdatePeriod = 200;
 
-/* XXX Returns [width, height] of arena. */
+/* Returns [width, height] of arena. */
 function getBBox() {
     return [
         $("#arena").outerWidth(),
@@ -226,9 +219,6 @@ KansasUI.prototype._computeContainmentHint = function(selectedSet, bb) {
 KansasUI.prototype._createSelection = function(items, popupMenu) {
     // On mobile, always pop up the hover menu,
     // since middle-click shortcuts are not possible.
-    if (!onMobile) {
-        popupMenu = false;
-    }
     selectedSet = items;
     if (selectedSet.length < 2) {
         this._updateFocus(selectedSet);
@@ -236,9 +226,6 @@ KansasUI.prototype._createSelection = function(items, popupMenu) {
         hideSelectionBox();
         if (selectedSet.length == 1) {
             this.activeCard = selectedSet;
-            if (popupMenu) {
-                this._showHoverMenu(selectedSet);
-            }
         }
         return;
     }
@@ -257,11 +244,8 @@ KansasUI.prototype._createSelection = function(items, popupMenu) {
     boxAndArea.show();
     $("#selectionbox span")
         .text(selectedSet.length + " cards")
-        .css("opacity", onMobile ? 0 : 1);
+        .css("opacity", 1);
     this._updateFocus($("#selectionbox"), true);
-    if (popupMenu) {
-        this._showHoverMenu(selectedSet);
-    }
 }
 
 /**
@@ -1208,10 +1192,9 @@ KansasUI.prototype._moveOffscreen = function(card) {
     if (parseInt(card.css("top")) != kOffscreenY) {
         animationCount += 1;
         card.animate({
-            left: (destX != parseInt(card.css("left"))) ? destX : destX + XXX_jitter,
+            left: destX,
             top: kOffscreenY,
             opacity: 1.0,
-            avoidTransforms: disableAccel,
         }, this.animationLength);
     }
 }
@@ -1757,7 +1740,6 @@ KansasUI.prototype._redrawHand = function() {
     var currentX = startX;
     var currentY = $("#hand").position().top - $(window).scrollTop() + kHandSpacing;
 
-    XXX_jitter *= -1;
     var skips = 0;
 
     for (i in hand) {
@@ -1777,10 +1759,9 @@ KansasUI.prototype._redrawHand = function() {
         if (xChanged || yChanged) {
             animationCount += 1;
             cd.animate({
-                left: currentX + (xChanged ? 0 : XXX_jitter),
-                top: currentY + (yChanged ? 0 : XXX_jitter),
+                left: currentX,
+                top: currentY,
                 opacity: 1.0,
-                avoidTransforms: disableAccel,
             }, this.animationLength);
         } else {
             skips += 1;
@@ -1812,14 +1793,12 @@ KansasUI.prototype._redrawCard = function(card) {
     this._setOrientProperties(card, this.client.getOrient(card));
     var xChanged = parseInt(newX) != parseInt(card.css('left'));
     var yChanged = parseInt(newY) != parseInt(card.css('top'));
-    XXX_jitter *= -1;
     if (xChanged || yChanged) {
         animationCount += 1;
         card.animate({
-            left: newX + (xChanged ? 0 : XXX_jitter),
-            top: newY + (yChanged ? 0 : XXX_jitter),
+            left: newX,
+            top: newY,
             opacity: 1.0,
-            avoidTransforms: disableAccel || card.hasClass("rotated") || card.hasClass("flipped"),
         }, this.animationLength / 2);
     }
 }
@@ -1881,10 +1860,6 @@ KansasUI.prototype._initCards = function(sel) {
             that.hasDraggedOffStart = true;
         } else {
             deactivateHand();
-        }
-        /* Slow on mobile. */
-        if (!onMobile) {
-            card.zIndex(kDraggingZIndex);
         }
         that._startDragProgress(card);
     });
