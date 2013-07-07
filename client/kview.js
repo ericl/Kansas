@@ -154,6 +154,7 @@ function KansasViewTxn(client, view) {
     this.client = client;
     this.movebuffer = {};
     this.committed = false;
+    this.nextNumber = 0;
 }
 
 KansasViewTxn.prototype._initEmptyMove = function(buf, id) {
@@ -162,7 +163,10 @@ KansasViewTxn.prototype._initEmptyMove = function(buf, id) {
             dest_type: this.client.getPos(id)[0],
             dest_key: this.client.getPos(id)[1],
             dest_orient: this.client.getOrient(id),
+            order: this.nextNumber,
+            id: id,
         };
+        this.nextNumber += 1;
     }
 }
 
@@ -256,10 +260,21 @@ KansasViewTxn.prototype.commit = function() {
     if (this.committed)
         throw "bulk move already committed";
     var bulkmove = this.client.newBulkMoveTxn();
-    console.log("movebuf " +  JSON.stringify(this.movebuffer));
+    var sorted = []
     for (id in this.movebuffer) {
         var move = this.movebuffer[id];
-        bulkmove.append(id, move.dest_type, move.dest_key, move.dest_orient);
+        sorted.push(move);
+    }
+    sorted.sort(function(a, b) {
+        return a.order - b.order;
+    });
+    for (idx in sorted) {
+        var move = sorted[idx];
+        bulkmove.append(
+            move.id,
+            move.dest_type,
+            move.dest_key,
+            move.dest_orient);
     }
     bulkmove.commit();
     this.committed = true;

@@ -62,7 +62,11 @@ function KansasBulkMove(client) {
 function toId(id) {
     if (isNaN(id)) {
         /* converts jquery selection to integer id */
-        id = parseInt(id.prop("id").substr(5));
+        var str = id.prop("id");
+        id = parseInt(str.substr(5));
+        if (isNaN(id)) {
+            throw "Failed to parse: " + str;
+        }
     }
     return id;
 }
@@ -97,6 +101,8 @@ KansasBulkMove.prototype.commit = function() {
         state.orientations[id] = move.dest_orient;
         this.client._game.index[id] = [move.dest_type, move.dest_key];
     }
+
+    this.client.ui.vlog(2, "bulkmove: " + JSON.stringify(this.moves));
 
     this.client.send("bulkmove", {moves: this.moves});
 }
@@ -258,7 +264,7 @@ KansasClient.prototype._eventHandlers = function(that) {
             that.ui.hideSpinner();
         },
         error: function(e) {
-            that._notify('error', e.data);
+            that._notify('error', e.msg);
         },
         broadcast_message: function(e) {
             that._notify('broadcast', e.data);
