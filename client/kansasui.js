@@ -171,7 +171,7 @@ KansasUI.prototype._computeContainmentHint = function(selectedSet, bb) {
         return [[card.hasClass("rotated"),
                  that.client.getPos(card)[1],
                  heightOf(
-                    card.data("stack_index"),
+                    that.client.stackIndex(card),
                     that.client.stackHeight(card))]];
     }
     function extend(result, option) {
@@ -573,8 +573,6 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                 heightOf(count, count + 1)]];
         }
     } else if (snap != null) {
-        this.vlog(3, "Rendering selection snapped to stack @ "
-            + snap.data("dest_key"));
         var count = this.client.stackHeight(snap);
         sizingInfo = [[
             snap.hasClass("rotated"),
@@ -836,11 +834,11 @@ KansasUI.prototype._removeCard = function() {
 
 
 KansasUI.prototype._toggleRotateCard = function(card) {
-    var orient = getOrient(card);
+    var orient = this.client.getOrient(card);
     if (Math.abs(orient) == 1) {
-        rotateCard(card);
+        this._rotateCard(card);
     } else {
-        unrotateCard(card);
+        this._unrotateCard(card);
     }
 }
 
@@ -875,7 +873,8 @@ KansasUI.prototype._flipCard = function(card) {
     var orient = this.client.getOrient(card);
     if (orient > 0) {
         this._changeOrient(card, -this.client.getOrient(card));
-        $(".hovermenu").children("img").prop("src", card.data("back"));
+        $(".hovermenu").children("img").prop(
+            "src", this.client.getBackUrl(card));
     }
 }
 
@@ -884,7 +883,8 @@ KansasUI.prototype._unflipCard = function(card) {
     var orient = this.client.getOrient(card);
     if (orient < 0) {
         this._changeOrient(card, -this.client.getOrient(card));
-        $(".hovermenu").children("img").prop("src", card.data("front_full"));
+        $(".hovermenu").children("img").prop("src",
+            this.client.getFrontUrl(card));
     }
 }
 
@@ -991,24 +991,6 @@ KansasUI.prototype._cardToSelection = function(card) {
     return "refreshselection";
 }
 
-/* Generates the move that does not move a card. */
-function generateTrivialMove(card) {
-    var cardId = parseInt(card.prop("id").substr(5));
-    var dest_type = "board";
-    var dest_prev_type = "board";
-    var dest_key = parseInt(card.data("dest_key"));
-    if (card.hasClass("inHand")) {
-        dest_type = "hands";
-        dest_key = hand_user;
-        dest_prev_type = "hands";
-    }
-    return {card: cardId,
-            dest_prev_type: dest_type,
-            dest_type: dest_type,
-            dest_key: toCanonicalKey(dest_key),
-            dest_orient: getOrient(card)};
-}
-
 KansasUI.prototype._flipSelected = function() {
     var txn = this.view.startBulkMove();
     $.each(zSorted(selectedSet), function() {
@@ -1043,10 +1025,9 @@ KansasUI.prototype._unrotateSelected = function() {
 
 /* Shows hovermenu of prev card in stack. */
 KansasUI.prototype._stackNext = function(memberCard) {
-    var idx = parseInt(memberCard.data("stack_index")) - 1;
-    var next = stackOf(memberCard).filter(function() {
-        return $(this).data("stack_index") == idx;
-    });
+    var idx = this.client.stackIndex(memberCard) - 1;
+    var nextId = this.client.stackOf(memberCard)[idx];
+    var next = $("#card_" + nextId);
     this.activeCard = next;
     showHoverMenu(next);
     return "keepmenu";
@@ -1054,10 +1035,9 @@ KansasUI.prototype._stackNext = function(memberCard) {
 
 /* Shows hovermenu of prev card in stack. */
 KansasUI.prototype._stackPrev = function(memberCard) {
-    var idx = parseInt(memberCard.data("stack_index")) + 1;
-    var prev = stackOf(memberCard).filter(function() {
-        return $(this).data("stack_index") == idx;
-    });
+    var idx = this.client.stackIndex(memberCard) + 1;
+    var prevId = this.client.stackOf(memberCard)[idx];
+    var prev = $("#card_" + nextId);
     this.activeCard = prev;
     showHoverMenu(prev);
     return "keepmenu";
@@ -1979,7 +1959,7 @@ KansasUI.prototype._initCards = function(sel) {
     sel.mousedown(function(event) {
         that.vlog(3, "----------");
         var card = $(event.currentTarget);
-        dragStartKey = card.data("dest_key");
+        that.dragStartKey = that.client.getPos(card)[1];
         that.hasDraggedOffStart = false;
         if (that.client.inHand(card)
                 && $("#hand").hasClass("collapsed")) {
@@ -2006,7 +1986,7 @@ KansasUI.prototype._initCards = function(sel) {
                 // Taps/untaps by middle-click.
                 if (event.which == 2) {
                     that._toggleRotateCard(card);
-                    removeFocus();
+                    that._removeFocus();
                 } else {
                     that._showHoverMenu(card);
                 }
