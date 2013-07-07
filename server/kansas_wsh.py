@@ -668,7 +668,6 @@ class KansasGameHandler(KansasHandler):
                 random.shuffle(stack)
             else:
                 raise Exception("invalid stackop type")
-            self._state.reassignZ(stack)
             self.broadcast(
                 set(self.streams.keys()),
                 'stackupdate',
