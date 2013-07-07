@@ -366,6 +366,7 @@ class CachingLoader(dict):
         new_id = self.highest_id
         self['urls'][new_id] = self.download(front_url)
         self['orientations'][new_id] = 1
+        # TODO add resource limit here
         return new_id
 
     def download(self, suffix):
@@ -487,7 +488,7 @@ class KansasGameState(object):
 
     def remove_card(self, card):
         loc_type, loc = self.index[card]
-        del self.index[card]
+        del self.index[card]  # TODO remove from other parts of deck too
         self.data[loc_type][loc].remove(card)
         if len(self.data[loc_type][loc]) == 0:
             del self.data[loc_type][loc]
@@ -729,10 +730,7 @@ class KansasGameHandler(KansasHandler):
         with self._lock:
             logging.info("Starting mass excommunication.")
             for card in req:
-                try: 
-                    self._state.remove_card(card)           
-                except:
-                    logging.warning("Ignoring bad remove: " + str(card))
+                self._state.remove_card(card)
             self.broadcast(
                 set(self.streams.keys()),
                 'reset', self.snapshot())
@@ -741,10 +739,7 @@ class KansasGameHandler(KansasHandler):
         with self._lock:
             logging.info("Starting mass immigration.")
             for card in req:
-                try:
-                    self._state.add_card(card)
-                except:
-                    logging.warning("Ignoring bad add: " + str(card))
+                self._state.add_card(card)
             self._state.assignZIndices()
             self.broadcast(
                 set(self.streams.keys()),
