@@ -9,7 +9,9 @@
  *      view.coordToPos(x: int, y: int) -> pos: int
  *      view.resize([400, 600]);
  *
- *  to mutate game state:
+ *  To mutate game state:
+ *  Note that the order of operations enforce a ordering upon the cards
+ *  such that cards moved first to a location will have a lower z-index.
  *      view.startBulkMove()
  *          .move(id1, x1, y1)
  *          .moveOnto(id2, id1)
