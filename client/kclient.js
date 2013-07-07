@@ -31,7 +31,6 @@
  *      kclient.getSmallUrl(id|jquery) -> str
  *      kclient.getFrontUrl(id|jquery) -> str
  *      kclient.getBackUrl(id|jquery) -> str
- *      kclient.getZ(id|jquery) -> int
  *
  *  low-level mutation methods for game state:
  *  (generally, prefer using KansasView for mutations)
