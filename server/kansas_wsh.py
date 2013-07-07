@@ -447,10 +447,6 @@ class KansasGameState(object):
                 if card not in self.data['orientations']:
                     self.data['orientations'][card] = -1
 
-    def reverseOrientations(self, stack):
-        for card in stack:
-            self.data['orientations'][card] *= -1
-
     def resetOrientations(self, stack):
         canonicalOrient = self.data['orientations'][stack[-1]]
         for card in stack:
@@ -651,7 +647,6 @@ class KansasGameHandler(KansasHandler):
         self._state = KansasGameState()
         self.handlers['broadcast'] = self.handle_broadcast
         self.handlers['bulkmove'] = self.handle_bulkmove
-        self.handlers['stackop'] = self.handle_stackop
         self.handlers['resync'] = self.handle_resync
         self.handlers['reset'] = self.handle_reset
         self.handlers['end'] = self.handle_end
@@ -660,29 +655,6 @@ class KansasGameHandler(KansasHandler):
         self.streams = {creatorOutputStream: creator}
         self.last_used = time.time()
         self.terminated = False
-
-    def handle_stackop(self, req, output):
-        with self._lock:
-            dest_t = req['dest_type']
-            dest_k = req['dest_key']
-            print dest_k, self._state.data[dest_t].keys()
-            stack = self._state.data[dest_t][dest_k]
-            if req['op_type'] == 'reverse':
-                stack.reverse()
-            elif req['op_type'] == 'shuffle':
-                self._state.resetOrientations(stack)
-                random.shuffle(stack)
-            else:
-                raise Exception("invalid stackop type")
-            self.broadcast(
-                set(self.streams.keys()),
-                'stackupdate',
-                {
-                    'op': req,
-                    'z_stack': stack,
-                    'orient': [self._state.data['orientations'][c] for c in stack],
-                    'seqno': self.nextseqno(),
-                })
 
     def handle_bulkmove(self, req, output):
         with self._lock:

@@ -837,9 +837,13 @@ KansasUI.prototype._reverseStack = function(memberCard) {
     var stack = this.client.stackOf(memberCard);
     var bottom = stack[0];
     $(".hovermenu").children("img").prop("src", this._highRes(bottom));
-    this.client.send("stackop", {op_type: "reverse",
-                                 dest_type: "board",
-                                 dest_key: parseInt(this.client.getPos(memberCard)[1])});
+    var txn = this.view.startBulkMove();
+    var i = stack.length - 1;
+    while (i >= 0) {
+        txn.moveOnto(stack[i], bottom);
+        i -= 1;
+    }
+    txn.commit();
 }
 
 KansasUI.prototype._shuffleSelectionConfirm = function() {
@@ -889,6 +893,24 @@ function majority(stream, keyFn) {
     return majority;
 }
 
+// Standard Fisher-Yates shuffle
+function shuffle(array) {
+    var counter = array.length, temp, index;
+
+    // While there are elements in the array
+    while (counter > 0) {
+        // Pick a random index
+        index = (Math.random() * counter--) | 0;
+
+        // And swap the last element with it
+        temp = array[counter];
+        array[counter] = array[index];
+        array[index] = temp;
+    }
+
+    return array;
+}
+
 /* Shuffles majority if there is one, and puts leftover cards on top. */
 KansasUI.prototype._shuffleSelection = function() {
     var that = this;
@@ -898,17 +920,17 @@ KansasUI.prototype._shuffleSelection = function() {
     var exemplar = this.client.getStackTop('board', majorityKey);
     var orient = this.client.getOrient(exemplar);
     var txn = this.view.startBulkMove();
-    $.each(zSorted(selectedSet), function() {
+    var randomized = [];
+    $.each(selectedSet, function() {
+        randomized.push(this);
+    });
+    shuffle(randomized);
+    $.each(randomized, function() {
         var card = $(this);
-        if (that.client.getPos(exemplar)[1] != that.client.getPos(card)[1])
-            txn.moveOnto(card, exemplar);
-        if (that.client.getOrient(card) != orient)
-            txn.setOrient(card, orient);
+        txn.moveOnto(card, exemplar);
+        txn.setOrient(card, orient);
     });
     txn.commit();
-    this.client.send("stackop", {op_type: "shuffle",
-                                 dest_type: "board",
-                                 dest_key: parseInt(majorityKey)});
 }
 
 /* Goes from a single card to selecting the entire stack. */

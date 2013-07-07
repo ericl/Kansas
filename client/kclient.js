@@ -34,7 +34,6 @@
  *
  *  low-level mutation methods for game state:
  *  (generally, prefer using KansasView for mutations)
- *      kclient.applyStackOp(pos_type, pos, op);
  *      kclient.newBulkMoveTxn()
  *          .append(id1, pos_type_a, pos_a, server_orient_a)
  *          .append(id2, pos_type_a, pos_a, server_orient_b)
