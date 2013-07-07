@@ -126,7 +126,7 @@ KansasClient.prototype.connect = function() {
     this.ui.showSpinner();
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";
-    this._state = 'connecting';
+    this._state = 'opening';
     var that = this;
     this._ws = $.websocket(
         "ws:///" + this.hostname + ":" + this.ip_port + "/kansas",

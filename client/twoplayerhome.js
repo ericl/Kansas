@@ -39,6 +39,7 @@ function enterGame() {
 
     /* Enforces that this function is only run once. */
     enterGame = function() {};
+    client._state = 'opened_pending_connect';
     client.send("connect", {
         user: user,
         gameid: gameid,
