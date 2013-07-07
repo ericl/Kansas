@@ -33,7 +33,6 @@ function imageDump(client, stack) {
 
 function textDump(client) {
     console.log("Rerendering entire client state.");
-    $("body").html(JSON.stringify(client._game.state));
     var buf = "<p>Status: " + client._state + "</p><h1>Hands</h1>";
     var hands = client.listStacks('hands');
     for (i in hands) {
