@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Kansas Test</title>
+        <meta name="viewport" content="target-densitydpi=device-dpi user-scalable=no, initial-scale=0.5, maximum-scale=0.5, minimum-scale=0.5" />
+        <link rel="stylesheet" href="app.css" type="text/css" />
+        <script type="text/javascript" src="third_party/jquery-1.8.3.min.js"></script>
+        <script type="text/javascript" src="third_party/jquery.animate-enhanced.min.js"></script>
+        <script type="text/javascript" src="third_party/jquery.websocket-0.0.1.js"></script>
+        <script type="text/javascript" src="third_party/jquery-ui-1.9.2.custom.min.js"></script>
+        <script type="text/javascript" src="client/simpleui.js"></script>
+        <script type="text/javascript" src="client/kclient.js"></script>
+        <script type="text/javascript" src="client/twoplayerhome.js"></script>
+        <script>
+            $(document).ready(function() {
+                setupTwoPlayerHome(new SimpleUI());
+            });
+        </script>
+    </head>
+    <body>
+        <div id="homescreen">
+            <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
+            <h3>Player Settings</h3>
+            <input id="username" type=textbox value="Anonymous" name="name">
+            <input id="player1" type="radio" name="users" checked>Player 1
+            <input id="player2" type="radio" name="users">Player 2
+            <h3>Choose Game</h3>
+            <div id="gamelist"><span id="gamelist_loading">Loading...</span></div>
+            <div class="gamechoice">
+                <input id="gamename" type=textbox>
+                <button id="newgame">New Game</button>
+                <br>
+                <input type="checkbox" id="private">Private Game
+            </div>
+        </div>
+        <textarea style="display: none; position: absolute; z-index: 9999999; right: 0" id="console" rows=15 cols=60></textarea><br>
+        <div id="arena">
+            <div style="float: left;" class="connected home-hidden">
+                <!--
+                <button id="sync">Force Sync</button>
+                <button id="reset">Reset Game</button>
+                -->
+                <button id="debug">Toggle Debug</button>
+                <button id="end">End Game</button>
+                <button id="leave">Leave Game</button>
+                <button id="add">Add</button>
+
+
+            </div>
+            <div id="spinner" class="home-hidden" style="font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding: 12px; background-color: #FFFBDF; font-size: 25pt;">Loading...</div>
+            <div id="stats" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 0; padding: 12px; color: white; background-color: green; font-size: 25pt;">Error.</div>
+            <div id="error" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 1; padding: 12px; color: white; background-color: red; font-size: 25pt;">Error.</div>
+            <div id="presence"></div>
+            <br>
+            <textarea id="addtext" value="" style="display: none; z-index: 99999999" rows = 15></textarea>
+            </br>
+            <div id="selectionbox"><span></span></div>
+            <div id="selectionarea"></div>
+            <div id="hand" class="collapsed home-hidden"></div>
+
+        </div>
+        <div id="divider" class="home-hidden"></div>
+    </body>
+</html>
+

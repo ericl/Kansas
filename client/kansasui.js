@@ -1,7 +1,8 @@
 /* Manages card rendering and user input / output.
  *
- * Defined methods for 'kansas_ui' module:
+ * Defined methods for 'KansasUI' module:
  *
+ *      var kansas_ui = new KansasUI();
  *      kansas_ui.init(client: KansasClient, uuid: str, isPlayer1: bool)
  *          Called when the client has been connected to a game.
  *          No new methods should be bound to the client by kansasui.
@@ -37,8 +38,6 @@ function KansasUI() {
     this.oldSnapCard = null;
     this.containmentHint = null;
     this.selectedSet = [];
-    this.updateCount = 0;
-    this.animationCount = 0;
     this.spinnerShowQueued = false;
     this.nextBoardZIndex = 200;
     this.nextHandZIndex = 4000000;
@@ -49,7 +48,6 @@ function KansasUI() {
 
 // Tracks perf statistics.
 var animationCount = 0;
-var updateCount = 0;
 var zChanges = 0;
 var zShuffles = 0;
 
@@ -1209,7 +1207,6 @@ KansasUI.prototype._moveOffscreen = function(card) {
     var destX = 200;
     if (parseInt(card.css("top")) != kOffscreenY) {
         animationCount += 1;
-        updateCount += 1;
         card.animate({
             left: (destX != parseInt(card.css("left"))) ? destX : destX + XXX_jitter,
             top: kOffscreenY,
@@ -1571,7 +1568,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     setInterval(function() {
         $("#stats")
             .text("anim: " + animationCount
-              + ", updates: " + updateCount
               + ", out: " + that.client._ws.sendCount
               + ", in: " + that.client._ws.recvCount
               + ", zCh: " + zChanges
@@ -1780,7 +1776,6 @@ KansasUI.prototype._redrawHand = function() {
         var yChanged = parseInt(currentY) != parseInt(cd.css('top'));
         if (xChanged || yChanged) {
             animationCount += 1;
-            updateCount += 1;
             cd.animate({
                 left: currentX + (xChanged ? 0 : XXX_jitter),
                 top: currentY + (yChanged ? 0 : XXX_jitter),
@@ -1819,7 +1814,7 @@ KansasUI.prototype._redrawCard = function(card) {
     var yChanged = parseInt(newY) != parseInt(card.css('top'));
     XXX_jitter *= -1;
     if (xChanged || yChanged) {
-        this.animationCount += 1;
+        animationCount += 1;
         card.animate({
             left: newX + (xChanged ? 0 : XXX_jitter),
             top: newY + (yChanged ? 0 : XXX_jitter),
