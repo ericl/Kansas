@@ -359,6 +359,7 @@ class CachingLoader(dict):
 
         logging.info("Cache load in %.3f seconds" % (time.time() - start))
 
+    # XXX(ekl) this should be defined in KansasState only
     def add_card(self, front_url):
         """Returns id of new card."""
 
@@ -446,11 +447,6 @@ class KansasGameState(object):
             for card in hand:
                 if card not in self.data['orientations']:
                     self.data['orientations'][card] = -1
-
-    def resetOrientations(self, stack):
-        canonicalOrient = self.data['orientations'][stack[-1]]
-        for card in stack:
-            self.data['orientations'][card] = canonicalOrient
 
     def buildIndex(self):
         index = {}
