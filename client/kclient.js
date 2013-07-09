@@ -329,17 +329,6 @@ KansasClient.prototype._eventHandlers = function(that) {
             }
             that._notify('added', added);
         },
-        stackupdate: function(e) {
-            var op = e.data.op;
-
-            that._game.state[op.dest_type][op.dest_key] = e.data.z_stack;
-            for (i in e.data.z_stack) {
-                var id = e.data.z_stack[i];
-                that._game.state.orientations[id] = e.data.orient[i];
-            }
-
-            that._notify('stackchanged', [op.dest_type, op.dest_key]);
-        },
         bulkupdate: function(e) {
             var stacksTouched = {};
 
