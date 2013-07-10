@@ -21,11 +21,7 @@ Running a test server:
 
     Starting the websocket server:
 
-        $ python test_server.py 8080
-
-    Starting the frontend server:
-
-        $ python -m SimpleHTTPServer
+        $ ./start
 
     Then, visit:
         
