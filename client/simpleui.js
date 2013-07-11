@@ -96,4 +96,6 @@ SimpleUI.prototype.warning = function(msg) {
     textDump(this.client);
 }
 
+SimpleUI.prototype.clear = function() {}
+
 })();  /* end namespace simpleui */

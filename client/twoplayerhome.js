@@ -46,6 +46,9 @@ function enterGame() {
 }
 
 function handleError(msg) {
+    if (msg == 'game terminated') {
+        client.halted = true;
+    }
     kansas_ui.warning("Server: " + msg);
 }
 

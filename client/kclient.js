@@ -45,6 +45,7 @@ function KansasClient(hostname, ip_port, kansas_ui) {
     this.hostname = hostname;
     this.ip_port = ip_port;
     this.ui = kansas_ui;
+    this.halted = false;
     this._ws = null;
     this._state = 'offline';
     this._game = {
@@ -130,6 +131,8 @@ KansasClient.prototype.send = function(tag, data) {
 }
 
 KansasClient.prototype.connect = function() {
+    if (this.halted)
+        throw "client halted";
     this.ui.showSpinner();
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";
