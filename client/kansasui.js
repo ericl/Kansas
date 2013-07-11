@@ -920,7 +920,7 @@ KansasUI.prototype._shuffleSelection = function() {
         return that.client.getPos($(x))[1];
     });
     var exemplar = this.client.getStackTop('board', majorityKey);
-    var orient = this.client.getOrient(exemplar);
+    var orient = -1;  // By default, hides all cards.
     var txn = this.view.startBulkMove();
     var randomized = [];
     $.each(selectedSet, function() {
