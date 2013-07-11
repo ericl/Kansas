@@ -15,6 +15,7 @@ Features:
 Dependencies:
 
     pywebsocket - http://code.google.com/p/pywebsocket/
+    python-leveldb
     python-imaging (optional)
 
 Running a test server:
