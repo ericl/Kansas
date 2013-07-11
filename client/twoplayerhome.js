@@ -22,7 +22,7 @@ function enterGame() {
     $("#homescreen").fadeOut('slow');
     $(".home-hidden").fadeIn('slow');
     var orient;
-    user = $("#username").val();
+    user = $("#username").val() || 'Undefined_User';
     if ($("#player1").is(":checked")) {
         orient = "player1";
     } else {
