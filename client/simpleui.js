@@ -77,13 +77,9 @@ SimpleUI.prototype.handlePresence = function(data) {
     console.log("Presence: " + data);
 }
 
-SimpleUI.prototype.showSpinner = function() {
-    $("#spinner").show();
-}
+SimpleUI.prototype.showSpinner = function() {}
 
-SimpleUI.prototype.hideSpinner = function() {
-    $("#spinner").hide();
-}
+SimpleUI.prototype.hideSpinner = function() {}
 
 SimpleUI.prototype.vlog = function(level, msg) {
     if (level <= LOGLEVEL) {
