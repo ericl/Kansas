@@ -32,6 +32,7 @@ function KansasUI() {
     this.activeCard = null;
     this.draggingId = null;
     this.dragging = false;
+    this.initialized_once = false;
     this.disableArenaEvents = false;
     this.dragStartKey = null;
     this.hasDraggedOffStart = false;
@@ -1267,13 +1268,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     }
     this._redrawDivider();
 
-
-    document.addEventListener("touchstart", touchHandler, true);
-    document.addEventListener("touchmove", touchHandler, true);
-    document.addEventListener("touchend", touchHandler, true);
-    document.addEventListener("touchcancel", touchHandler, true);
-    document.addEventListener("touchleave", touchHandler, true);
-
     this.eventTable = {
         'flip': this._flipCard,
         'unflip': this._unflipCard,
@@ -1297,6 +1291,17 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
              return "keepselection";
         },
     }
+
+    if (this.initialized_once) {
+        return;
+    }
+    this.initialized_once = true;
+
+    document.addEventListener("touchstart", touchHandler, true);
+    document.addEventListener("touchmove", touchHandler, true);
+    document.addEventListener("touchend", touchHandler, true);
+    document.addEventListener("touchcancel", touchHandler, true);
+    document.addEventListener("touchleave", touchHandler, true);
 
     $("#sync").mouseup(function(e) {
         this.client.send("resync");
