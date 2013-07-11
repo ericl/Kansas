@@ -66,6 +66,9 @@ class Namespace(object):
 
 
 if __name__ == '__main__':
-    print '== Latest namespaces =='
-    for name, stats in ListNamespaces('../db'):
+    path = '../db'
+    print _GetDB(path).GetStats()
+    print '-- Namespaces --'
+    for name, stats in ListNamespaces(path):
         print name, stats
+        print "num keys =", len(list(Namespace(path, name, version=stats[1])))
