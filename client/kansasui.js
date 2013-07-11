@@ -17,6 +17,7 @@
  *      kansas_ui.hideSpinner()
  *      kansas_ui.vlog(level: int, msg)
  *      kansas_ui.warning(msg)
+ *      kansas_ui.clear()
  */
 
 function KansasUI() {
@@ -2090,6 +2091,11 @@ KansasUI.prototype.warning = function(msg) {
         $("#error").text(msg).show();
     }
     console.log("WARNING: " + msg);
+}
+
+KansasUI.prototype.clear = function(msg) {
+    this.hideSpinner();
+    $("#error").hide();
 }
 
 KansasUI.prototype.vlog = function(i, msg) {

@@ -37,8 +37,6 @@ function enterGame() {
 
     kansas_ui.init(client, uuid, user, $("#player1").is(":checked"));
 
-    /* Enforces that this function is only run once. */
-    enterGame = function() {};
     client._state = 'opened_pending_connect';
     client.send("connect", {
         user: user,
@@ -52,6 +50,7 @@ function handleError(msg) {
 }
 
 function handleSocketOpen() {
+    kansas_ui.clear();
     if (document.location.hash) {
         var arr = document.location.hash.split(';');
         user = arr[0].substr(1);
@@ -68,9 +67,10 @@ function handleSocketOpen() {
     }
 }
 
-function handleSocketClose() {
-    kansas_ui.warning("Connection Error.");
+function handleSocketClose(client) {
+    kansas_ui.warning("Connecting...");
     kansas_ui.hideSpinner();
+    setTimeout(function() { client.connect(); }, 1000);
 }
 
 function handleListGames(data) {
@@ -158,7 +158,7 @@ $(document).ready(function() {
     client = new KansasClient(hostname, kWSPort, kansas_ui)
         .bind('opened', handleSocketOpen)
         .bind('error', handleError)
-        .bind('disconnected', handleSocketClose)
+        .bind('disconnected', function() { handleSocketClose(client); } )
         .bind('listgames', handleListGames)
         .bind('broadcast', function(x) { kansas_ui.handleBroadcast(x); })
         .bind('presence', function(x) { kansas_ui.handlePresence(x); })
