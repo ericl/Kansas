@@ -52,6 +52,7 @@ function KansasUI() {
 var animationCount = 0;
 var zChanges = 0;
 var zShuffles = 0;
+var isRetina = window.devicePixelRatio > 1;
 
 var originalZIndex = jQuery.fn.zIndex;
 jQuery.fn.zIndex = function() {
@@ -1214,7 +1215,9 @@ KansasUI.prototype._moveOffscreen = function(card) {
 /* Changes the visible orientation the card */
 KansasUI.prototype._setOrientProperties = function(card, orient) {
     if (orient > 0) {
-        card.prop("src", this._toResource(this.client.getSmallUrl(card)));
+        card.prop("src", this._toResource(
+            isRetina ? this.client.getFrontUrl(card)
+                     : this.client.getSmallUrl(card)));
     } else {
         card.prop("src", this._toResource(this.client.getBackUrl(card)));
     }
