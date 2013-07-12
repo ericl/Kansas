@@ -2078,7 +2078,7 @@ KansasUI.prototype.showSpinner = function() {
     if (!this.spinnerShowQueued && this.client._state != 'offline') {
         this.spinnerShowQueued = true;
         var that = this;
-        setTimeout(function() { that._reallyShowSpinner(); }, 500);
+        setTimeout(function() { that._reallyShowSpinner(); }, 1000);
     }
 }
 
