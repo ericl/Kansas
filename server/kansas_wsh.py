@@ -388,6 +388,7 @@ class KansasGameHandler(KansasHandler):
         self.handlers['end'] = self.handle_end
         self.handlers['remove'] = self.handle_remove
         self.handlers['add'] = self.handle_add
+        self.handlers['keepalive'] = self.handle_keepalive
         self.streams = {}
         self.last_used = time.time()
         self.terminated = False
@@ -426,6 +427,9 @@ class KansasGameHandler(KansasHandler):
                 })
             self.broadcast(set(self.streams.keys()), 'bulkupdate', msg)
             self.save()
+
+    def handle_keepalive(self, req, output):
+        logging.info('keepalive from ' + str(output.stream));
 
     def handle_broadcast(self, req, output):
         with self._lock:

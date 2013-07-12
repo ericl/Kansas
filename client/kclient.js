@@ -52,6 +52,12 @@ function KansasClient(hostname, ip_port, kansas_ui) {
         state: {},
         index: {},
     };
+    var that = this;
+    setInterval(function() {
+        if (that._state == 'connected') {
+            that._ws.send('keepalive');
+        }
+    }, 30000);
 }
 
 function KansasBulkMove(client) {
