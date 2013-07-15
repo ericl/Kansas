@@ -306,12 +306,6 @@ KansasClient.prototype._eventHandlers = function(that) {
             that._state = 'connected';
             that._reset(e.data[0]);
         },
-        resync_resp: function(e) {
-            that._reset(e.data[0]);
-        },
-        reset: function(e) {
-            that._reset(e.data[0]);
-        },
         remove_resp: function(e) {
             for (i in e.data) {
                 var id = e.data[i];

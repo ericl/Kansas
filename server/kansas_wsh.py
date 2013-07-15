@@ -384,8 +384,6 @@ class KansasGameHandler(KansasHandler):
         self.gameid = gameid
         self.handlers['broadcast'] = self.handle_broadcast
         self.handlers['bulkmove'] = self.handle_bulkmove
-        self.handlers['resync'] = self.handle_resync
-        self.handlers['reset'] = self.handle_reset
         self.handlers['end'] = self.handle_end
         self.handlers['remove'] = self.handle_remove
         self.handlers['add'] = self.handle_add
@@ -441,19 +439,6 @@ class KansasGameHandler(KansasHandler):
                 'broadcast_message',
                 req)
             output.reply('ok')
-
-    def handle_resync(self, req, output):
-        with self._lock:
-            output.reply(self.snapshot())
-
-    def handle_reset(self, req, output):
-        with self._lock:
-            self._state = KansasGameState()
-            self.broadcast(
-                set(self.streams.keys()),
-                'reset',
-                self.snapshot())
-            self.save()
 
     def handle_remove(self, req, output):
         with self._lock:

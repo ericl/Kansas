@@ -6,6 +6,8 @@ import pickle
 
 _databases = {}
 def _GetDB(dbPath):
+    """Returns or creates a LevelDB instance stored at dbPath."""
+
     if dbPath not in _databases:
         _databases[dbPath] = leveldb.LevelDB(dbPath)
     return _databases[dbPath]
@@ -13,17 +15,23 @@ def _GetDB(dbPath):
 
 _meta = {}
 def _GetMeta(dbPath):
+    """Returns the meta table, which is a list of all other tables."""
+
     if dbPath not in _meta:
         _meta[dbPath] = Namespace(dbPath, '__META__', version=0)
     return _meta[dbPath]
 
 
 def ListNamespaces(dbPath):
+    """Lists all namespaces registered in the meta table."""
+
     meta = _GetMeta(dbPath)
     return list(meta)
 
 
 class Namespace(object):
+    """Returns a named, versioned subpartition of a LevelDB instance."""
+
     def __init__(self, dbpath, name, version=0, serializer=pickle):
         if ':' in name:
             raise ValueError("name must not contain ':'")
