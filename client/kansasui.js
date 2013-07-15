@@ -7,7 +7,6 @@
  *          Called when the client has been connected to a game.
  *          No new methods should be bound to the client by kansasui.
  *
- *      kansas_ui.handleReset()
  *      kansas_ui.handleAdd(ids: list[int])
  *      kansas_ui.handleRemove(ids: list[int])
  *      kansas_ui.handleStackChanged(key: [str, str|int])
@@ -1305,16 +1304,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     document.addEventListener("touchend", touchHandler, true);
     document.addEventListener("touchcancel", touchHandler, true);
     document.addEventListener("touchleave", touchHandler, true);
-
-    $("#sync").mouseup(function(e) {
-        this.client.send("resync");
-    });
-
-    $("#reset").mouseup(function(e) {
-        if (confirm("Are you sure you want to reset the game?")) {
-            this.client.send("reset");
-        }
-    });
 
     $("#end").mouseup(function(e) {
         if (confirm("Are you sure you want to end the game?")) {
