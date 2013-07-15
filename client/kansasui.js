@@ -1336,9 +1336,14 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         loggingEnabled = !loggingEnabled;
     });
 
-    $("#deck, #close").mouseup(function(e) {
-        $("#clear, #add, #close, #savedeck, #loaddeck, #deckname").toggle();
-        $("#deckpanel").animate({width:'toggle'}, 300);
+    $('#close').click(function(){
+        $('#deck').click();
+    });
+
+    $('#deck').toggle(function(){
+        $('#deckpanel').animate({left:'0%'}, 300);
+    },function(){
+        $('#deckpanel').animate({left:'-20%'}, 300);
     });
 
     $("#clear").mouseup(function(e) {

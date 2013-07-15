@@ -28,16 +28,15 @@ html, body {
 #add, #clear, #savedeck, #loaddeck {
     height: 5%;
     width: 40%;
-    display:none;
-}
-#deckname {
-    display:none;
-}
-#close {
-    float: left;
-    display:none;
 }
 
+#deckname {
+    width: 80%;
+}
+
+#close {
+    float: left;
+}
 
 #addtext {
     margin-top: 10%;
@@ -48,17 +47,15 @@ html, body {
     float: left;
 }
 
-
 #deckpanel {
-    display: none;
     background-color: black;
+    left: -20%;
     opacity: 0.65;
     height: 100%;
     width: 20%;
     position: absolute;
     z-index: 9999999;
     top: 0px;
-    left: 0;
 }
 
 #hand {

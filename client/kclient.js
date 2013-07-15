@@ -306,6 +306,12 @@ KansasClient.prototype._eventHandlers = function(that) {
             that._state = 'connected';
             that._reset(e.data[0]);
         },
+        savedeck_resp: function(e) {
+            that.ui.vlog(1, e.data);
+        },
+        loaddeck_resp: function(e) {
+            that.ui.vlog(1, e.data);
+        },
         resync_resp: function(e) {
             that._reset(e.data[0]);
         },

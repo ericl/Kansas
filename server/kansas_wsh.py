@@ -484,39 +484,18 @@ class KansasGameHandler(KansasHandler):
                 set(self.streams.keys()),
                 'add_resp', added)
             self.save()
+
+    def handle_loaddeck(self, req, output):
+        decklist = Decks.Get(req)
+        if decklist:
+            self.handle_add(decklist, output)
+        else:
+            output.reply('Deck ' + req + ' does not exist')
     
     def handle_savedeck(self, req, output):
         with self._lock:
             Decks.Put(req['name'], req['deck_list']) 
-            self.broadcast(
-                set(self.streams.keys()),
-                'save_deck', req)
-
-
-    def handle_loaddeck(self, req, output):
-        with self._lock:
-            decklist = Decks.Get(req)
-            if decklist:
-                added = []
-                for card in decklist:
-                    new_id = self._state.add_card(card)
-                    added.append({
-                        'id': new_id,
-                        'orient': self._state.data['orientations'][new_id],
-                        'url': self._state.data['urls'][new_id],
-                        'small_url': self._state.data['urls_small'][new_id],
-                        'pos': self._state.index[new_id],
-                    })
-                self._state.initializeStacks()
-                self.broadcast(
-                    set(self.streams.keys()),
-                    'add_resp', added)
-                self.save()
-            else: 
-                self.broadcast(
-                    set(self.streams.keys()),
-                    'add_resp', [])
-
+            output.reply('Deck ' + req['name'] + ' saved')
 
     def snapshot(self):
         with self._lock:
