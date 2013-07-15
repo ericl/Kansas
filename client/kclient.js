@@ -312,12 +312,6 @@ KansasClient.prototype._eventHandlers = function(that) {
         loaddeck_resp: function(e) {
             that.ui.vlog(1, e.data);
         },
-        resync_resp: function(e) {
-            that._reset(e.data[0]);
-        },
-        reset: function(e) {
-            that._reset(e.data[0]);
-        },
         remove_resp: function(e) {
             for (i in e.data) {
                 var id = e.data[i];
