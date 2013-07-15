@@ -1338,7 +1338,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
     $("#deck, #close").mouseup(function(e) {
         $("#deckpanel").animate({width:'toggle'}, 300);
-        $(".addbutton, #close").toggle();
+        $("#clear, #add, #close").toggle();
     });
     $("#clear").mouseup(function(e) {
         $('#addtext').val("");

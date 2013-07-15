@@ -25,12 +25,13 @@ html, body {
     right: 0;
 }
 
-.addbutton {
+#add, #clear {
     height: 5%;
     width: 40%;
     display:none;
 }
 #close {
+    float: left;
     display:none;
 }
 
