@@ -25,9 +25,12 @@ html, body {
     right: 0;
 }
 
-#add, #clear {
+#add, #clear, #savedeck, #loaddeck {
     height: 5%;
     width: 40%;
+    display:none;
+}
+#deckname {
     display:none;
 }
 #close {

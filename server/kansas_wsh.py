@@ -33,6 +33,7 @@ if not os.path.exists(kCachePath):
 
 Games = namespaces.Namespace(kDBPath, 'Games', version=1)
 Cards = namespaces.Namespace(kDBPath, 'Cards', version=1)
+Decks = namespaces.Namespace(kDBPath, 'Decks', version=1)
 LookupCache = namespaces.Namespace(kDBPath, 'LookupCache', version=1)
 
 
@@ -388,6 +389,8 @@ class KansasGameHandler(KansasHandler):
         self.handlers['end'] = self.handle_end
         self.handlers['remove'] = self.handle_remove
         self.handlers['add'] = self.handle_add
+        self.handlers['savedeck'] = self.handle_savedeck
+        self.handlers['loaddeck'] = self.handle_loaddeck
         self.handlers['keepalive'] = self.handle_keepalive
         self.streams = {}
         self.last_used = time.time()
@@ -481,6 +484,39 @@ class KansasGameHandler(KansasHandler):
                 set(self.streams.keys()),
                 'add_resp', added)
             self.save()
+    
+    def handle_savedeck(self, req, output):
+        with self._lock:
+            Decks.Put(req['name'], req['deck_list']) 
+            self.broadcast(
+                set(self.streams.keys()),
+                'save_deck', req)
+
+
+    def handle_loaddeck(self, req, output):
+        with self._lock:
+            decklist = Decks.Get(req)
+            if decklist:
+                added = []
+                for card in decklist:
+                    new_id = self._state.add_card(card)
+                    added.append({
+                        'id': new_id,
+                        'orient': self._state.data['orientations'][new_id],
+                        'url': self._state.data['urls'][new_id],
+                        'small_url': self._state.data['urls_small'][new_id],
+                        'pos': self._state.index[new_id],
+                    })
+                self._state.initializeStacks()
+                self.broadcast(
+                    set(self.streams.keys()),
+                    'add_resp', added)
+                self.save()
+            else: 
+                self.broadcast(
+                    set(self.streams.keys()),
+                    'add_resp', [])
+
 
     def snapshot(self):
         with self._lock:

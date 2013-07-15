@@ -1337,15 +1337,39 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $("#deck, #close").mouseup(function(e) {
+        $("#clear, #add, #close, #savedeck, #loaddeck, #deckname").toggle();
         $("#deckpanel").animate({width:'toggle'}, 300);
-        $("#clear, #add, #close").toggle();
     });
+
     $("#clear").mouseup(function(e) {
         $('#addtext').val("");
     });
 
+    $("#savedeck").mouseup(function(e) {
+        var cards = $('#addtext').val();
+        var deck = parseDeck(cards);
+        var data = {'name': $('#deckname').val(),
+                    'deck_list': deck}
+        client.send('savedeck', data);
+        $('#addtext').val("");
+    });
+
+    $("#loaddeck").mouseup(function(e) {
+        if ($('#deckname').val()) {
+            client.send('loaddeck', $('#deckname').val());
+        }
+    });
+
     $("#add").mouseup(function(e) {
         var cards = $('#addtext').val();
+        var sendList = parseDeck(cards);
+        if (sendList.length > 500)
+            warning("Trying to add too many cards");
+        else 
+            client.send('add', sendList);
+    });
+    
+    function parseDeck(cards) {
         cardNames = cards.split("\n");
         sendList = [];
         var regex = /^([0-9]+) ([a-zA-Z,\-\' \/]+)$/;
@@ -1363,11 +1387,9 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 }
             }
         }
-        if (sendList.length > 500)
-            warning("Trying to add too many cards");
-        else 
-            client.send('add', sendList);
-    });
+        return sendList;
+
+    }
 
     $("#hand").droppable({
         over: function(event, ui) {
