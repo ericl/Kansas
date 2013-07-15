@@ -1336,35 +1336,37 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         loggingEnabled = !loggingEnabled;
     });
 
+    $("#deck, #close").mouseup(function(e) {
+        $("#deckpanel").animate({width:'toggle'}, 300);
+        $(".addbutton, #close").toggle();
+    });
+    $("#clear").mouseup(function(e) {
+        $('#addtext').val("");
+    });
+
     $("#add").mouseup(function(e) {
-        if ($('#addtext').css('display') == 'none') {
-            $('#addtext').toggle();
-        } else {
-            var cards = $('#addtext').val();
-            cardNames = cards.split("\n");
-            sendList = [];
-            var regex = /^([0-9]+) ([a-zA-Z,\-\' ]+)$/;
-            
-            for (var i = 0; i < cardNames.length; i++) {
-                var match = regex.exec(cardNames[i]);
-                if (match != null) {
-                var count = match[1];
-                    for (var j = 0; j < count; j++) {
-                        sendList[sendList.length] = {
-                            loc: that.view.coordToPos(
-                                that.view.width / 2 - kCardWidth,
-                                that.view.height * 2 / 3
-                            ),
-                            name: match[2]};
-                    }
+        var cards = $('#addtext').val();
+        cardNames = cards.split("\n");
+        sendList = [];
+        var regex = /^([0-9]+) ([a-zA-Z,\-\' \/]+)$/;
+        for (var i = 0; i < cardNames.length; i++) {
+            var match = regex.exec(cardNames[i]);
+            if (match != null) {
+            var count = match[1];
+                for (var j = 0; j < count; j++) {
+                    sendList[sendList.length] = {
+                        loc: that.view.coordToPos(
+                            that.view.width / 2 - kCardWidth,
+                            that.view.height * 2 / 3
+                        ),
+                        name: match[2]};
                 }
             }
-            if (sendList.length > 500)
-                warning("Trying to add too many cards");
-            else 
-                client.send('add', sendList);
-            $('#addtext').toggle();
         }
+        if (sendList.length > 500)
+            warning("Trying to add too many cards");
+        else 
+            client.send('add', sendList);
     });
 
     $("#hand").droppable({

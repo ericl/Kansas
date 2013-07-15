@@ -34,7 +34,14 @@
                 <input type="checkbox" id="private">Private Game
             </div>
         </div>
-        <textarea style="display: none; position: absolute; z-index: 9999999; right: 0" id="console" rows=15 cols=60></textarea><br>
+        <textarea id="console" rows=15 cols=60></textarea><br>
+        <div id="deckpanel">
+            <br>
+            <button id="close">Close Panel</button>
+            <textarea id="addtext" rows = 15></textarea><br>
+            <button class="addbutton">Add</button>
+            <button class="addbutton">Clear</button>
+        </div>
         <div id="arena">
             <div style="float: left;" class="connected home-hidden">
                 <!--
@@ -44,7 +51,7 @@
                 <button id="debug">Toggle Debug</button>
                 <button id="end">End Game</button>
                 <button id="leave">Leave Game</button>
-                <button id="add">Add</button>
+                <button id="deck">Deck</button>
 
 
             </div>
@@ -52,9 +59,6 @@
             <div id="stats" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 0; padding: 12px; color: white; background-color: green; font-size: 25pt;">Error.</div>
             <div id="error" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 1; padding: 12px; color: white; background-color: red; font-size: 25pt;">Error.</div>
             <div id="presence"></div>
-            <br>
-            <textarea id="addtext" value="" style="display: none; z-index: 99999999" rows = 15></textarea>
-            </br>
             <div id="selectionbox"><span></span></div>
             <div id="selectionarea"></div>
             <div id="hand" class="collapsed home-hidden"></div>

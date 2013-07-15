@@ -18,6 +18,45 @@ html, body {
     margin: 0;
 }
 
+#console {
+    display: none;
+    position: absolute;
+    z-index: 9999999;
+    right: 0;
+}
+
+.addbutton {
+    height: 5%;
+    width: 40%;
+    display:none;
+}
+#close {
+    display:none;
+}
+
+
+#addtext {
+    margin-top: 10%;
+    width: 90%;
+    height: 30%;
+    max-width:90%;
+    max-height:30%;
+    float: left;
+}
+
+
+#deckpanel {
+    display: none;
+    background-color: black;
+    opacity: 0.65;
+    height: 100%;
+    width: 20%;
+    position: absolute;
+    z-index: 9999999;
+    top: 0px;
+    left: 0;
+}
+
 #hand {
     width: 100%;
     background-color: #257390;
