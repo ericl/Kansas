@@ -306,11 +306,8 @@ KansasClient.prototype._eventHandlers = function(that) {
             that._state = 'connected';
             that._reset(e.data[0]);
         },
-        savedeck_resp: function(e) {
-            that.ui.vlog(1, e.data);
-        },
-        loaddeck_resp: function(e) {
-            that.ui.vlog(1, e.data);
+        kvop_resp: function(e) {
+            that._notify('kvop', e.data);
         },
         remove_resp: function(e) {
             for (i in e.data) {
@@ -401,6 +398,7 @@ KansasClient.prototype._hooks = {
     error: function(data) {},
     disconnected: function() {},
     listgames: function(data) {},
+    kvop: function(data) {},
     broadcast: function(data) {},
     presence: function(data) {},
     stackchanged: function(data) {},

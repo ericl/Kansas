@@ -9,6 +9,7 @@
  *
  *      kansas_ui.handleAdd(ids: list[int])
  *      kansas_ui.handleRemove(ids: list[int])
+ *      kansas_ui.handleKVResp(data: json)
  *      kansas_ui.handleStackChanged(key: [str, str|int])
  *      kansas_ui.handleBroadcast(data: json)
  *      kansas_ui.handlePresence(data: json)
@@ -1331,6 +1332,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
     $('#deck').toggle(function(){
         $('#deckpanel').animate({left:'0%'}, 300);
+        that._refreshDeckList();
     },function(){
         $('#deckpanel').animate({left:'-20%'}, 300);
     });
@@ -1341,17 +1343,31 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
     $("#savedeck").mouseup(function(e) {
         var cards = $('#addtext').val();
-        var deck = parseDeck(cards);
-        var data = {'name': $('#deckname').val(),
-                    'deck_list': deck}
-        client.send('savedeck', data);
-        $('#addtext').val("");
+        var name = $('#deckname').val();
+        if (!cards || !name) {
+            return;
+        }
+        client.send('kvop', {
+            'namespace': 'Decks',
+            'op': 'Put',
+            'key': name,
+            'value': cards,
+            'tag': 'deck_save',
+        });
+        $('#addtext').val('');
     });
 
     $("#loaddeck").mouseup(function(e) {
-        if ($('#deckname').val()) {
-            client.send('loaddeck', $('#deckname').val());
+        var name = $('#deckname').val();
+        if (!name) {
+            return;
         }
+        client.send('kvop', {
+            'namespace': 'Decks',
+            'op': 'Get',
+            'key': name,
+            'tag': 'deck_load',
+        });
     });
 
     $("#add").mouseup(function(e) {
@@ -2052,6 +2068,32 @@ KansasUI.prototype.handleStackChanged = function(key) {
     var dest_k = key[1];
     this.vlog(1, "stackChanged @ " + key);
     this._redrawStack(dest_k);
+}
+
+KansasUI.prototype.handleKVResp = function(data) {
+    if (data['req']['tag'] == 'deck_load') {
+        $('#addtext').val(data['resp']);
+    } else if (data['req']['tag'] == 'deck_save') {
+        this._refreshDeckList();
+    } else if (data['req']['tag'] == 'deck_list') {
+        this.vlog(1, 'showing deck data');
+        var html = "Available:";
+        data['resp'].forEach(function(name) {
+            html += "<br> * " + name;
+        });
+        $('#decks').html(html);
+    } else {
+        this.vlog(1, 'kvop response ignored');
+    }
+}
+
+KansasUI.prototype._refreshDeckList = function() {
+    this.vlog(1, 'send refresh deck');
+    this.client.send('kvop', {
+        'namespace': 'Decks',
+        'op': 'List',
+        'tag': 'deck_list',
+    });
 }
 
 KansasUI.prototype.handleBroadcast = function(data) {

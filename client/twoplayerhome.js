@@ -169,6 +169,7 @@ $(document).ready(function() {
         .bind('reset', function(x) { kansas_ui.handleReset(x); })
         .bind('removed', function(x) { kansas_ui.handleRemove(x); })
         .bind('added', function(x) { kansas_ui.handleAdd(x); })
+        .bind('kvop', function(x) { kansas_ui.handleKVResp(x); })
         .connect();
 
     if (clients.length == 0)
