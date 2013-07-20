@@ -32,9 +32,8 @@ if not os.path.exists(kCachePath):
 
 
 Games = namespaces.Namespace(kDBPath, 'Games', version=1)
-Cards = namespaces.Namespace(kDBPath, 'Cards', version=1)
-Decks = namespaces.Namespace(kDBPath, 'Decks', version=1)
 LookupCache = namespaces.Namespace(kDBPath, 'LookupCache', version=1)
+ClientDB = namespaces.Namespace(kDBPath, 'ClientDB', version=1)
 
 
 BLANK_DECK = {
@@ -235,13 +234,31 @@ class KansasHandler(object):
 
     def __init__(self):
         self._lock = threading.RLock()
-        self.handlers = {
-            'ping': self.handle_ping,
-        }
+        self.handlers = {}
+        self.handlers['ping'] = self.handle_ping
+        self.handlers['keepalive'] = self.handle_keepalive
+        self.handlers['query'] = self.handle_query
 
     def handle_ping(self, request, output):
         logging.debug("served ping")
         output.reply('pong')
+
+    def handle_keepalive(self, req, output):
+        logging.info('keepalive from ' + str(output.stream));
+
+    def handle_query(self, request, output):
+        logging.info("Trying exact match")
+        urls = CardNameToUrls(request['term'], True)
+        if urls:
+            output.reply({'urls': urls, 'tags': request.get('tags')})
+        else:
+            logging.info("Trying inexact match")
+            urls = CardNameToUrls(request['term'], False)
+            if urls:
+                output.reply({'urls': urls, 'tags': request.get('tags')})
+            else:
+                output.reply({
+                    'error': 'No match found.', 'tags': request.get('tags')})
 
     def notify_closed(self, stream):
         """Callback for when a stream has been closed."""
@@ -352,25 +369,10 @@ class KansasInitHandler(KansasHandler):
 
 
 class KansasSearchHandler(KansasHandler):
-    """There is a singleton search handler for all search api requests."""
+    """Handler that *only* serves search requests."""
 
     def __init__(self):
         KansasHandler.__init__(self)
-        self.handlers['query'] = self.handle_query
-
-    def handle_query(self, request, output):
-        logging.info("Trying exact match")
-        urls = CardNameToUrls(request['term'], True)
-        if urls:
-            output.reply({'urls': urls, 'tags': request.get('tags')})
-        else:
-            logging.info("Trying inexact match")
-            urls = CardNameToUrls(request['term'], False)
-            if urls:
-                output.reply({'urls': urls, 'tags': request.get('tags')})
-            else:
-                output.reply({
-                    'error': 'No match found.', 'tags': request.get('tags')})
 
 
 class KansasGameHandler(KansasHandler):
@@ -387,9 +389,7 @@ class KansasGameHandler(KansasHandler):
         self.handlers['end'] = self.handle_end
         self.handlers['remove'] = self.handle_remove
         self.handlers['add'] = self.handle_add
-        self.handlers['savedeck'] = self.handle_savedeck
-        self.handlers['loaddeck'] = self.handle_loaddeck
-        self.handlers['keepalive'] = self.handle_keepalive
+        self.handlers['kvop'] = self.handle_kvop
         self.streams = {}
         self.last_used = time.time()
         self.terminated = False
@@ -429,9 +429,6 @@ class KansasGameHandler(KansasHandler):
             self.broadcast(set(self.streams.keys()), 'bulkupdate', msg)
             self.save()
 
-    def handle_keepalive(self, req, output):
-        logging.info('keepalive from ' + str(output.stream));
-
     def handle_broadcast(self, req, output):
         with self._lock:
             self.broadcast(
@@ -469,18 +466,25 @@ class KansasGameHandler(KansasHandler):
                 set(self.streams.keys()),
                 'add_resp', added)
             self.save()
-
-    def handle_loaddeck(self, req, output):
-        decklist = Decks.Get(req)
-        if decklist:
-            self.handle_add(decklist, output)
-        else:
-            output.reply('Deck ' + req + ' does not exist')
     
-    def handle_savedeck(self, req, output):
-        with self._lock:
-            Decks.Put(req['name'], req['deck_list']) 
-            output.reply('Deck ' + req['name'] + ' saved')
+    def handle_kvop(self, req, output):
+        op = req['op']
+        ns = ClientDB.Subspace(req['namespace'])
+        resp = None
+        if op == 'Put':
+            resp = ns.Put(req['key'], req['value'])
+        elif op == 'Delete':
+            resp = ns.Delete(req['key'])
+        elif op == 'Get':
+            resp = ns.Get(req['key'])
+        elif op == 'List':
+            resp = []
+            for k, _ in ns:
+                resp.append(k)
+            print "LIST: " + str(resp)
+        else:
+            raise Exception("invalid kvop")
+        output.reply({'req': req, 'resp': resp})
 
     def snapshot(self):
         with self._lock:
