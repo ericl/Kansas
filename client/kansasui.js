@@ -923,15 +923,23 @@ KansasUI.prototype._shuffleSelection = function() {
     var exemplar = this.client.getStackTop('board', majorityKey);
     var orient = -1;  // By default, hides all cards.
     var txn = this.view.startBulkMove();
+
+    // First, flip cards upside down.
     var randomized = [];
     $.each(selectedSet, function() {
+        var card = $(this);
+        txn.setOrient(card, orient);
         randomized.push(this);
     });
+    txn.commit();
+
+    // Second, randomize their order. This cannot be done with (1) in the
+    // same txn because orientation changes are assumed to be in place.
+    txn = this.view.startBulkMove();
     shuffle(randomized);
     $.each(randomized, function() {
         var card = $(this);
         txn.moveOnto(card, exemplar);
-        txn.setOrient(card, orient);
     });
     txn.commit();
 }
