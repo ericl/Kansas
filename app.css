@@ -75,7 +75,7 @@ html, body {
 #deckpanel {
     background-color: black;
     left: -45%;
-    opacity: 0.80;
+    background-color: rgba(0, 0, 0, 0.8);
     padding: 5px;
     height: 90%;
     width: 35%;
@@ -392,4 +392,45 @@ div.hovernote {
     color: gray;
     font-size: small;
     padding: .5em;
+}
+
+#notfound {
+    position: relative;
+    left: 5px;
+    color: red;
+}
+
+#search_preview {
+    left: 36%;
+    background-color: rgba(0, 0, 0, 0.5);
+    max-height: 90%;
+    max-width: 800px;
+    overflow-y: auto;
+    padding: 5px;
+    position: absolute;
+    z-index: 9999999;
+    top: 0px;
+    border-radius: 6px;
+    display: none;
+}
+
+.kansas_preview {
+    padding: 10px;
+    margin: 0;
+    width: 240px;
+}
+
+#throbber {
+    display: none
+}
+
+#previews {
+    padding-top: 7em;
+}
+
+#floater {
+    background: rgba(255, 255, 255, 0.9);
+    padding-bottom: 1em;
+    width: 100%;
+    position: fixed;
 }

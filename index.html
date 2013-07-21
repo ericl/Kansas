@@ -12,6 +12,7 @@
         <script type="text/javascript" src="client/kclient.js"></script>
         <script type="text/javascript" src="client/kview.js"></script>
         <script type="text/javascript" src="client/twoplayerhome.js"></script>
+        <script type="text/javascript" src="client/search.js"></script>
         <script>
             $(document).ready(function() {
                 setupTwoPlayerHome(new KansasUI());
@@ -36,7 +37,13 @@
         </div>
         <textarea id="console" rows=15 cols=60></textarea><br>
         <div id="deckpanel">
-            <button id="closepanel" style="float: right; margin-right: -3px; margin-top: -3px;">&#x2716;</button>
+            <form class="navbar-form" style="float: left; margin-top: -3px">
+              <span style="color: white">Card Search </span>
+              <input id="kansas_typeahead" type="text" class="span5">
+              <span id="notfound" style="display: none">no matches</span>
+            </form>
+            <button id="closepanel" style="font-size: 25px; background-color: black; color: white; border: none; float: right; margin-right: -3px; margin-top: -3px;">&#x2716;</button>
+            <br>
             <br>
             <div id="deckinput" contentEditable=true>
                 <div>=== Welcome to the deck editor ===</div>
@@ -49,10 +56,10 @@
                 <div>2 Swamp</div>
                 <div>1 Forest</div>
                 <div></div><br>
-                <div>Then validate your deck and add it to the board. Note that this will replace previously placed decks.</div>
+                <div>Then preview your deck and add it to the board. Note that this will replace previously placed decks.</div>
             </div>
             <br>
-            <button id="validate">Validate</button>
+            <button id="validate">Preview</button>
             <button id="add" class="requiresvalidation" disabled=true>Add to Board</button>
             <br>
             <br>
@@ -63,6 +70,7 @@
             </div>
             <div id="decks" style="color: white"></div>
         </div>
+        <div id="search_preview"></div>
         <div id="arena">
             <div style="float: left;" class="connected home-hidden">
                 <button id="end">End Game</button>

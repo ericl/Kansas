@@ -1,108 +1,72 @@
 /* Provides instant search service. */
 
-// TODO namespace these variables.
-var kWSPort = 8080
-var hostname = window.location.hostname || "localhost"
-var uuid = "p_" + Math.random().toString().substring(5);
-var ws = null;
-var connected = false;
-var disconnected = false;
-var lastGet = 0;
-var lastTyped = 0;
-
-// TODO detect mobile devices better
-var onMobile = navigator.platform.indexOf("android") >= 0;
-
-// The time to wait between queries, in milliseconds.
-var kMinWaitPeriod = 350
-var requestsInFlight = 0;
-
-function showThrobber() {
-    $("#throbber").show();
-    $("#notfound").hide();
+function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id) {
+    this.client = client;
+    this.lastGet = 0;
+    this.lastTyped = 0;
+    this.preview_div = "#" + preview_div_id;
+    this.notfound = "#" + notfound_id;
+    this.typeahead = "#" + typeahead_id;
 }
 
-function hideThrobber() {
-    requestsInFlight -= 1;
-    if (requestsInFlight <= 0) {
-        $("#throbber").hide();
+(function() {  /* begin namespace searcher */
+
+// The time to wait between queries, in milliseconds.
+var kMinWaitPeriod = 500
+
+KansasSearcher.prototype.handleQueryStringUpdate = function() {
+    var query = $(this.typeahead).val();
+    if ($.now() - this.lastGet > kMinWaitPeriod) {
+        this.lastGet = $.now();
+        this.client.ui.vlog(1, "sent immediate query " + query);
+        this.client.send("query", {
+            "term": query,
+            "tags": "immediate",
+            "allow_inexact": true
+        });
+    }
+    var timestamp = this.lastTyped = $.now();
+    var that = this;
+    setTimeout(function() {
+        if (that.lastTyped == timestamp) {
+            that.lastGet = $.now();
+            query = $(that.typeahead).val();
+            that.client.ui.vlog(1, "sent delayed query " + query);
+            that.client.send("query", {"term": query, "allow_inexact": true});
+        }
+    }, kMinWaitPeriod);
+}
+
+KansasSearcher.prototype.handleQueryResponse = function(data) {
+    var that = this;
+    this.client.ui.vlog(3, JSON.stringify(data));
+    if (data.urls.length == 0) {
+        if (data.req.term == "") {
+            $(this.preview_div + " img").remove();
+            $(this.preview_div).hide();
+            $(this.notfound).hide();
+        } else if (data.req.tags != "immediate") {
+            $(this.notfound).show();
+        }
+    } else {
+        this.previewItems(data.urls);
     }
 }
 
-function log(msg) {
-    console.log("[search] " + msg);
+KansasSearcher.prototype.previewItems = function(urls) {
+    var that = this;
+    $(this.preview_div + " img").remove();
+    $.each(urls, function() {
+        that.client.ui.vlog(1, "append: " + $(this)[0]);
+        $(that.preview_div).append(
+            "<img src="
+            + $(this)[0]
+            + " class=kansas_preview></img>");
+    });
+    $(this.notfound).hide();
+    $(this.preview_div).show().scrollTop();
 }
 
-$(document).ready(function() {
-    $("#kansas_typeahead").focus();
-    $("form").submit(function(event) {
-        event.preventDefault();
-        return false;
-    });
-
-    $("#kansas_typeahead").keypress(function(event) {
-        showThrobber();
-        var query = $("#kansas_typeahead").val();
-        if ($.now() - lastGet > kMinWaitPeriod) {
-            lastGet = $.now();
-            requestsInFlight += 1;
-            log("sent immediate query " + query);
-            ws.send("query", {
-                "term": query,
-                "tags": "immediate",
-                "allow_inexact": true
-            });
-        }
-        lastTyped = $.now();
-        var timestamp = lastTyped;
-        setTimeout(function() {
-            if (lastTyped == timestamp) {
-                lastGet = $.now();
-                requestsInFlight += 1;
-                query = $("#kansas_typeahead").val();
-                log("sent delayed query " + query);
-                ws.send("query", {"term": query, "allow_inexact": true});
-            }
-        }, kMinWaitPeriod);
-    });
-
-    ws = $.websocket("ws:///" + hostname + ":" + kWSPort + "/kansas", {
-        open: function() {
-            ws.send("connect_searchapi");
-        },
-        close: function() {
-            log("Connection Error.");
-            disconnected = true;
-            connected = false;
-        },
-        events: {
-            connect_searchapi_resp: function(e) {
-                connected = true;
-                log("Connected: " + e.data);
-            },
-            query_resp: function(e) {
-                hideThrobber();
-                log(JSON.stringify(e));
-                if (e.data.urls === undefined) {
-                    if (e.data.req.tags != "immediate") {
-                        $("#notfound").show();
-                    }
-                } else {
-                    $("#previews img").remove();
-                    $.each(e.data.urls, function() {
-                        $("#previews").append(
-                            "<img src="
-                            + $(this)[0]
-                            + " class=kansas_preview></img>");
-                    });
-                    $("#notfound").hide();
-                }
-            },
-            _default: function(e) {
-                log("Unknown response: " + JSON.stringify(e));
-            },
-        },
-    });
-});
+})();  /* end namespace searcher */
 
 // vim: et sw=4

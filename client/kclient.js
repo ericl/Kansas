@@ -309,6 +309,9 @@ KansasClient.prototype._eventHandlers = function(that) {
         kvop_resp: function(e) {
             that._notify('kvop', e.data);
         },
+        query_resp: function(e) {
+            that._notify('query', e.data);
+        },
         bulkquery_resp: function(e) {
             that._notify('bulkquery', e.data);
         },
@@ -402,6 +405,7 @@ KansasClient.prototype._hooks = {
     disconnected: function() {},
     listgames: function(data) {},
     kvop: function(data) {},
+    query: function(data) {},
     bulkquery: function(data) {},
     broadcast: function(data) {},
     presence: function(data) {},

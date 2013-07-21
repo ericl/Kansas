@@ -46,6 +46,7 @@ function KansasUI() {
     this.nextBoardZIndex = 200;
     this.nextHandZIndex = 4000000;
     this.eventTable = {};
+    this.searcher = null;
 }
 
 (function() {  /* begin namespace kansasui */
@@ -78,6 +79,11 @@ function extractCards(html) {
 
 function hideDeckPanel() {
     $('#deckpanel').animate({left:'-45%'}, 300);
+    $("#search_preview").hide();
+}
+
+function showDeckPanel() {
+    $('#deckpanel').animate({left:'0%'}, 300);
 }
 
 /**
@@ -1313,6 +1319,14 @@ KansasUI.prototype._setOrientProperties = function(card, orient) {
  * http://stackoverflow.com/questions/5186441/javascript-drag-and-drop-for-touch-devices
  */
 function touchHandler(event) {
+
+    // We only want to override drag behavior on draggable nodes.
+    var t = $(event.target);
+    if (!t.hasClass("ui-draggable")
+            && t.prop("id") != "arena") {
+        return false;
+    }
+
     event.preventDefault();
     var touches = event.changedTouches,
     first = touches[0],
@@ -1336,10 +1350,28 @@ function touchHandler(event) {
 }
 
 KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
+    var that = this;
     this.client = client;
     this.uuid = uuid;
     this.user = user;
-    var that = this;
+
+    this.searcher = new KansasSearcher(
+        this.client,
+        "search_preview",
+        "notfound",
+        "kansas_typeahead"
+    );
+
+    $("#kansas_typeahead").keypress(function() {
+        that.searcher.handleQueryStringUpdate();
+    });
+
+    /* Prevents search form from being submitted normally. */
+    $("form").submit(function(event) {
+        event.preventDefault();
+        return false;
+    });
+
     if (isPlayer1) {
         this.hand_user = "Player 1";
         this.view = new KansasView(client, 0, [0, 0], getBBox());
@@ -1425,7 +1457,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $("#deck").mouseup(function(e) {
-        $('#deckpanel').animate({left:'0%'}, 300);
+        showDeckPanel();
         that._refreshDeckList();
         e.stopPropagation();
     });
@@ -2149,6 +2181,7 @@ KansasUI.prototype.handleAdd = function(data) {
     }
 
     if (requestor == this.uuid) {
+        /* TODO is this even the right UI - looks kinda weird.
         // TODO why do we need this timeout... immediate => box in wrong place
         setTimeout(function() {
             var set = $();
@@ -2156,8 +2189,8 @@ KansasUI.prototype.handleAdd = function(data) {
                 set = set.add($("#card_" + cards[i]));
             }
             that._createSelection(set, false);
-            $("#selectionbox").hide();
         }, kAnimationLength / 2);
+        */
     }
 }
 
@@ -2189,6 +2222,10 @@ KansasUI.prototype._setDeckInputHtml = function(res) {
     $('#deckinput').html(replacement);
 }
 
+KansasUI.prototype.handleQueryResp = function(data) {
+    this.searcher.handleQueryResponse(data);
+}
+
 KansasUI.prototype.handleBulkQueryResp = function(data) {
     if (data.req.tag == 'validate_deckinput') {
         var html = $("#deckinput").html();
@@ -2198,6 +2235,16 @@ KansasUI.prototype.handleBulkQueryResp = function(data) {
         // Only allows actions if verification had no errors.
         if (resp[2] == 0 && resp[1] > 0) {
             $('.requiresvalidation').prop("disabled", false);
+        }
+        var urls = [];
+        for (i in cards) {
+            var url = data.resp[cards[i][1]];
+            if (url) {
+                urls.push(url);
+            }
+        }
+        if (urls.length > 0) {
+            this.searcher.previewItems(urls);
         }
     } else {
         this.vlog(1, 'bulk query response ignored');
@@ -2210,6 +2257,7 @@ KansasUI.prototype.handleKVResp = function(data) {
         $("#deckname").val(data.req.key);
         this._setDeckInputHtml(cardsToHtml(cards));
         $('.requiresvalidation').prop("disabled", false);
+        $('#savedeck').prop("disabled", true);
     } else if (data.req.tag == 'deck_save') {
         this._refreshDeckList();
     } else if (data.req.tag == 'deck_delete') {

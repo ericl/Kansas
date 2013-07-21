@@ -264,17 +264,18 @@ class KansasHandler(object):
         output.reply({'req': request, 'resp': resp})
 
     def handle_query(self, request, output):
-        logging.info("Trying exact match")
-        urls = CardNameToUrls(request['term'], True)
-        if urls:
-            output.reply({'urls': urls, 'req': request})
-            return
-        if request.get('allow_inexact'):
-            logging.info("Trying inexact match")
-            urls = CardNameToUrls(request['term'], False)
+        if request['term']:
+            logging.info("Trying exact match")
+            urls = CardNameToUrls(request['term'], True)
             if urls:
                 output.reply({'urls': urls, 'req': request})
                 return
+            if request.get('allow_inexact'):
+                logging.info("Trying inexact match")
+                urls = CardNameToUrls(request['term'], False)
+                if urls:
+                    output.reply({'urls': urls, 'req': request})
+                    return
         output.reply({'urls': [], 'req': request})
 
     def notify_closed(self, stream):
