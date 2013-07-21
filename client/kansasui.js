@@ -523,12 +523,15 @@ function heightOf(stackIndex, stackCount) {
         stackCount = 0;
     }
     if (stackIndex === undefined
+            || stackCount <= 0
             || isNaN(stackIndex)
             || stackIndex >= kHandZIndex) {
         return 0;
     }
     var stackHeight = 14;
-    if (stackCount == 2) {
+    if (stackCount == 1) {
+        stackHeight = 1;
+    } else if (stackCount == 2) {
         stackHeight = 40;
     } else if (stackCount == 3) {
         stackHeight = 42;
