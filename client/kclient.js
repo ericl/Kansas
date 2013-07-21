@@ -143,7 +143,6 @@ KansasClient.prototype.bind = function(name, fn) {
 /* Sends message and returns a pending Future for the result.
  * The client will be "Loading..." as long as the Future is pending. */
 KansasClient.prototype.callAsync = function(tag, data) {
-    this.ui.vlog(1, "callAsync: " + tag + "::" + JSON.stringify(data));
     this.ui.showSpinner("sending " + tag);
     var fut = new Future(tag);
     if (this._ws != null) {
