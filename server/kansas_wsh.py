@@ -94,7 +94,7 @@ class CachingLoader(dict):
         if not os.path.exists(small_path):
             small_path = self.resize(large_path, small_path)
         self['urls_small'][new_id] = small_path
-        self['orientations'][new_id] = 1
+        self['orientations'][new_id] = -1
         return new_id
 
     def download(self, suffix):

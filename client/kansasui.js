@@ -1438,7 +1438,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
     $("#add").mouseup(function(e) {
         var cards = extractCards($('#deckinput').html())[0];
-        if (cards.length > 100) {
+        if (cards.length > 150) {
             warning("Trying to add too many cards");
         } else {
             var sendList = [];
@@ -1447,13 +1447,14 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 for (var j = 0; j < count; j++) {
                     sendList.push({
                         loc: that.view.coordToPos(
-                            that.view.width / 2 - kCardWidth,
-                            that.view.height * 2 / 3
+                            that.view.width * 9 / 10 - kCardWidth,
+                            that.view.height * 6 / 10
                         ),
                         name: cards[i][1],
                     });
                 }
             }
+            shuffle(sendList);
             client.send('add', sendList);
         }
     });
