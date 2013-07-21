@@ -86,6 +86,7 @@ function hideDeckPanel() {
 
 function showDeckPanel() {
     $('#deckpanel').animate({left:'0%'}, 300);
+    $("#kansas_typeahead").focus();
 }
 
 /**
@@ -101,9 +102,14 @@ function cardsToHtml(cards, validclass, verifiedurls) {
     if (!validclass) {
         validclass = "validated";
     }
+    var next = undefined;
     for (i in cards) {
+        /* skips redundant newlines */
+        if (next && !(prev == "<br>" && next == prev)) {
+            replacement += next;
+        }
+        prev = next;
         var card = cards[i];
-        var next = undefined;
         if (card[0] == 0) {
             if (card[1]) {
                 next = "" + card[1] + "<br>";
@@ -127,11 +133,10 @@ function cardsToHtml(cards, validclass, verifiedurls) {
                 + card[0] + " " + card[1] + "</span><span>"
                 + card[2] + "</span><br>";
         }
-        /* skips redundant newlines */
-        if (next && !(prev == "<br>" && next == prev)) {
-            replacement += next;
-        }
-        prev = next;
+    }
+    $("#deckname").focus();
+    if (next && next != "<br>") {
+        replacement += next;
     }
     return [replacement, count, failed];
 }
@@ -2383,6 +2388,7 @@ KansasUI.prototype.hideSpinner = function() {
 KansasUI.prototype.warning = function(msg) {
     $("#error span").text(msg);
     $("#error").show();
+    document.title = msg;
     console.log("WARNING: " + msg);
 }
 
