@@ -10,6 +10,7 @@
  *      kansas_ui.handleAdd(ids: list[int])
  *      kansas_ui.handleRemove(ids: list[int])
  *      kansas_ui.handleKVResp(data: json)
+ *      kansas_ui.handleBulkQueryResp(data: json)
  *      kansas_ui.handleStackChanged(key: [str, str|int])
  *      kansas_ui.handleBroadcast(data: json)
  *      kansas_ui.handlePresence(data: json)
@@ -40,6 +41,7 @@ function KansasUI() {
     this.oldSnapCard = null;
     this.containmentHint = null;
     this.selectedSet = [];
+    this.decksAvail = [];
     this.spinnerShowQueued = false;
     this.nextBoardZIndex = 200;
     this.nextHandZIndex = 4000000;
@@ -50,8 +52,8 @@ function KansasUI() {
 
 /**
  * Returns list of cards found in the following html blob.
- * Each list element is [#cards, card name, card comments].
  * Returns [cards_list, #cards].
+ * Each element of cards_list is [#cards, card name, card comments].
  */
 function extractCards(html) {
     var text = html
@@ -77,11 +79,15 @@ function extractCards(html) {
 /**
  * Approximate inverse of extractCards. The pair can be used
  * to validate the syntax of card lists.
- * Returns [html, #cards total].
+ * Returns [html, #cards total, #failed].
  */
-function cardsToHtml(cards) {
+function cardsToHtml(cards, validclass, verifiedurls) {
     var replacement = "";
     var count = 0;
+    var failed = 0;
+    if (!validclass) {
+        validclass = "validated";
+    }
     for (i in cards) {
         var card = cards[i];
         if (card[0] == 0) {
@@ -90,15 +96,25 @@ function cardsToHtml(cards) {
             } else if (replacement != "") {
                 replacement += "<div><br></div>";
             }
+        } else if (verifiedurls) {
+            var myclass = validclass;
+            if (!verifiedurls[card[1]]) {
+                myclass = "invalid";
+                failed += card[0];
+            } else {
+                count += card[0];
+            }
+            replacement += "<div><span class=" + myclass + ">"
+                + card[0] + " " + card[1] + "</span><span>"
+                + card[2] + "</span></div>";
         } else {
-            /* TODO check if card really exists */
             count += card[0];
-            replacement += "<div><span class=validated>"
+            replacement += "<div><span class=" + validclass + ">"
                 + card[0] + " " + card[1] + "</span><span>"
                 + card[2] + "</span></div>";
         }
     }
-    return [replacement, count];
+    return [replacement, count, failed];
 }
 
 // Tracks perf statistics.
@@ -1375,14 +1391,24 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $("#closepanel").mouseup(function() {
-        $('#deckpanel').animate({left:'-40%'}, 300);
+        $('#deckpanel').animate({left:'-45%'}, 300);
     });
 
     $("#validate").click(function(e) {
         var html = $("#deckinput").html();
         var cards = extractCards(html)[0];
-        that.vlog(1, "cards: " + JSON.stringify(cards));
-        that._setDeckInputHtml(cardsToHtml(cards));
+        that.vlog(1, "validating cards: " + JSON.stringify(cards));
+        that._setDeckInputHtml(cardsToHtml(cards, 'maybe_valid'));
+        client.send('bulkquery', {
+            'terms': $.map(cards, function(x) {
+                if (x[0] > 0) {
+                    return [x[1]];
+                } else {
+                    return [];
+                }
+            }),
+            'tag': 'validate_deckinput',
+        });
     });
 
     $("#clearerror").mouseup(function(e) {
@@ -1400,15 +1426,14 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         e.stopPropagation();
     });
 
-    $("#clear").mouseup(function(e) {
-        $('#deckinput').html("");
-        $('#validstatus').html("");
+    $("#deckinput").keyup(function(e) {
+        $('.requiresvalidation').prop("disabled", true);
     });
 
     $("#savedeck").mouseup(function(e) {
+        var name = $('#deckname').val();
         var res = extractCards($("#deckinput").html());
         var ncards = res[1];
-        var name = $('#deckname').val();
         if (ncards == 0 || !name) {
             return;
         }
@@ -1420,11 +1445,23 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             'value': cards,
             'tag': 'deck_save',
         });
-        $('#deckinput').html("");
+        $('#savedeck').prop("disabled", true);
     });
 
-    $("#loaddeck").mouseup(function(e) {
-        var name = $('#deckname').val();
+    $(".deletedeck").live('mouseup', function(e) {
+        var name = $(e.currentTarget).data("name");
+        if (confirm("Are you sure you want to delete '" + name + "'?")) {
+            client.send('kvop', {
+                'namespace': 'Decks',
+                'op': 'Delete',
+                'key': name,
+                'tag': 'deck_delete',
+            });
+        }
+    });
+
+    $(".loaddeck").live('mouseup', function(e) {
+        var name = $(e.currentTarget).data("name");
         if (!name) {
             return;
         }
@@ -2116,22 +2153,51 @@ KansasUI.prototype.handleStackChanged = function(key) {
 KansasUI.prototype._setDeckInputHtml = function(res) {
     var replacement = res[0];
     var count = res[1];
+    var errors = res[2];
+    if (errors) {
+        $("#validstatus").text("Could not find " + errors + " cards.");
+    } else {
+        $("#validstatus").text("Found " + count + " cards.");
+    }
     this.vlog(2, "replacement: " + replacement);
     $('#deckinput').html(replacement);
-    $("#validstatus").text("Found " + count + " cards.");
+}
+
+KansasUI.prototype.handleBulkQueryResp = function(data) {
+    if (data.req.tag == 'validate_deckinput') {
+        var html = $("#deckinput").html();
+        var cards = extractCards(html)[0];
+        var resp = cardsToHtml(cards, 'validated', data.resp);
+        this._setDeckInputHtml(resp);
+        // Only allows actions if verification had no errors.
+        if (resp[2] == 0 && resp[1] > 0) {
+            $('.requiresvalidation').prop("disabled", false);
+        }
+    } else {
+        this.vlog(1, 'bulk query response ignored');
+    }
 }
 
 KansasUI.prototype.handleKVResp = function(data) {
-    if (data['req']['tag'] == 'deck_load') {
-        var cards = JSON.parse(data['resp']);
+    if (data.req.tag == 'deck_load') {
+        var cards = JSON.parse(data.resp);
+        $("#deckname").val(data.req.key);
         this._setDeckInputHtml(cardsToHtml(cards));
-    } else if (data['req']['tag'] == 'deck_save') {
+        $('.requiresvalidation').prop("disabled", false);
+    } else if (data.req.tag == 'deck_save') {
         this._refreshDeckList();
-    } else if (data['req']['tag'] == 'deck_list') {
+    } else if (data.req.tag == 'deck_delete') {
+        this._refreshDeckList();
+    } else if (data.req.tag == 'deck_list') {
         this.vlog(1, 'showing deck data');
-        var html = "Available:";
+        var html = "<br>Saved Decks:";
+        this.decksAvail = data['resp'];
         data['resp'].forEach(function(name) {
-            html += "<br> * " + name;
+            html += "<br> &bull; " + name
+                + " <button data-name='" + name
+                + "' class='loaddeck'>load</button>"
+                + " <button data-name='" + name
+                + "' class='deletedeck'>delete</button>";
         });
         $('#decks').html(html);
     } else {

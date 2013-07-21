@@ -170,6 +170,7 @@ $(document).ready(function() {
         .bind('removed', function(x) { kansas_ui.handleRemove(x); })
         .bind('added', function(x) { kansas_ui.handleAdd(x); })
         .bind('kvop', function(x) { kansas_ui.handleKVResp(x); })
+        .bind('bulkquery', function(x) { kansas_ui.handleBulkQueryResp(x); })
         .connect();
 
     if (clients.length == 0)

@@ -47,7 +47,11 @@ $(document).ready(function() {
             lastGet = $.now();
             requestsInFlight += 1;
             log("sent immediate query " + query);
-            ws.send("query", {"term": query, "tags": "immediate"});
+            ws.send("query", {
+                "term": query,
+                "tags": "immediate",
+                "allow_inexact": true
+            });
         }
         lastTyped = $.now();
         var timestamp = lastTyped;
@@ -57,7 +61,7 @@ $(document).ready(function() {
                 requestsInFlight += 1;
                 query = $("#kansas_typeahead").val();
                 log("sent delayed query " + query);
-                ws.send("query", {"term": query});
+                ws.send("query", {"term": query, "allow_inexact": true});
             }
         }, kMinWaitPeriod);
     });
@@ -80,7 +84,7 @@ $(document).ready(function() {
                 hideThrobber();
                 log(JSON.stringify(e));
                 if (e.data.urls === undefined) {
-                    if (e.data.tags != "immediate") {
+                    if (e.data.req.tags != "immediate") {
                         $("#notfound").show();
                     }
                 } else {

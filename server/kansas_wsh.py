@@ -55,8 +55,10 @@ def CardNameToUrls(name, exact=False):
     key = str((str(name), exact))
     val = LookupCache.Get(key)
     if val is not None:
-        logging.debug("Cache HIT on '%s'", key)
+        logging.info("Cache HIT on '%s'", key)
         return val
+    else:
+        logging.info("Cache miss on '%s'", key)
     url = "http://magiccards.info/query?q=%s%s&v=card&s=cname" %\
         ('!' if exact else 'l:en+', '+'.join(name.split()))
     logging.info("GET " + url)
@@ -215,7 +217,6 @@ class KansasGameState(object):
             del self.data[loc_type][loc]
         
     def add_card(self, card):
-        print "CARD", card
         loc = card['loc']
         name = card['name']
         urls = CardNameToUrls(name, True)
@@ -242,6 +243,7 @@ class KansasHandler(object):
         self.handlers['ping'] = self.handle_ping
         self.handlers['keepalive'] = self.handle_keepalive
         self.handlers['query'] = self.handle_query
+        self.handlers['bulkquery'] = self.handle_bulkquery
 
     def handle_ping(self, request, output):
         logging.debug("served ping")
@@ -249,20 +251,31 @@ class KansasHandler(object):
 
     def handle_keepalive(self, req, output):
         logging.info('keepalive from ' + str(output.stream));
+    
+    def handle_bulkquery(self, request, output):
+        resp = {}
+        logging.info('bulkquery: ' + str(request));
+        for term in request['terms']:
+            urls = CardNameToUrls(term, True)
+            if urls:
+                resp[term] = urls[0]
+            else:
+                resp[term] = None
+        output.reply({'req': request, 'resp': resp})
 
     def handle_query(self, request, output):
         logging.info("Trying exact match")
         urls = CardNameToUrls(request['term'], True)
         if urls:
-            output.reply({'urls': urls, 'tags': request.get('tags')})
-        else:
+            output.reply({'urls': urls, 'req': request})
+            return
+        if request.get('allow_inexact'):
             logging.info("Trying inexact match")
             urls = CardNameToUrls(request['term'], False)
             if urls:
-                output.reply({'urls': urls, 'tags': request.get('tags')})
-            else:
-                output.reply({
-                    'error': 'No match found.', 'tags': request.get('tags')})
+                output.reply({'urls': urls, 'req': request})
+                return
+        output.reply({'urls': [], 'req': request})
 
     def notify_closed(self, stream):
         """Callback for when a stream has been closed."""
@@ -292,7 +305,7 @@ class KansasInitHandler(KansasHandler):
         self.handlers['connect_searchapi'] = self.handle_connect_searchapi
         self.games = {}
         for gameid, snapshot in Games:
-            logging.info("Restoring %s as %s" % (gameid, str(snapshot)))
+            logging.debug("Restoring %s as %s" % (gameid, str(snapshot)))
             game = self.new_game(gameid)
             game.restore(snapshot)
             self.games[gameid] = game
@@ -524,7 +537,7 @@ class KansasGameHandler(KansasHandler):
             return self._seqno
 
     def broadcast(self, streamSet, reqtype, data):
-        logging.info("Broadcasting %s: '%s'", reqtype, data)
+        logging.info("Broadcasting %s", reqtype)
         start = time.time()
         self.last_used = start
         presence_changed = False

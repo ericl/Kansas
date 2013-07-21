@@ -36,15 +36,31 @@
         </div>
         <textarea id="console" rows=15 cols=60></textarea><br>
         <div id="deckpanel">
+            <button id="closepanel" style="float: right; margin-right: -3px; margin-top: -3px;">&#x2716;</button>
             <br>
-            <div id="deckinput" contentEditable=true></div>
-            <button id="closepanel">Close Panel</button>
-            <button id="validate">Validate</button><span id="validstatus"></span><br>
-            <button id="add">Add</button>
-            <button id="clear">Clear</button>
-            <button id="savedeck">Save Deck</button>
-            <button id="loaddeck">Load Deck</button>
-            <input type="text" id="deckname" placeholder="Input Deck Name..."/>
+            <div id="deckinput" contentEditable=true>
+                <div>=== Welcome to the deck editor ===</div>
+                <div></div><br>
+                <div>You can list cards in plain text below, like as follows:</div>
+                <div></div><br>
+                <div>5 Island</div>
+                <div>4 Plains</div>
+                <div>3 Mountain</div>
+                <div>2 Swamp</div>
+                <div>1 Forest</div>
+                <div></div><br>
+                <div>Then validate your deck and add it to the board.</div>
+            </div>
+            <br>
+            <button id="validate">Validate</button>
+            <button id="add" class="requiresvalidation" disabled=true>Add to Board</button>
+            <br>
+            <br>
+            <div id="validstatus">Found 0 cards.</div>
+            <div id="savedeck_div">
+                <input type="text" id="deckname" placeholder="Name this deck..."/>
+                <button id="savedeck" class="requiresvalidation" disabled=true>Save Deck</button>
+            </div>
             <div id="decks" style="color: white"></div>
         </div>
         <div id="arena">
@@ -55,7 +71,7 @@
             </div>
             <div id="spinner" class="home-hidden" style="font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding: 12px; background-color: #FFFBDF; font-size: 25pt;">Loading...</div>
             <div id="stats" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 0; padding: 12px; color: white; background-color: green; font-size: 25pt;">Error.</div>
-            <div id="error" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 1; padding: 12px; color: white; background-color: red; font-size: 25pt;"><span>Error.</span><button id="clearerror">x</button></div>
+            <div id="error" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 1; padding: 12px; color: white; background-color: red; font-size: 25pt;"><span>Error.</span><button id="clearerror">&#x2716;</button></div>
             <div id="presence"></div>
             <div id="selectionbox"><span></span></div>
             <div id="selectionarea"></div>
