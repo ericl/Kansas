@@ -32,7 +32,7 @@ if not os.path.exists(kCachePath):
 
 
 Games = namespaces.Namespace(kDBPath, 'Games', version=1)
-LookupCache = namespaces.Namespace(kDBPath, 'LookupCache', version=1)
+LookupCache = namespaces.Namespace(kDBPath, 'LookupCache', version=3)
 ClientDB = namespaces.Namespace(kDBPath, 'ClientDB', version=1)
 
 
@@ -50,8 +50,32 @@ BLANK_DECK = {
 }
 
 
+def DownloadAndCache(url):
+    if url.startswith(kCachePath):
+        logging.info("ALREADY CACHED: " + url)
+        return url
+    path = os.path.join(kCachePath, hex(hash('$' + url))[2:] + '.jpg')
+    if not os.path.exists(path):
+        logging.info("GET " + url)
+        imgdata = urllib2.urlopen(url).read()
+        with open(path, 'wb') as f:
+            f.write(imgdata)
+    return path
+
+
+def ReturnCachedIfPresent(url):
+    if url.startswith(kCachePath):
+        logging.info("ALREADY CACHED: " + url)
+        return url
+    path = os.path.join(kCachePath, hex(hash('$' + url))[2:] + '.jpg')
+    if os.path.exists(path):
+        return path
+    else:
+        return url
+
+
 # TODO(ekl) split into game specific plugin
-def CardNameToUrls(name, exact=False):
+def _CardNameToUrls(name, exact=False):
     key = str((str(name), exact))
     val = LookupCache.Get(key)
     if val is not None:
@@ -70,8 +94,14 @@ def CardNameToUrls(name, exact=False):
         data)
     urls = [m.group() for m in matches]
     logging.info("found " + ','.join(urls))
+    urls = [a[1:-1] for a in urls]  # strips quote marks
     LookupCache.Put(key, urls)
     return urls
+
+
+def CardNameToUrls(name, exact=False):
+    urls = _CardNameToUrls(name, exact)
+    return [ReturnCachedIfPresent(a) for a in urls]
 
 
 class CachingLoader(dict):
@@ -101,16 +131,7 @@ class CachingLoader(dict):
 
     def download(self, suffix):
         url = self.toAbsoluteURL(suffix)
-        path = self.cachePath(url)
-        if not os.path.exists(path):
-            logging.info("GET " + url)
-            imgdata = urllib2.urlopen(url).read()
-            with open(path, 'wb') as f:
-                f.write(imgdata)
-        return path
-
-    def cachePath(self, url):
-        return os.path.join(kCachePath, hex(hash('$' + url))[2:] + '.jpg')
+        return DownloadAndCache(url)
 
     def resize(self, large_path, small_path):
         """Resizes image found at large_path and saves to small_path."""
@@ -221,7 +242,7 @@ class KansasGameState(object):
         name = card['name']
         urls = CardNameToUrls(name, True)
         if urls:
-            url = CardNameToUrls(name, True)[0][1:-1]
+            url = urls[0]
         else:
             raise Exception("Cannot find '%s'" % name);
         card_id = self.data.new_card(url)
