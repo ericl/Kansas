@@ -47,6 +47,7 @@ function KansasUI() {
     this.nextHandZIndex = 4000000;
     this.eventTable = {};
     this.searcher = null;
+    this.oldtitle = null;
 }
 
 (function() {  /* begin namespace kansasui */
@@ -1365,6 +1366,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     this.client = client;
     this.uuid = uuid;
     this.user = user;
+    this.oldtitle = document.title;
 
     this.searcher = new KansasSearcher(
         this.client,
@@ -2365,6 +2367,7 @@ KansasUI.prototype.showSpinner = function() {
 KansasUI.prototype._reallyShowSpinner = function() {
     if (this.spinnerShowQueued && this.client._state != 'offline') {
         $("#spinner").show();
+        document.title = "Waiting for server..."
         this.spinnerShowQueued = false;
     }
 }
@@ -2372,6 +2375,9 @@ KansasUI.prototype._reallyShowSpinner = function() {
 KansasUI.prototype.hideSpinner = function() {
     this.spinnerShowQueued = false;
     $("#spinner").hide();
+    if (this.oldtitle) {
+        document.title = this.oldtitle;
+    }
 }
 
 KansasUI.prototype.warning = function(msg) {
