@@ -58,7 +58,8 @@ function KansasUI() {
  */
 function extractCards(html) {
     var text = html
-        .replace(/\<div\>/g, '\n')
+        .replace(/\<div[^\>\<]*\>/g, '\n')
+        .replace(/\<br[^\>\<]*\>/g, '\n')
         .replace(/\<[^\>\<]+\>/g, '')
         .replace(/&nbsp;/g, ' ');
     var cardNames = text.split("\n");
@@ -95,16 +96,18 @@ function cardsToHtml(cards, validclass, verifiedurls) {
     var replacement = "";
     var count = 0;
     var failed = 0;
+    var prev = undefined;
     if (!validclass) {
         validclass = "validated";
     }
     for (i in cards) {
         var card = cards[i];
+        var next = undefined;
         if (card[0] == 0) {
             if (card[1]) {
-                replacement += "<div>" + card[1] + "</div>";
+                next = "" + card[1] + "<br>";
             } else if (replacement != "") {
-                replacement += "<div><br></div>";
+                next = "<br>";
             }
         } else if (verifiedurls) {
             var myclass = validclass;
@@ -114,15 +117,20 @@ function cardsToHtml(cards, validclass, verifiedurls) {
             } else {
                 count += card[0];
             }
-            replacement += "<div><span class=" + myclass + ">"
+            next = "<span class=" + myclass + ">"
                 + card[0] + " " + card[1] + "</span><span>"
-                + card[2] + "</span></div>";
+                + card[2] + "</span><br>";
         } else {
             count += card[0];
-            replacement += "<div><span class=" + validclass + ">"
+            next = "<span class=" + validclass + ">"
                 + card[0] + " " + card[1] + "</span><span>"
-                + card[2] + "</span></div>";
+                + card[2] + "</span><br>";
         }
+        /* skips redundant newlines */
+        if (next && !(prev == "<br>" && next == prev)) {
+            replacement += next;
+        }
+        prev = next;
     }
     return [replacement, count, failed];
 }
@@ -1419,6 +1427,20 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     document.addEventListener("touchend", touchHandler, true);
     document.addEventListener("touchcancel", touchHandler, true);
     document.addEventListener("touchleave", touchHandler, true);
+
+    $("#deckinput")[0].addEventListener("paste", function(e) {
+        // cancel paste
+        e.preventDefault();
+
+        // get text representation of clipboard
+        var text = e.clipboardData.getData("text/plain");
+        text = text.replace(/\n/g, '\<br\>');
+        text = text.replace(/^\<br\>/g, '');
+        console.log(text);
+
+        // insert text manually
+        document.execCommand("insertHTML", false, text);
+    });
 
     $("#end").mouseup(function(e) {
         if (confirm("Are you sure you want to end the game?")) {
