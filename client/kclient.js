@@ -267,7 +267,7 @@ KansasClient.prototype._onOpen = function() {
 KansasClient.prototype._onClose = function() {
     this.ui.vlog(3, "ws:close");
     this._state = 'offline'
-    this._notify('disconnected');
+    this._notify('disconnected', null, true);
 }
 
 /**
@@ -393,8 +393,10 @@ KansasClient.prototype._reset = function(state) {
     this._notify('reset');
 }
 
-KansasClient.prototype._notify = function(hook, arg) {
-    this.ui.hideSpinner();
+KansasClient.prototype._notify = function(hook, arg, socket_down) {
+    if (!socket_down) {
+        this.ui.hideSpinner();
+    }
     this.ui.vlog(3, 'invoke hook: ' + hook);
     this._hooks[hook](arg);
 }
