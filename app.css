@@ -38,21 +38,31 @@ html, body {
     float: left;
 }
 
-#addtext {
-    margin-top: 10%;
-    width: 90%;
-    height: 30%;
-    max-width:90%;
-    max-height:30%;
+#deckinput {
+    margin: 2%;
+    width: 96%;
+    height: 60%;
     float: left;
+    color: white;
+    overflow-y: auto;
+    border: 1px solid #222;
+}
+
+.validated {
+    color: green;
+    font-weight: bold;
+}
+
+#validstatus {
+    color: white;
 }
 
 #deckpanel {
     background-color: black;
-    left: -20%;
-    opacity: 0.65;
+    left: -40%;
+    opacity: 0.75;
     height: 100%;
-    width: 20%;
+    width: 40%;
     position: absolute;
     z-index: 9999999;
     top: 0px;

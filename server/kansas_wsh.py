@@ -215,10 +215,14 @@ class KansasGameState(object):
             del self.data[loc_type][loc]
         
     def add_card(self, card):
+        print "CARD", card
         loc = card['loc']
         name = card['name']
-        # Trims the quotes off the url.
-        url = CardNameToUrls(name, True)[0][1:-1]
+        urls = CardNameToUrls(name, True)
+        if urls:
+            url = CardNameToUrls(name, True)[0][1:-1]
+        else:
+            raise Exception("Cannot find '%s'" % name);
         card_id = self.data.new_card(url)
         if loc in self.data['board']:
             self.data['board'][loc].append(card_id)
@@ -481,7 +485,6 @@ class KansasGameHandler(KansasHandler):
             resp = []
             for k, _ in ns:
                 resp.append(k)
-            print "LIST: " + str(resp)
         else:
             raise Exception("invalid kvop")
         output.reply({'req': req, 'resp': resp})

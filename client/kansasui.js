@@ -48,6 +48,59 @@ function KansasUI() {
 
 (function() {  /* begin namespace kansasui */
 
+/**
+ * Returns list of cards found in the following html blob.
+ * Each list element is [#cards, card name, card comments].
+ * Returns [cards_list, #cards].
+ */
+function extractCards(html) {
+    var text = html
+        .replace(/\<div\>/g, '\n')
+        .replace(/\<[^\>\<]+\>/g, '')
+        .replace(/&nbsp;/g, ' ');
+    var cardNames = text.split("\n");
+    var validated = [];
+    var regex = /^([0-9]+)\s+([^\s][a-zA-Z,\-\' \/]*)(.*)$/;
+    var count = 0;
+    for (i in cardNames) {
+        var match = regex.exec(cardNames[i]);
+        if (match != null) {
+            validated.push([parseInt(match[1]), match[2], match[3]]);
+            count += parseInt(match[1]);
+        } else {
+            validated.push([0, cardNames[i]]);
+        }
+    }
+    return [validated, count];
+}
+
+/**
+ * Approximate inverse of extractCards. The pair can be used
+ * to validate the syntax of card lists.
+ * Returns [html, #cards total].
+ */
+function cardsToHtml(cards) {
+    var replacement = "";
+    var count = 0;
+    for (i in cards) {
+        var card = cards[i];
+        if (card[0] == 0) {
+            if (card[1]) {
+                replacement += "<div>" + card[1] + "</div>";
+            } else if (replacement != "") {
+                replacement += "<div><br></div>";
+            }
+        } else {
+            /* TODO check if card really exists */
+            count += card[0];
+            replacement += "<div><span class=validated>"
+                + card[0] + " " + card[1] + "</span><span>"
+                + card[2] + "</span></div>";
+        }
+    }
+    return [replacement, count];
+}
+
 // Tracks perf statistics.
 var animationCount = 0;
 var zChanges = 0;
@@ -282,7 +335,7 @@ KansasUI.prototype._startDragProgress = function(target) {
 
 /* Unselects all selected items, and hides hover menu. */
 KansasUI.prototype._removeFocus = function(doAnimation) {
-    this.vlog(3, "unfocus");
+    this.vlog(1, "unfocus");
     this._removeHoverMenu(doAnimation);
     this._setSnapPoint(null);
     hideSelectionBox();
@@ -448,19 +501,17 @@ function heightOf(stackIndex, stackCount) {
             || stackIndex >= kHandZIndex) {
         return 0;
     }
-    var kStackDelta = 2;
+    var stackHeight = 14;
     if (stackCount == 2) {
-        kStackDelta = 20;
+        stackHeight = 40;
     } else if (stackCount == 3) {
-        kStackDelta = 14;
+        stackHeight = 42;
     } else if (stackCount == 4) {
-        kStackDelta = 8;
+        stackHeight = 32;
+    } else {
+        stackHeight = 10 + Math.sqrt(stackCount - 5) * .85;
     }
-    var kMaxVisibleStackHeight = 7;
-    if (stackIndex > kMaxVisibleStackHeight) {
-        stackIndex = kMaxVisibleStackHeight;
-    }
-    return stackIndex * kStackDelta;
+    return stackIndex / stackCount * stackHeight;
 }
 
 /* Returns [x, y, dx, dy] of selection box relative to selection area. */
@@ -1323,38 +1374,45 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         }
     });
 
+    $("#closepanel").mouseup(function() {
+        $('#deckpanel').animate({left:'-40%'}, 300);
+    });
+
+    $("#validate").click(function(e) {
+        var html = $("#deckinput").html();
+        var cards = extractCards(html)[0];
+        that.vlog(1, "cards: " + JSON.stringify(cards));
+        that._setDeckInputHtml(cardsToHtml(cards));
+    });
+
+    $("#clearerror").mouseup(function(e) {
+        $("#error").hide();
+    });
+
     $("#leave").mouseup(function(e) {
         document.location.hash = "";
         document.location.reload();
     });
 
-    $("#debug").mouseup(function(e) {
-        $("#console").toggle();
-        $("#stats").show();
-        loggingEnabled = !loggingEnabled;
-    });
-
-    $('#close').click(function(){
-        $('#deck').click();
-    });
-
-    $('#deck').toggle(function(){
+    $("#deck").mouseup(function(e) {
         $('#deckpanel').animate({left:'0%'}, 300);
         that._refreshDeckList();
-    },function(){
-        $('#deckpanel').animate({left:'-20%'}, 300);
+        e.stopPropagation();
     });
 
     $("#clear").mouseup(function(e) {
-        $('#addtext').val("");
+        $('#deckinput').html("");
+        $('#validstatus').html("");
     });
 
     $("#savedeck").mouseup(function(e) {
-        var cards = $('#addtext').val();
+        var res = extractCards($("#deckinput").html());
+        var ncards = res[1];
         var name = $('#deckname').val();
-        if (!cards || !name) {
+        if (ncards == 0 || !name) {
             return;
         }
+        var cards = JSON.stringify(res[0]);
         client.send('kvop', {
             'namespace': 'Decks',
             'op': 'Put',
@@ -1362,7 +1420,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             'value': cards,
             'tag': 'deck_save',
         });
-        $('#addtext').val('');
+        $('#deckinput').html("");
     });
 
     $("#loaddeck").mouseup(function(e) {
@@ -1379,36 +1437,27 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $("#add").mouseup(function(e) {
-        var cards = $('#addtext').val();
-        var sendList = parseDeck(cards);
-        if (sendList.length > 500)
+        var cards = extractCards($('#deckinput').html())[0];
+        if (cards.length > 100) {
             warning("Trying to add too many cards");
-        else 
-            client.send('add', sendList);
-    });
-    
-    function parseDeck(cards) {
-        cardNames = cards.split("\n");
-        sendList = [];
-        var regex = /^([0-9]+) ([a-zA-Z,\-\' \/]+)$/;
-        for (var i = 0; i < cardNames.length; i++) {
-            var match = regex.exec(cardNames[i]);
-            if (match != null) {
-            var count = match[1];
+        } else {
+            var sendList = [];
+            for (i in cards) {
+                var count = cards[i][0];
                 for (var j = 0; j < count; j++) {
-                    sendList[sendList.length] = {
+                    sendList.push({
                         loc: that.view.coordToPos(
                             that.view.width / 2 - kCardWidth,
                             that.view.height * 2 / 3
                         ),
-                        name: match[2]};
+                        name: cards[i][1],
+                    });
                 }
             }
+            client.send('add', sendList);
         }
-        return sendList;
-
-    }
-
+    });
+    
     $("#hand").droppable({
         over: function(event, ui) {
             if (ui.draggable.hasClass("card")) {
@@ -1431,11 +1480,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         },
         tolerance: "touch",
     });
-
-    $("#arena").disableSelection();
-    $("body").disableSelection();
-    $("html").disableSelection();
-    $("#hand").disableSelection();
 
     $("#hand").mouseup(function(event) {
         that.vlog(2, "hand click: show hand");
@@ -1612,15 +1656,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         that._redrawHand();
         that._redrawBoard();
     });
-
-    setInterval(function() {
-        $("#stats")
-            .text("anim: " + animationCount
-              + ", out: " + that.client._ws.sendCount
-              + ", in: " + that.client._ws.recvCount
-              + ", zCh: " + zChanges
-              + ", zShuf: " + zShuffles);
-    }, 500);
 
     this._redrawDivider();
 }
@@ -2021,7 +2056,6 @@ KansasUI.prototype.handleReset = function() {
 
 KansasUI.prototype.handleAdd = function(cards) {
     var that = this;
-
     this.vlog(1, "add cards: " + cards);
 
     function createImageNode(cid) {
@@ -2078,9 +2112,18 @@ KansasUI.prototype.handleStackChanged = function(key) {
     this._redrawStack(dest_k);
 }
 
+KansasUI.prototype._setDeckInputHtml = function(res) {
+    var replacement = res[0];
+    var count = res[1];
+    this.vlog(2, "replacement: " + replacement);
+    $('#deckinput').html(replacement);
+    $("#validstatus").text("Found " + count + " cards.");
+}
+
 KansasUI.prototype.handleKVResp = function(data) {
     if (data['req']['tag'] == 'deck_load') {
-        $('#addtext').val(data['resp']);
+        var cards = JSON.parse(data['resp']);
+        this._setDeckInputHtml(cardsToHtml(cards));
     } else if (data['req']['tag'] == 'deck_save') {
         this._refreshDeckList();
     } else if (data['req']['tag'] == 'deck_list') {
@@ -2163,9 +2206,8 @@ KansasUI.prototype.hideSpinner = function() {
 }
 
 KansasUI.prototype.warning = function(msg) {
-    if (!$("#error").is(":visible")) {
-        $("#error").text(msg).show();
-    }
+    $("#error span").text(msg);
+    $("#error").show();
     console.log("WARNING: " + msg);
 }
 
