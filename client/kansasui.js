@@ -1434,6 +1434,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
         // get text representation of clipboard
         var text = e.clipboardData.getData("text/plain");
+        text = text.replace(/\r\n/g, '\<br\>');
         text = text.replace(/\n/g, '\<br\>');
         text = text.replace(/^\<br\>/g, '');
         console.log(text);
