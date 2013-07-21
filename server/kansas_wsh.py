@@ -145,7 +145,8 @@ class CachingLoader(dict):
             return large_path
 
     def toAbsoluteURL(self, url):
-        if url.startswith('/'):
+        # TODO these hacks need to go away
+        if url.startswith('/') or url.startswith(kCachePath):
             return kLocalServingAddress + url
         if url.startswith('http:'):
             return url
