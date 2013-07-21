@@ -1518,9 +1518,11 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             warning("Trying to add too many cards");
         } else {
             var toAdd = [];
-            var pos = that.view.coordToPos(
-                that.view.width * 9 / 10 - kCardWidth,
-                that.view.height * 6 / 10);
+            if (that.hand_user == "Player 2") {
+                var pos = 29425869;
+            } else {
+                var pos = 80545413;
+            }
             for (i in cards) {
                 var count = cards[i][0];
                 for (var j = 0; j < count; j++) {
