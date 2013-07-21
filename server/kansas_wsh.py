@@ -157,16 +157,20 @@ class CachingLoader(dict):
 class JSONOutput(object):
     """JSONOutput is a convenience class for working with websocket streams."""
 
-    def __init__(self, stream, reqtype):
+    def __init__(self, stream, reqtype, future_id):
         self.stream = stream
         self.reqtype = reqtype
+        self.future_id = future_id
+        self.replied = False
 
     def reply(self, datum):
+        self.replied = True
         self.stream.send_message(
             json.dumps({
                 'type': self.reqtype + '_resp',
                 'data': datum,
                 'time': time.time(),
+                'future_id': self.future_id,
             }), binary=False)
 
 
@@ -475,7 +479,7 @@ class KansasGameHandler(KansasHandler):
                 set(self.streams.keys()) - {output.stream},
                 'broadcast_message',
                 req)
-            output.reply('ok')
+        output.reply("ok")
 
     def handle_remove(self, req, output):
         with self._lock:
@@ -641,10 +645,14 @@ def web_socket_transfer_data(request):
             logging.debug("Parsed json %s", req)
             logging.debug("Handler %s", type(currentHandler))
             logging.debug("Request type %s", req['type'])
+            output = JSONOutput(
+                request.ws_stream,
+                req['type'],
+                req.get('future_id'))
             currentHandler = currentHandler.transition(
                 req['type'],
                 req.get('data'),
-                JSONOutput(request.ws_stream, req['type']))
+                output)
         except Exception, e:
             logging.exception(e)
             request.ws_stream.send_message(

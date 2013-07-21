@@ -9,8 +9,6 @@
  *
  *      kansas_ui.handleAdd(ids: list[int])
  *      kansas_ui.handleRemove(ids: list[int])
- *      kansas_ui.handleKVResp(data: json)
- *      kansas_ui.handleBulkQueryResp(data: json)
  *      kansas_ui.handleStackChanged(key: [str, str|int])
  *      kansas_ui.handleBroadcast(data: json)
  *      kansas_ui.handlePresence(data: json)
@@ -363,7 +361,7 @@ KansasUI.prototype._updateDragProgress = function(target, force) {
 KansasUI.prototype._startDragProgress = function(target) {
     lastFrameLocation = this._keyFromTargetLocation(target);
     if (target.hasClass("card")) {
-        this.client.send("broadcast",
+        this.client.sendRaw("broadcast",
             {"subtype": "dragstart",
              "uuid": this.uuid,
              "card": target.prop("id")});
@@ -381,7 +379,7 @@ KansasUI.prototype._removeFocus = function(doAnimation) {
     hideSelectionBox();
     $(".card").removeClass("highlight");
     $(".card").css("box-shadow", "none");
-    this.client.send("broadcast",
+    this.client.sendRaw("broadcast",
         {
             "subtype": "frameupdate",
             "hide": true,
@@ -598,7 +596,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
 
     if (this.client.inHand(target)) {
         this.vlog(3, "Target in hand - removing focus to keep movement private.");
-        this.client.send("broadcast",
+        this.client.sendRaw("broadcast",
             {
                 "subtype": "frameupdate",
                 "hide": true,
@@ -655,7 +653,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
         return;
     }
 
-    this.client.send("broadcast",
+    this.client.sendRaw("broadcast",
         {
             "subtype": "frameupdate",
             "hide": false,
@@ -1476,7 +1474,25 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                     return [];
                 }
             }),
-            'tag': 'validate_deckinput',
+        }).then(function(data) {
+            var html = $("#deckinput").html();
+            var cards = extractCards(html)[0];
+            var resp = cardsToHtml(cards, 'validated', data.resp);
+            that._setDeckInputHtml(resp);
+            // Only allows actions if verification had no errors.
+            if (resp[2] == 0 && resp[1] > 0) {
+                $('.requiresvalidation').prop("disabled", false);
+            }
+            var urls = [];
+            for (i in cards) {
+                var url = data.resp[cards[i][1]];
+                if (url) {
+                    urls.push(url);
+                }
+            }
+            if (urls.length > 0) {
+                that.searcher.previewItems(urls);
+            }
         });
     });
 
@@ -1512,8 +1528,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             'op': 'Put',
             'key': name,
             'value': cards,
-            'tag': 'deck_save',
-        });
+        }).then(function() { that._refreshDeckList(); });
         $('#savedeck').prop("disabled", true);
     });
 
@@ -1524,8 +1539,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 'namespace': 'Decks',
                 'op': 'Delete',
                 'key': name,
-                'tag': 'deck_delete',
-            });
+            }).then(function() { that._refreshDeckList(); });
         }
     });
 
@@ -1538,7 +1552,12 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             'namespace': 'Decks',
             'op': 'Get',
             'key': name,
-            'tag': 'deck_load',
+        }).then(function(data) {
+            var cards = JSON.parse(data.resp);
+            $("#deckname").val(data.req.key);
+            that._setDeckInputHtml(cardsToHtml(cards));
+            $('.requiresvalidation').prop("disabled", false);
+            $('#savedeck').prop("disabled", true);
         });
     });
 
@@ -2257,48 +2276,14 @@ KansasUI.prototype._setDeckInputHtml = function(res) {
     $('#deckinput').html(replacement);
 }
 
-KansasUI.prototype.handleQueryResp = function(data) {
-    this.searcher.handleQueryResponse(data);
-}
-
-KansasUI.prototype.handleBulkQueryResp = function(data) {
-    if (data.req.tag == 'validate_deckinput') {
-        var html = $("#deckinput").html();
-        var cards = extractCards(html)[0];
-        var resp = cardsToHtml(cards, 'validated', data.resp);
-        this._setDeckInputHtml(resp);
-        // Only allows actions if verification had no errors.
-        if (resp[2] == 0 && resp[1] > 0) {
-            $('.requiresvalidation').prop("disabled", false);
-        }
-        var urls = [];
-        for (i in cards) {
-            var url = data.resp[cards[i][1]];
-            if (url) {
-                urls.push(url);
-            }
-        }
-        if (urls.length > 0) {
-            this.searcher.previewItems(urls);
-        }
-    } else {
-        this.vlog(1, 'bulk query response ignored');
-    }
-}
-
-KansasUI.prototype.handleKVResp = function(data) {
-    if (data.req.tag == 'deck_load') {
-        var cards = JSON.parse(data.resp);
-        $("#deckname").val(data.req.key);
-        this._setDeckInputHtml(cardsToHtml(cards));
-        $('.requiresvalidation').prop("disabled", false);
-        $('#savedeck').prop("disabled", true);
-    } else if (data.req.tag == 'deck_save') {
-        this._refreshDeckList();
-    } else if (data.req.tag == 'deck_delete') {
-        this._refreshDeckList();
-    } else if (data.req.tag == 'deck_list') {
-        this.vlog(1, 'showing deck data');
+KansasUI.prototype._refreshDeckList = function() {
+    var that = this;
+    this.vlog(1, 'send refresh deck');
+    this.client.send('kvop', {
+        'namespace': 'Decks',
+        'op': 'List',
+    }).then(function(data) {
+        that.vlog(1, 'showing deck data');
         var html = "<br>Saved Decks:";
         this.decksAvail = data['resp'];
         data['resp'].forEach(function(name) {
@@ -2309,17 +2294,6 @@ KansasUI.prototype.handleKVResp = function(data) {
                 + "' class='deletedeck'>delete</button>";
         });
         $('#decks').html(html);
-    } else {
-        this.vlog(1, 'kvop response ignored');
-    }
-}
-
-KansasUI.prototype._refreshDeckList = function() {
-    this.vlog(1, 'send refresh deck');
-    this.client.send('kvop', {
-        'namespace': 'Decks',
-        'op': 'List',
-        'tag': 'deck_list',
     });
 }
 
@@ -2359,9 +2333,10 @@ KansasUI.prototype.handlePresence = function(data) {
     });
 }
 
-KansasUI.prototype.showSpinner = function() {
+KansasUI.prototype.showSpinner = function(hint) {
     if (!this.client)
         return;
+    this.vlog(3, "Showing spinner for: " + hint);
     if (!this.spinnerShowQueued && this.client._state != 'offline') {
         this.spinnerShowQueued = true;
         var that = this;

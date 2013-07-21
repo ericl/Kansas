@@ -6,6 +6,8 @@
  * MIT License: http://www.opensource.org/licenses/mit-license.php
  * 
  * Copyright (c) 2010 by shootaroo (Shotaro Tsubouchi).
+ *
+ * Modified by Eric Liang (c 2013) to support futures.
  */
 
 (function($){
@@ -33,18 +35,23 @@ $.extend({
                 var m = JSON.parse(e.originalEvent.data);
                 var h = $.websocketSettings.events[m.type];
                 var def = $.websocketSettings.events['_default'];
+                var fut = $.websocketSettings.events['_future_router'];
                 ws.recvCount += 1;
-                if (h)
+                if (m.future_id && fut) {
+                    fut.call(this, m);
+                } else if (h) {
                     h.call(this, m)
-                else if (def)
+                } else if (def) {
                     def.call(this, m)
+                }
             });
         ws._send = ws.send;
-        ws.send = function(type, data) {
+        ws.send = function(type, data, future_id) {
             ws.sendCount += 1;
             var m = {type: type};
             m = $.extend(true, m, $.extend(true, {}, $.websocketSettings.options, m));
             if (data) m['data'] = data;
+            if (future_id) m['future_id'] = future_id;
             return this._send(JSON.stringify(m));
         }
         $(window).unload(function(){ ws.close(); ws = null });

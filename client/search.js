@@ -15,15 +15,16 @@ function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id) {
 var kMinWaitPeriod = 500
 
 KansasSearcher.prototype.handleQueryStringUpdate = function() {
+    var that = this;
     var query = $(this.typeahead).val();
     if ($.now() - this.lastGet > kMinWaitPeriod) {
         this.lastGet = $.now();
-        this.client.ui.vlog(1, "sent immediate query " + query);
+        this.client.ui.vlog(1, "sent immediate query '" + query + "'");
         this.client.send("query", {
             "term": query,
             "tags": "immediate",
             "allow_inexact": true
-        });
+        }).then(function(v) { that.handleQueryResponse(v); });
     }
     var timestamp = this.lastTyped = $.now();
     var that = this;
@@ -31,8 +32,10 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
         if (that.lastTyped == timestamp) {
             that.lastGet = $.now();
             query = $(that.typeahead).val();
-            that.client.ui.vlog(1, "sent delayed query " + query);
-            that.client.send("query", {"term": query, "allow_inexact": true});
+            that.client.ui.vlog(1, "sent delayed query '" + query + "'");
+            that.client
+                .send("query", {"term": query, "allow_inexact": true})
+                .then(function(v) { that.handleQueryResponse(v); });
         }
     }, kMinWaitPeriod);
 }
@@ -57,7 +60,7 @@ KansasSearcher.prototype.previewItems = function(urls) {
     var that = this;
     $(this.preview_div + " img").remove();
     $.each(urls, function() {
-        that.client.ui.vlog(1, "append: " + $(this)[0]);
+        that.client.ui.vlog(2, "append: " + $(this)[0]);
         $(that.preview_div).append(
             "<img src="
             + $(this)[0]

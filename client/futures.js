@@ -15,9 +15,11 @@
  *      >> 'completed'
  */
 
-function Future() {
+function Future(tag, isChild) {
     this.result = null;
     this.state = 'pending';
+    this.id = tag + "_" + Math.random().toString(36).substring(2)
+    this.isChild = isChild;
     this._oncomplete = null;
 }
 
@@ -33,13 +35,14 @@ Future.prototype.then = function(callback) {
         throw "callback already set for this future.";
     }
 
-    var child = new Future();
+    var child = new Future(this.id, true);
     this._oncomplete = function(v) {
         child.complete(callback(v));
     };
 
     if (this.state == 'completed') {
         this._oncomplete(this.result);
+        console.log("Note: Late completion of " + this.id);
     }
 
     return child;
@@ -56,6 +59,9 @@ Future.prototype.complete = function(result) {
     this.result = result;
     if (this._oncomplete !== null) {
         this._oncomplete(result);
+    } else if (!this.isChild) {
+        console.log("Note: future "
+            + this.id + " completed without callback.");
     }
 
     this.state = 'completed';

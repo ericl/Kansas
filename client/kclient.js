@@ -10,7 +10,8 @@
  *      .connect();
  *
  *  to send a message:
- *      kclient.send(msg_type, msg_payload);
+ *      var fut = kclient.send(msg_type, msg_payload);
+ *      fut.then(myCallback).then(mySecondCallback);
  *
  *  to reconnect:
  *      kclient.connect();
@@ -47,6 +48,7 @@ function KansasClient(hostname, ip_port, kansas_ui) {
     this.ui = kansas_ui;
     this.halted = false;
     this._ws = null;
+    this._futures = {};
     this._state = 'offline';
     this._game = {
         state: {},
@@ -109,7 +111,7 @@ KansasBulkMove.prototype.commit = function() {
     }
 
     this.client.ui.vlog(3, "bulkmove: " + JSON.stringify(this.moves));
-    this.client.send("bulkmove", {moves: this.moves});
+    this.client.sendRaw("bulkmove", {moves: this.moves});
 }
 
 KansasClient.prototype._removeEntry = function(pos, id) {
@@ -130,7 +132,17 @@ KansasClient.prototype.bind = function(name, fn) {
 
 KansasClient.prototype.send = function(tag, data) {
     this.ui.vlog(3, "send: " + tag + "::" + JSON.stringify(data));
-    this.ui.showSpinner();
+    this.ui.showSpinner("sending " + tag);
+    var fut = new Future(tag);
+    if (this._ws != null) {
+        this._ws.send(tag, data, fut.id);
+        this._futures[fut.id] = fut;
+    }
+    return fut;
+}
+
+KansasClient.prototype.sendRaw = function(tag, data) {
+    this.ui.showSpinner("sendRaw " + tag);
     if (this._ws != null) {
         this._ws.send(tag, data);
     }
@@ -139,11 +151,12 @@ KansasClient.prototype.send = function(tag, data) {
 KansasClient.prototype.connect = function() {
     if (this.halted)
         throw "client halted";
-    this.ui.showSpinner();
+    this.ui.showSpinner("connect");
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";
     this._state = 'opening';
     var that = this;
+    this._futures = {};
     this._ws = $.websocket(
         "ws:///" + this.hostname + ":" + this.ip_port + "/kansas",
         { open: function() { that._onOpen.call(that); },
@@ -286,12 +299,18 @@ function removeFromArray(arr, item) {
 
 KansasClient.prototype._eventHandlers = function(that) {
     return {
+        _future_router: function(e) {
+            that.ui.hideSpinner();
+            if (that._futures[e.future_id]) {
+                that._futures[e.future_id].complete(e.data);
+                delete that._futures[e.future_id];
+            } else {
+                that.ui.vlog(0, "Dropped future: " + JSON.stringify(e.future_id));
+            }
+        },
         _default: function(e) {
             that.ui.hideSpinner();
             that.ui.vlog(0, "Unhandled response: " + JSON.stringify(e));
-        },
-        broadcast_resp: function() {
-            that.ui.hideSpinner();
         },
         error: function(e) {
             that._notify('error', e.msg);
@@ -299,21 +318,12 @@ KansasClient.prototype._eventHandlers = function(that) {
         broadcast_message: function(e) {
             that._notify('broadcast', e.data);
         },
-        list_games_resp: function(e) {
-            that._notify('listgames', e.data);
+        broadcast_resp: function(e) {
+            that.ui.hideSpinner();
         },
         connect_resp: function(e) {
             that._state = 'connected';
             that._reset(e.data[0]);
-        },
-        kvop_resp: function(e) {
-            that._notify('kvop', e.data);
-        },
-        query_resp: function(e) {
-            that._notify('query', e.data);
-        },
-        bulkquery_resp: function(e) {
-            that._notify('bulkquery', e.data);
         },
         remove_resp: function(e) {
             for (i in e.data) {
@@ -371,7 +381,7 @@ KansasClient.prototype._eventHandlers = function(that) {
             }
         },
         presence: function(e) {
-            that._notify('presence', e.data);
+            that._notify('presence', e.data, true);
         },
     };
 }
@@ -393,9 +403,10 @@ KansasClient.prototype._reset = function(state) {
     this._notify('reset');
 }
 
-KansasClient.prototype._notify = function(hook, arg, socket_down) {
-    if (!socket_down) {
+KansasClient.prototype._notify = function(hook, arg, keep_spinner) {
+    if (!keep_spinner) {
         this.ui.hideSpinner();
+        this.ui.vlog(3, "hide spinner for response to: " + hook);
     }
     this.ui.vlog(3, 'invoke hook: ' + hook);
     this._hooks[hook](arg);
@@ -405,10 +416,6 @@ KansasClient.prototype._hooks = {
     opened: function() {},
     error: function(data) {},
     disconnected: function() {},
-    listgames: function(data) {},
-    kvop: function(data) {},
-    query: function(data) {},
-    bulkquery: function(data) {},
     broadcast: function(data) {},
     presence: function(data) {},
     stackchanged: function(data) {},

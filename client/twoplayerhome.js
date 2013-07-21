@@ -38,7 +38,7 @@ function enterGame() {
     kansas_ui.init(client, uuid, user, $("#player1").is(":checked"));
 
     client._state = 'opened_pending_connect';
-    client.send("connect", {
+    client.sendRaw("connect", {
         user: user,
         gameid: gameid,
         uuid: uuid,
@@ -66,7 +66,7 @@ function handleSocketOpen() {
         enterGame();
     } else {
         kansas_ui.vlog(3, "client: "  + client);
-        client.send("list_games");
+        client.send("list_games").then(handleListGames);
     }
 }
 
@@ -133,7 +133,7 @@ function handleListGames(data) {
     }
     setTimeout(function() {
         if (client._state == 'opened') {
-            client.send("list_games");
+            client.send("list_games").then(handleListGames);
         }
     }, 500);
 }
@@ -162,16 +162,12 @@ $(document).ready(function() {
         .bind('opened', handleSocketOpen)
         .bind('error', handleError)
         .bind('disconnected', function() { handleSocketClose(client); } )
-        .bind('listgames', handleListGames)
         .bind('broadcast', function(x) { kansas_ui.handleBroadcast(x); })
         .bind('presence', function(x) { kansas_ui.handlePresence(x); })
         .bind('stackchanged', function(x) { kansas_ui.handleStackChanged(x); })
         .bind('reset', function(x) { kansas_ui.handleReset(x); })
         .bind('removed', function(x) { kansas_ui.handleRemove(x); })
         .bind('added', function(x) { kansas_ui.handleAdd(x); })
-        .bind('kvop', function(x) { kansas_ui.handleKVResp(x); })
-        .bind('query', function(x) { kansas_ui.handleQueryResp(x); })
-        .bind('bulkquery', function(x) { kansas_ui.handleBulkQueryResp(x); })
         .connect();
 
     if (clients.length == 0)
