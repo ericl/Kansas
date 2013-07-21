@@ -361,7 +361,7 @@ KansasUI.prototype._updateDragProgress = function(target, force) {
 KansasUI.prototype._startDragProgress = function(target) {
     lastFrameLocation = this._keyFromTargetLocation(target);
     if (target.hasClass("card")) {
-        this.client.sendRaw("broadcast",
+        this.client.send("broadcast",
             {"subtype": "dragstart",
              "uuid": this.uuid,
              "card": target.prop("id")});
@@ -379,7 +379,7 @@ KansasUI.prototype._removeFocus = function(doAnimation) {
     hideSelectionBox();
     $(".card").removeClass("highlight");
     $(".card").css("box-shadow", "none");
-    this.client.sendRaw("broadcast",
+    this.client.send("broadcast",
         {
             "subtype": "frameupdate",
             "hide": true,
@@ -520,6 +520,9 @@ KansasUI.prototype._findSnapPoint = function(target) {
             }
             snap = stack[stack.length - 2];
         }
+        if (snap == undefined) {
+            return null;
+        }
         this.vlog(2, "Snap point found for: " + target.prop("id")
             + ": card_" + snap);
         return $("#card_" + snap);
@@ -596,7 +599,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
 
     if (this.client.inHand(target)) {
         this.vlog(3, "Target in hand - removing focus to keep movement private.");
-        this.client.sendRaw("broadcast",
+        this.client.send("broadcast",
             {
                 "subtype": "frameupdate",
                 "hide": true,
@@ -653,7 +656,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
         return;
     }
 
-    this.client.sendRaw("broadcast",
+    this.client.send("broadcast",
         {
             "subtype": "frameupdate",
             "hide": false,
@@ -861,8 +864,8 @@ KansasUI.prototype._removeCard = function() {
     var cards = $.map(selectedSet, function(x) {
         return parseInt(x.id.substr(5));   
     });
-        
-    this.client.send("remove", cards);   
+ 
+    this.client.callAsync("remove", cards).done();
 }
 
 
@@ -1466,7 +1469,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         var cards = extractCards(html)[0];
         that.vlog(1, "validating cards: " + JSON.stringify(cards));
         that._setDeckInputHtml(cardsToHtml(cards, 'maybe_valid'));
-        client.send('bulkquery', {
+        client.callAsync('bulkquery', {
             'terms': $.map(cards, function(x) {
                 if (x[0] > 0) {
                     return [x[1]];
@@ -1523,7 +1526,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             return;
         }
         var cards = JSON.stringify(res[0]);
-        client.send('kvop', {
+        client.callAsync('kvop', {
             'namespace': 'Decks',
             'op': 'Put',
             'key': name,
@@ -1535,7 +1538,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     $(".deletedeck").live('mouseup', function(e) {
         var name = $(e.currentTarget).data("name");
         if (confirm("Are you sure you want to delete '" + name + "'?")) {
-            client.send('kvop', {
+            client.callAsync('kvop', {
                 'namespace': 'Decks',
                 'op': 'Delete',
                 'key': name,
@@ -1548,7 +1551,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         if (!name) {
             return;
         }
-        client.send('kvop', {
+        client.callAsync('kvop', {
             'namespace': 'Decks',
             'op': 'Get',
             'key': name,
@@ -1584,9 +1587,13 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             shuffle(toAdd);
             var oldStack = client.getStack('board', pos);
             if (oldStack) {
-                client.send('remove', oldStack);
+                /* Use callasync here to force Loading message until
+                 * this call completes. */
+                client.callAsync('remove', oldStack).done();
             }
-            client.send('add', {'cards': toAdd, 'requestor': uuid});
+            client
+                .callAsync('add', {'cards': toAdd, 'requestor': uuid})
+                .done();
             hideDeckPanel();
         }
     });
@@ -2279,7 +2286,7 @@ KansasUI.prototype._setDeckInputHtml = function(res) {
 KansasUI.prototype._refreshDeckList = function() {
     var that = this;
     this.vlog(1, 'send refresh deck');
-    this.client.send('kvop', {
+    this.client.callAsync('kvop', {
         'namespace': 'Decks',
         'op': 'List',
     }).then(function(data) {
@@ -2336,24 +2343,35 @@ KansasUI.prototype.handlePresence = function(data) {
 KansasUI.prototype.showSpinner = function(hint) {
     if (!this.client)
         return;
-    this.vlog(3, "Showing spinner for: " + hint);
     if (!this.spinnerShowQueued && this.client._state != 'offline') {
+        this.vlog(3, "Showing spinner for: " + hint);
         this.spinnerShowQueued = true;
         var that = this;
         setTimeout(function() { that._reallyShowSpinner(); }, 1000);
+    } else {
+        this.vlog(3, "Not showing spinner for: " + hint);
     }
 }
 
 KansasUI.prototype._reallyShowSpinner = function() {
     if (this.spinnerShowQueued && this.client._state != 'offline') {
+        this.vlog(3, "really show spinner");
         $("#spinner").show();
         document.title = "Waiting for server..."
         this.spinnerShowQueued = false;
+    } else {
+        this.vlog(3, "really NOT showing spinner");
     }
 }
 
 KansasUI.prototype.hideSpinner = function() {
+    if (this.client && this.client.futuresPending() > 0) {
+        this.vlog(1, "keeping spinner: pending futures: "
+            + this.client.futuresPending());
+        return;
+    }
     this.spinnerShowQueued = false;
+    this.vlog(3, "hiding spinner");
     $("#spinner").hide();
     if (this.oldtitle) {
         document.title = this.oldtitle;

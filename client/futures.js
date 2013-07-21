@@ -48,6 +48,11 @@ Future.prototype.then = function(callback) {
     return child;
 }
 
+/* Convenience function to ignore a future's result. */
+Future.prototype.done = function() {
+    this.then(function() {});
+}
+
 /**
  * Called on this future when the pending computation is completed.
  */

@@ -38,7 +38,7 @@ function enterGame() {
     kansas_ui.init(client, uuid, user, $("#player1").is(":checked"));
 
     client._state = 'opened_pending_connect';
-    client.sendRaw("connect", {
+    client.send("connect", {
         user: user,
         gameid: gameid,
         uuid: uuid,
@@ -66,7 +66,7 @@ function handleSocketOpen() {
         enterGame();
     } else {
         kansas_ui.vlog(3, "client: "  + client);
-        client.send("list_games").then(handleListGames);
+        client.callAsync("list_games").then(handleListGames);
     }
 }
 
@@ -133,7 +133,7 @@ function handleListGames(data) {
     }
     setTimeout(function() {
         if (client._state == 'opened') {
-            client.send("list_games").then(handleListGames);
+            client.callAsync("list_games").then(handleListGames);
         }
     }, 500);
 }

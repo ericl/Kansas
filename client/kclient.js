@@ -10,8 +10,11 @@
  *      .connect();
  *
  *  to send a message:
- *      var fut = kclient.send(msg_type, msg_payload);
+ *      var fut = kclient.callAsync(msg_type, msg_payload);
  *      fut.then(myCallback).then(mySecondCallback);
+ *
+ *  to send raw messages:
+ *      kclient.send(msg_type, args);
  *
  *  to reconnect:
  *      kclient.connect();
@@ -19,6 +22,7 @@
  *  See kclient._hooks for more information on adding hooks.
  *
  *  to query game state:
+ *      kclient.futuresPending() -> int
  *      kclient.listAll() -> list[int]
  *      kclient.listStacks(pos_type) -> list[any]
  *      kclient.getPos(id|jquery) -> (type: str, pos: any)
@@ -61,6 +65,8 @@ function KansasClient(hostname, ip_port, kansas_ui) {
         }
     }, 30000);
 }
+
+(function() {  /* begin namespace kclient */
 
 function KansasBulkMove(client) {
     this.moves = [];
@@ -111,7 +117,11 @@ KansasBulkMove.prototype.commit = function() {
     }
 
     this.client.ui.vlog(3, "bulkmove: " + JSON.stringify(this.moves));
-    this.client.sendRaw("bulkmove", {moves: this.moves});
+    this.client.send("bulkmove", {moves: this.moves});
+}
+
+KansasClient.prototype.futuresPending = function() {
+    return Object.keys(this._futures).length;
 }
 
 KansasClient.prototype._removeEntry = function(pos, id) {
@@ -130,8 +140,10 @@ KansasClient.prototype.bind = function(name, fn) {
     return this;
 }
 
-KansasClient.prototype.send = function(tag, data) {
-    this.ui.vlog(3, "send: " + tag + "::" + JSON.stringify(data));
+/* Sends message and returns a pending Future for the result.
+ * The client will be "Loading..." as long as the Future is pending. */
+KansasClient.prototype.callAsync = function(tag, data) {
+    this.ui.vlog(1, "callAsync: " + tag + "::" + JSON.stringify(data));
     this.ui.showSpinner("sending " + tag);
     var fut = new Future(tag);
     if (this._ws != null) {
@@ -141,8 +153,10 @@ KansasClient.prototype.send = function(tag, data) {
     return fut;
 }
 
-KansasClient.prototype.sendRaw = function(tag, data) {
-    this.ui.showSpinner("sendRaw " + tag);
+/* Sends message without creating a Future.
+ * The client will be "Loading..." until any ack is received on the socket. */
+KansasClient.prototype.send = function(tag, data) {
+    this.ui.showSpinner("send " + tag);
     if (this._ws != null) {
         this._ws.send(tag, data);
     }
@@ -300,13 +314,13 @@ function removeFromArray(arr, item) {
 KansasClient.prototype._eventHandlers = function(that) {
     return {
         _future_router: function(e) {
-            that.ui.hideSpinner();
             if (that._futures[e.future_id]) {
                 that._futures[e.future_id].complete(e.data);
                 delete that._futures[e.future_id];
             } else {
                 that.ui.vlog(0, "Dropped future: " + JSON.stringify(e.future_id));
             }
+            that.ui.hideSpinner();
         },
         _default: function(e) {
             that.ui.hideSpinner();
@@ -325,14 +339,14 @@ KansasClient.prototype._eventHandlers = function(that) {
             that._state = 'connected';
             that._reset(e.data[0]);
         },
-        remove_resp: function(e) {
+        bulk_remove: function(e) {
             for (i in e.data) {
                 var id = e.data[i];
                 that._removeEntry(that.getPos(id), id);
             }
             that._notify('removed', e.data);
         },
-        add_resp: function(e) {
+        bulk_add: function(e) {
             var state = that._game.state;
             var added = [];
             for (i in e.data.cards) {
@@ -423,3 +437,5 @@ KansasClient.prototype._hooks = {
     removed: function(data) {},
     added: function(data) {},
 }
+
+})();  /* end namespace kclient */

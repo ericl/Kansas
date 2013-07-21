@@ -270,6 +270,7 @@ class KansasHandler(object):
         self.handlers['keepalive'] = self.handle_keepalive
         self.handlers['query'] = self.handle_query
         self.handlers['bulkquery'] = self.handle_bulkquery
+        self.handlers['sleep'] = self.handle_sleep
 
     def handle_ping(self, request, output):
         logging.debug("served ping")
@@ -277,6 +278,10 @@ class KansasHandler(object):
 
     def handle_keepalive(self, req, output):
         logging.info('keepalive from ' + str(output.stream));
+
+    def handle_sleep(self, request, output):
+        time.sleep(5)
+        output.reply("done")
     
     def handle_bulkquery(self, request, output):
         resp = {}
@@ -490,8 +495,9 @@ class KansasGameHandler(KansasHandler):
                     self._state.remove_card(card)
             self.broadcast(
                 set(self.streams.keys()),
-                'remove_resp', list(removed))
+                'bulk_remove', list(removed))
             self.save()
+        output.reply("done")
 
     def handle_add(self, req, output):
         with self._lock:
@@ -509,11 +515,12 @@ class KansasGameHandler(KansasHandler):
             self._state.initializeStacks()
             self.broadcast(
                 set(self.streams.keys()),
-                'add_resp', {
+                'bulk_add', {
                     'cards': added,
                     'requestor': requestor,
                 })
             self.save()
+        output.reply("done")
     
     def handle_kvop(self, req, output):
         op = req['op']
