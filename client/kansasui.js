@@ -2156,7 +2156,8 @@ KansasUI.prototype.handleAdd = function(data) {
                 set = set.add($("#card_" + cards[i]));
             }
             that._createSelection(set, false);
-        }, kAnimationLength);
+            $("#selectionbox").hide();
+        }, kAnimationLength / 2);
     }
 }
 
