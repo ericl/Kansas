@@ -322,8 +322,8 @@ KansasClient.prototype._eventHandlers = function(that) {
         add_resp: function(e) {
             var state = that._game.state;
             var added = [];
-            for (i in e.data) {
-                var add = e.data[i];
+            for (i in e.data.cards) {
+                var add = e.data.cards[i];
                 var stack = state[add.pos[0]][add.pos[1]];
                 added.push(add.id);
                 if (!stack) {
@@ -336,7 +336,7 @@ KansasClient.prototype._eventHandlers = function(that) {
                 state.urls_small[add.id] = add.small_url;
                 that._game.index[add.id] = add.pos;
             }
-            that._notify('added', added);
+            that._notify('added', {'cards': added, 'requestor': e.data.requestor});
         },
         bulkupdate: function(e) {
             var stacksTouched = {};

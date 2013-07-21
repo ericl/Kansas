@@ -56,7 +56,7 @@ SimpleUI.prototype.handleReset = function() {
     textDump(this.client);
 }
 
-SimpleUI.prototype.handleAdd = function(cards) {
+SimpleUI.prototype.handleAdd = function(data) {
     textDump(this.client);
 }
 

@@ -76,6 +76,10 @@ function extractCards(html) {
     return [validated, count];
 }
 
+function hideDeckPanel() {
+    $('#deckpanel').animate({left:'-45%'}, 300);
+}
+
 /**
  * Approximate inverse of extractCards. The pair can be used
  * to validate the syntax of card lists.
@@ -1391,7 +1395,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $("#closepanel").mouseup(function() {
-        $('#deckpanel').animate({left:'-45%'}, 300);
+        hideDeckPanel();
     });
 
     $("#validate").click(function(e) {
@@ -1478,21 +1482,26 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         if (cards.length > 150) {
             warning("Trying to add too many cards");
         } else {
-            var sendList = [];
+            var toAdd = [];
+            var pos = that.view.coordToPos(
+                that.view.width * 9 / 10 - kCardWidth,
+                that.view.height * 6 / 10);
             for (i in cards) {
                 var count = cards[i][0];
                 for (var j = 0; j < count; j++) {
-                    sendList.push({
-                        loc: that.view.coordToPos(
-                            that.view.width * 9 / 10 - kCardWidth,
-                            that.view.height * 6 / 10
-                        ),
+                    toAdd.push({
+                        loc: pos,
                         name: cards[i][1],
                     });
                 }
             }
-            shuffle(sendList);
-            client.send('add', sendList);
+            shuffle(toAdd);
+            var oldStack = client.getStack('board', pos);
+            if (oldStack) {
+                client.send('remove', oldStack);
+            }
+            client.send('add', {'cards': toAdd, 'requestor': uuid});
+            hideDeckPanel();
         }
     });
     
@@ -2089,10 +2098,15 @@ KansasUI.prototype.handleReset = function() {
     this.vlog(3, "Reset all local state.");
     $(".uuid_frame").remove();
     $(".card").remove();
-    this.handleAdd(this.client.listAll());
+    this.handleAdd({
+        'cards': this.client.listAll(),
+        'requestor': 'reset',
+    });
 }
 
-KansasUI.prototype.handleAdd = function(cards) {
+KansasUI.prototype.handleAdd = function(data) {
+    var cards = data.cards;
+    var requestor = data.requestor;
     var that = this;
     this.vlog(1, "add cards: " + cards);
 
@@ -2132,6 +2146,17 @@ KansasUI.prototype.handleAdd = function(cards) {
         var card = $("#card_" + cards[i]);
         card.fadeIn();
         this._initCards(card);
+    }
+
+    if (requestor == this.uuid) {
+        // TODO why do we need this timeout... immediate => box in wrong place
+        setTimeout(function() {
+            var set = $();
+            for (i in cards) {
+                set = set.add($("#card_" + cards[i]));
+            }
+            that._createSelection(set, false);
+        }, kAnimationLength);
     }
 }
 

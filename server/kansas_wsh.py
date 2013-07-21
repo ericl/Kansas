@@ -469,7 +469,8 @@ class KansasGameHandler(KansasHandler):
     def handle_add(self, req, output):
         with self._lock:
             added = []
-            for card in req:
+            requestor = req['requestor']
+            for card in req['cards']:
                 new_id = self._state.add_card(card)
                 added.append({
                     'id': new_id,
@@ -481,7 +482,10 @@ class KansasGameHandler(KansasHandler):
             self._state.initializeStacks()
             self.broadcast(
                 set(self.streams.keys()),
-                'add_resp', added)
+                'add_resp', {
+                    'cards': added,
+                    'requestor': requestor,
+                })
             self.save()
     
     def handle_kvop(self, req, output):
