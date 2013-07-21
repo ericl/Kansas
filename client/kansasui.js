@@ -373,7 +373,7 @@ KansasUI.prototype._startDragProgress = function(target) {
 
 /* Unselects all selected items, and hides hover menu. */
 KansasUI.prototype._removeFocus = function(doAnimation) {
-    this.vlog(1, "unfocus");
+    this.vlog(2, "unfocus");
     this._removeHoverMenu(doAnimation);
     this._setSnapPoint(null);
     hideSelectionBox();
@@ -1950,7 +1950,7 @@ KansasUI.prototype._redrawOtherHands = function() {
 
 /* Forces a re-render of the hand after a handCache update. */
 KansasUI.prototype._redrawHand = function() {
-    this.vlog(1, "redrawHand");
+    this.vlog(2, "redrawHand");
     var hand = this.client.getStack('hands', this.hand_user);
     if (!hand)
         hand = [];
