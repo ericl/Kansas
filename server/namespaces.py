@@ -49,11 +49,13 @@ class Namespace(object):
         if type(key) not in [unicode, str, int, float, long]:
             raise ValueError("key must be atomic type, was '%s'" % type(key))
         key = str(key)
-        return '%s.v%d:%s' % (self.name, self.version, self.prefix + key)
+        prefix = self.prefix and (self.prefix + '\0') or ''
+        return '%s.v%d:%s' % (self.name, self.version, prefix + key)
 
     def _invkey(self, internal_key):
         assert ':' in internal_key
-        return internal_key.split(':', 1)[1][len(self.prefix):]
+        prefix = self.prefix and (self.prefix + '\0') or ''
+        return internal_key.split(':', 1)[1][len(prefix):]
 
     def Subspace(self, name):
         return Namespace(
@@ -75,18 +77,15 @@ class Namespace(object):
         except KeyError:
             return None
 
+    def List(self):
+        return list(self)
+
     def __contains__(self, key):
         return self.Get(key) is not None
 
     def __iter__(self):
         for k, v in self.db.RangeIter(self._key('\x00'), self._key('\xff')):
             yield self._invkey(k), self.serializer.loads(v)
-
-    def __str__(self):
-        return str(list(self))
-
-    def __repr__(self):
-        return str(self)
 
 
 if __name__ == '__main__':
