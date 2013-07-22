@@ -7,7 +7,6 @@
  *      view.getCoord(id|jquery) -> (int, int)
  *      view.posToCoord(pos: int) -> (int, int)
  *      view.coordToPos(x: int, y: int) -> pos: int
- *      view.toPos(id|jquery) -> pos: int
  *      view.resize([400, 600]);
  *
  *  To mutate game state:
@@ -137,11 +136,6 @@ KansasView.prototype.posToCoord = function(board_pos) {
     var x = keyToX(this, canonicalKey);
     var y = keyToY(this, canonicalKey);
     return [toClientX(this, x), toClientY(this, y)];
-}
-
-KansasView.prototype.toPos = function(jquery) {
-    var off = jquery.offset();
-    return this.coordToPos(off.left, off.top);
 }
 
 KansasView.prototype.coordToPos = function(x, y) {

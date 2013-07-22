@@ -348,7 +348,7 @@ KansasUI.prototype._createSelection = function(items, popupMenu) {
 KansasUI.prototype._updateDragProgress = function(target, force) {
     if ($.now() - this.lastFrameUpdate > kFrameUpdatePeriod || force) {
         this.lastFrameUpdate = $.now();
-        var dest_key = this.view.toPos(target);
+        var dest_key = this._screenToPos(target);
         if (dest_key != this.lastFrameLocation) {
             this.hasDraggedOffStart = true;
             this.lastFrameLocation = dest_key;
@@ -359,7 +359,7 @@ KansasUI.prototype._updateDragProgress = function(target, force) {
 
 /* Call this before updateDragProgress() */
 KansasUI.prototype._startDragProgress = function(target) {
-    lastFrameLocation = this.view.toPos(target);
+    lastFrameLocation = this._screenToPos(target);
     if (target.hasClass("card")) {
         this.client.send("broadcast",
             {"subtype": "dragstart",
@@ -621,7 +621,7 @@ KansasUI.prototype._updateFocus = function(target, noSnap) {
                 this.vlog(2, "Rendering free-dragging card.");
                 sizingInfo = [[
                     target.hasClass("rotated"),
-                    this.view.toPos(target),
+                    this._screenToPos(target),
                     0]];
             } else {
                 this.vlog(2, "Rendering just-selected card on stack.");
@@ -2078,6 +2078,49 @@ KansasUI.prototype._redrawHand = function() {
     this.vlog(2, "hand animated with " + skips + " skips");
 }
 
+/* Produces a location key from a jquery selection. */
+// TODO move into KansasView... somehow? this is hard because
+// the code needs to know the heightOf() function and rotation state.
+KansasUI.prototype._screenToPos = function(target) {
+    return this.view.coordToPos(
+        this._normalizedX(target),
+        this._normalizedY(target));
+}
+
+/* Returns the y-key of the card in the client view. */
+KansasUI.prototype._normalizedY = function(target) {
+    var offset = target.offset();
+    var tp = offset.top;
+    if (target.prop("id") != this.draggingId
+            && target.hasClass("card")) {
+        tp -= heightOf(
+            this.client.stackIndex(target),
+            this.client.stackHeight(target));
+    }
+    // Compensates for rotated targets.
+    if (target.hasClass("card")) {
+        tp -= parseInt(target.css("margin-top"));
+    }
+    return tp;
+}
+
+KansasUI.prototype._normalizedX = function(target) {
+    var offset = target.offset();
+    var left = offset.left;
+    if (target.prop("id") != this.draggingId
+            && target.hasClass("card")) {
+      left -= heightOf(
+        this.client.stackIndex(target),
+        this.client.stackHeight(target));
+    }
+    // Compensates for rotated targets.
+    if (target.hasClass("card")) {
+        left -= parseInt(target.css("margin-left"));
+    }
+    return left;
+}
+
+
 /* Animates a card move to a destination on the board. */
 KansasUI.prototype._redrawCard = function(card) {
     this.updateCount += 1;
@@ -2175,7 +2218,7 @@ KansasUI.prototype._initCards = function(sel) {
             if (snap != null) {
                 txn.moveOnto(card, snap);
             } else {
-                txn.moveToBoard(card, that.view.toPos(card));
+                txn.moveToBoard(card, that._screenToPos(card));
             }
         }
 
