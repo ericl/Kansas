@@ -23,6 +23,7 @@
  *
  *  to query game state:
  *      kclient.futuresPending() -> int
+ *      kclient.dropFutures() -> void
  *      kclient.listAll() -> list[int]
  *      kclient.listStacks(pos_type) -> list[any]
  *      kclient.getPos(id|jquery) -> (type: str, pos: any)
@@ -122,6 +123,10 @@ KansasBulkMove.prototype.commit = function() {
 
 KansasClient.prototype.futuresPending = function() {
     return Object.keys(this._futures).length;
+}
+
+KansasClient.prototype.dropFutures = function() {
+    this._futures = {};
 }
 
 KansasClient.prototype._removeEntry = function(pos, id) {
