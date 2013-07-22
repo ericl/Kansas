@@ -2200,7 +2200,8 @@ KansasUI.prototype._initCards = function(sel) {
 
     sel.mouseup(function(event) {
         var card = $(event.currentTarget);
-        if (!that.dragging) {
+        if (!that.dragging &&
+                that.view.getPos(card)[1] != that.opposing_hand_user) {
             if ($(".selecting").length != 0) {
                 that.vlog(2, "skipping mouseup when selecting");
             } else if (that.client.getPos(card)[0] == "hands"
