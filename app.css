@@ -40,7 +40,9 @@ html, body {
 }
 
 #deckinput {
+    font-family: "Lucida Console", Monospace;
     width: 100%;
+    overflow-x: hidden;
     height: 50%;
     float: left;
     color: white;
@@ -82,6 +84,24 @@ html, body {
     position: absolute;
     z-index: 9999999;
     top: 0px;
+}
+
+#opposinghand {
+    position: absolute;
+    z-index: 4200000;
+    border: 0 !important;
+    opacity: 0.8;
+    background-color: #555;
+    border-radius: 6px;
+    left: 30%;
+    top: 0;
+    height: 45px !important;
+    margin-top: -20px;
+    width: 210px;
+}
+
+#opposinghand.active {
+    background-color: #33b5e5 !important;
 }
 
 #hand {
