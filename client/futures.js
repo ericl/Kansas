@@ -53,6 +53,13 @@ Future.prototype.done = function() {
     this.then(function() {});
 }
 
+/* Convenience function to print a future's result. */
+Future.prototype.print = function() {
+    this.then(function(v) {
+        console.log(JSON.stringify(v));
+    });
+}
+
 /**
  * Called on this future when the pending computation is completed.
  */
