@@ -42,11 +42,11 @@ html, body {
 #deckinput {
     font-family: "Lucida Console", Monospace;
     width: 100%;
-    overflow-x: hidden;
     height: 50%;
     float: left;
     color: white;
     overflow-y: auto;
+    overflow-x: hidden;
     border: 1px solid #222;
 }
 
@@ -426,6 +426,7 @@ div.hovernote {
     max-height: 90%;
     max-width: 800px;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 5px;
     position: absolute;
     z-index: 9999999;
