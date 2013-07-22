@@ -389,7 +389,8 @@ KansasUI.prototype._removeFocus = function(doAnimation) {
 
 /* Highlights new snap-to card, and unhighlights old one. */
 KansasUI.prototype._setSnapPoint = function(snap) {
-    var hand = $("#hand").hasClass("active");
+    var hand = $("#hand").hasClass("active")
+        || $("#opponenthand").hasClass("active");
     if (snap != null) {
         if (hand) {
             snap.removeClass("snappoint");
@@ -2200,24 +2201,32 @@ KansasUI.prototype._initCards = function(sel) {
 
     sel.mouseup(function(event) {
         var card = $(event.currentTarget);
-        if (!that.dragging &&
-                that.view.getPos(card)[1] != that.opposing_hand_user) {
+        var inophand = client.getPos(card)[1] == that.opposing_hand_user;
+        if (!that.dragging) {
             if ($(".selecting").length != 0) {
                 that.vlog(2, "skipping mouseup when selecting");
             } else if (that.client.getPos(card)[0] == "hands"
                     && $("#hand").hasClass("collapsed")) {
                 // Expands hand if a card is clicked while collapsed.
-                $("#hand").removeClass("collapsed");
-                that._redrawHand();
-                that.vlog(2, "expand hand");
-            } else if (that.hoverCardId != card.prop("id")) {
-                that.vlog(2, "case 3");
-                // Taps/untaps by middle-click.
-                if (event.which == 2) {
-                    that._toggleRotateCard(card);
-                    that._removeFocus();
+                if (!inophand) {
+                    $("#hand").removeClass("collapsed");
+                    that._redrawHand();
+                    that.vlog(2, "expand hand");
                 } else {
-                    that._showHoverMenu(card);
+                    that.vlog(2, "expand hand denied");
+                }
+            } else if (that.hoverCardId != card.prop("id")) {
+                if (!inophand) {
+                    that.vlog(2, "case 3a");
+                    // Taps/untaps by middle-click.
+                    if (event.which == 2) {
+                        that._toggleRotateCard(card);
+                        that._removeFocus();
+                    } else {
+                        that._showHoverMenu(card);
+                    }
+                } else {
+                    that.vlog(2, "case 3b");
                 }
             } else {
                 that.vlog(2, "case 4");
