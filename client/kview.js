@@ -7,6 +7,7 @@
  *      view.getCoord(id|jquery) -> (int, int)
  *      view.posToCoord(pos: int) -> (int, int)
  *      view.coordToPos(x: int, y: int) -> pos: int
+ *      view.toPos(id|jquery) -> pos: int
  *      view.resize([400, 600]);
  *
  *  To mutate game state:
@@ -14,6 +15,7 @@
  *  such that cards moved first to a location will have a lower z-index.
  *      view.startBulkMove()
  *          .move(id1, x1, y1)
+ *          .moveToBoard(id1, boardpos)
  *          .moveOnto(id2, id1)
  *          .moveToHand(id2, handid)
  *          .move(id3, x2, y2)
@@ -137,6 +139,11 @@ KansasView.prototype.posToCoord = function(board_pos) {
     return [toClientX(this, x), toClientY(this, y)];
 }
 
+KansasView.prototype.toPos = function(jquery) {
+    var off = jquery.offset();
+    return this.coordToPos(off.left, off.top);
+}
+
 KansasView.prototype.coordToPos = function(x, y) {
     return keyFromCoords(this, toCanonicalX(this, x), toCanonicalY(this, y));
 }
@@ -182,6 +189,15 @@ KansasViewTxn.prototype.move = function(id, x, y) {
         this.view,
         toCanonicalX(this.view, x),
         toCanonicalY(this.view, y));
+    return this;
+}
+
+KansasViewTxn.prototype.moveToBoard = function(id, pos) {
+    id = toId(id);
+    var buf = this.movebuffer;
+    this._initEmptyMove(buf, id);
+    buf[id].dest_type = 'board';
+    buf[id].dest_key = pos;
     return this;
 }
 
