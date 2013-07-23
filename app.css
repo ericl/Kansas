@@ -40,7 +40,6 @@ html, body {
 }
 
 #deckinput {
-    font-family: "Lucida Console", Monospace;
     width: 100%;
     height: 50%;
     float: left;
