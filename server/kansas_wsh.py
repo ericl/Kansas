@@ -31,9 +31,9 @@ if not os.path.exists(kCachePath):
     os.makedirs(kCachePath)
 
 
-Games = namespaces.Namespace(kDBPath, 'Games', version=1)
-LookupCache = namespaces.Namespace(kDBPath, 'LookupCache', version=3)
-ClientDB = namespaces.Namespace(kDBPath, 'ClientDB', version=1)
+Games = namespaces.Namespace(kDBPath, 'Games', version=2)
+LookupCache = namespaces.Namespace(kDBPath, 'LookupCache', version=4)
+ClientDB = namespaces.Namespace(kDBPath, 'ClientDB', version=2)
 
 
 BLANK_DECK = {
