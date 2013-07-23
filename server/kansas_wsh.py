@@ -92,16 +92,18 @@ def _CardNameToUrls(name, exact=False):
     matches = re.finditer(
         '"http://magiccards.info/scans/en/[a-z0-9]*/[a-z0-9]*.jpg"',
         data)
+    has_more = bool(re.findall('"\/query.*;p=2"', data))
     urls = [m.group() for m in matches]
     logging.info("found " + ','.join(urls))
     urls = [a[1:-1] for a in urls]  # strips quote marks
-    LookupCache.Put(key, urls)
-    return urls
+    result = (urls, has_more)
+    LookupCache.Put(key, result)
+    return result
 
 
 def CardNameToUrls(name, exact=False):
-    urls = _CardNameToUrls(name, exact)
-    return [ReturnCachedIfPresent(a) for a in urls]
+    urls, has_more = _CardNameToUrls(name, exact)
+    return [ReturnCachedIfPresent(a) for a in urls], has_more
 
 
 class CachingLoader(dict):
@@ -245,7 +247,7 @@ class KansasGameState(object):
     def add_card(self, card):
         loc = card['loc']
         name = card['name']
-        urls = CardNameToUrls(name, True)
+        urls, _ = CardNameToUrls(name, True)
         if urls:
             url = urls[0]
         else:
@@ -287,7 +289,7 @@ class KansasHandler(object):
         resp = {}
         logging.info('bulkquery: ' + str(request));
         for term in request['terms']:
-            urls = CardNameToUrls(term, True)
+            urls, _ = CardNameToUrls(term, True)
             if urls:
                 resp[term] = urls[0]
             else:
@@ -297,15 +299,21 @@ class KansasHandler(object):
     def handle_query(self, request, output):
         if request['term']:
             logging.info("Trying exact match")
-            urls = CardNameToUrls(request['term'], True)
+            urls, has_more = CardNameToUrls(request['term'], True)
             if urls:
-                output.reply({'urls': urls, 'req': request})
+                output.reply({
+                    'urls': urls,
+                    'has_more': has_more,
+                    'req': request})
                 return
             if request.get('allow_inexact'):
                 logging.info("Trying inexact match")
-                urls = CardNameToUrls(request['term'], False)
+                urls, has_more = CardNameToUrls(request['term'], False)
                 if urls:
-                    output.reply({'urls': urls, 'req': request})
+                    output.reply({
+                        'urls': urls,
+                        'has_more': has_more,
+                        'req': request})
                     return
         output.reply({'urls': [], 'req': request})
 
@@ -326,24 +334,44 @@ class KansasHandler(object):
 
 
 class KansasInitHandler(KansasHandler):
-    """The request handler created for each new websocket connection."""
-
-    MAX_GAMES = 5
+    """The request handler for inbound websocket connections."""
 
     def __init__(self):
         KansasHandler.__init__(self)
+        self.scopes = {}
+        self.handlers['set_scope'] = self.handle_set_scope
+
+    def handle_set_scope(self, request, output):
+        scope = request
+        assert scope, scope
+        if scope not in self.scopes:
+            self.scopes[scope] = KansasScopeHandler(scope)
+
+    def transition(self, reqtype, request, output):
+        if reqtype == 'set_scope':
+            KansasHandler.transition(self, reqtype, request, output)
+            return self.scopes[request]
+        else:
+            return KansasHandler.transition(self, reqtype, request, output)
+
+
+class KansasScopeHandler(KansasHandler):
+    """The request handler created for Kansas scope."""
+
+    MAX_GAMES = 5
+
+    def __init__(self, scope):
+        KansasHandler.__init__(self)
         self.handlers['connect'] = self.handle_connect
         self.handlers['list_games'] = self.handle_list_games
-        self.handlers['connect_searchapi'] = self.handle_connect_searchapi
+        self.scope = scope
         self.games = {}
-        for gameid, snapshot in Games:
+        self.ScopedGames = Games.Subspace(self.scope)
+        for gameid, snapshot in self.ScopedGames:
             logging.debug("Restoring %s as %s" % (gameid, str(snapshot)))
             game = self.new_game(gameid)
             game.restore(snapshot)
             self.games[gameid] = game
-
-    def handle_connect_searchapi(self, request, output):
-        output.reply("ok")
 
     def handle_list_games(self, request, output):
         self.garbage_collect_games()
@@ -354,19 +382,17 @@ class KansasInitHandler(KansasHandler):
                 key=lambda (k, v): (bool(not v.presence_count()), -v.last_used))
             for gameid, handler in ranked:
                 resp.append({
-                    'gameid': gameid
-                        if '@private' not in gameid
-                            else abs(hash(gameid) % 10000000),
+                    'gameid': gameid,
                     'private': '@private' in gameid,
                     'presence': handler.presence_count()})
             output.reply(resp)
 
     def garbage_collect_games(self):
-        if len(self.games) > KansasInitHandler.MAX_GAMES:
+        if len(self.games) > self.MAX_GAMES:
             ranked = sorted(
                 self.games.items(),
                 key=lambda (k, v): (bool(not v.presence_count()), -v.last_used))
-            while len(self.games) > KansasInitHandler.MAX_GAMES:
+            while len(self.games) > self.MAX_GAMES:
                 victim_id, victim = ranked.pop()
                 self.delete_game(victim_id)
         for gameid, game in self.games.items():
@@ -375,7 +401,7 @@ class KansasInitHandler(KansasHandler):
     
     def new_game(self, gameid):
         logging.info("Creating new game '%s'", gameid)
-        game = KansasGameHandler(gameid)
+        game = KansasGameHandler(gameid, self.scope)
         self.games[gameid] = game
         return game
 
@@ -410,25 +436,15 @@ class KansasInitHandler(KansasHandler):
         if reqtype == 'connect':
             KansasHandler.transition(self, reqtype, request, output)
             return self.games[request['gameid']]
-        elif reqtype == 'connect_searchapi':
-            KansasHandler.transition(self, reqtype, request, output)
-            return searchHandler
         else:
             return KansasHandler.transition(self, reqtype, request, output)
-
-
-class KansasSearchHandler(KansasHandler):
-    """Handler that *only* serves search requests."""
-
-    def __init__(self):
-        KansasHandler.__init__(self)
 
 
 class KansasGameHandler(KansasHandler):
     """There is single game handler for each game, shared among all players.
        Enforces a global ordering on game-state update broadcasts."""
 
-    def __init__(self, gameid):
+    def __init__(self, gameid, scope):
         KansasHandler.__init__(self)
         self._seqno = 1000
         self._state = KansasGameState()
@@ -439,13 +455,15 @@ class KansasGameHandler(KansasHandler):
         self.handlers['remove'] = self.handle_remove
         self.handlers['add'] = self.handle_add
         self.handlers['kvop'] = self.handle_kvop
+        self.ScopedClientDB = ClientDB.Subspace(scope)
+        self.ScopedGames = Games.Subspace(scope)
         self.streams = {}
         self.last_used = time.time()
         self.terminated = False
 
     def save(self):
         logging.info("Saving snapshot of %s." % self.gameid)
-        Games.Put(self.gameid, self.snapshot())
+        self.ScopedGames.Put(self.gameid, self.snapshot())
 
     def add_stream(self, stream, presence_info):
         self.streams[stream] = presence_info
@@ -524,7 +542,7 @@ class KansasGameHandler(KansasHandler):
     
     def handle_kvop(self, req, output):
         op = req['op']
-        ns = ClientDB.Subspace(req['namespace'])
+        ns = self.ScopedClientDB.Subspace(req['namespace'])
         resp = None
         if op == 'Put':
             resp = ns.Put(req['key'], req['value'])
@@ -556,7 +574,7 @@ class KansasGameHandler(KansasHandler):
         logging.info("Terminating game.")
         with self._lock:
             self.terminated = True
-            Games.Delete(self.gameid)
+            self.ScopedGames.Delete(self.gameid)
             for s in self.streams:
                 try:
                     s.send_message(
@@ -630,7 +648,6 @@ class KansasGameHandler(KansasHandler):
 
 
 initHandler = KansasInitHandler()
-searchHandler = KansasSearchHandler()
 
 
 def web_socket_do_extra_handshake(request):

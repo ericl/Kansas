@@ -420,6 +420,13 @@ div.hovernote {
     color: red;
 }
 
+#has_more {
+    position: relative;
+    left: 5px;
+    color: #33b5e5;
+    font-style: italic;
+}
+
 #search_preview {
     left: 36%;
     background-color: rgba(0, 0, 0, 0.5);

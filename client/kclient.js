@@ -17,7 +17,7 @@
  *      kclient.send(msg_type, args);
  *
  *  to reconnect:
- *      kclient.connect();
+ *      kclient.connect(scopeName);
  *
  *  See kclient._hooks for more information on adding hooks.
  *
@@ -52,6 +52,7 @@ function KansasClient(hostname, ip_port, kansas_ui) {
     this.ip_port = ip_port;
     this.ui = kansas_ui;
     this.halted = false;
+    this.scope = 'DEFAULT_SCOPE';
     this._ws = null;
     this._futures = {};
     this._state = 'offline';
@@ -167,6 +168,8 @@ KansasClient.prototype.send = function(tag, data) {
 }
 
 KansasClient.prototype.connect = function() {
+    if (!this.scope)
+        throw "must set scope name";
     if (this.halted)
         throw "client halted";
     this.ui.showSpinner("connect");
@@ -177,7 +180,10 @@ KansasClient.prototype.connect = function() {
     this._futures = {};
     this._ws = $.websocket(
         "ws:///" + this.hostname + ":" + this.ip_port + "/kansas",
-        { open: function() { that._onOpen.call(that); },
+        { open: function() {
+            that._ws.send("set_scope", that.scope);
+            that._onOpen.call(that);
+          },
           close: function() { that._onClose.call(that); },
           events: this._eventHandlers(that) });
     return this;

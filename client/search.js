@@ -50,13 +50,15 @@ KansasSearcher.prototype.handleQueryResponse = function(data) {
             $(this.notfound).hide();
         } else if (data.req.tags != "immediate") {
             $(this.notfound).show();
+            $("#has_more").hide();
         }
     } else {
-        this.previewItems(data.urls);
+        console.log(data);
+        this.previewItems(data.urls, data.has_more, data.req.term);
     }
 }
 
-KansasSearcher.prototype.previewItems = function(urls) {
+KansasSearcher.prototype.previewItems = function(urls, has_more, term) {
     var that = this;
     $(this.preview_div + " img").remove();
     $.each(urls, function() {
@@ -66,6 +68,13 @@ KansasSearcher.prototype.previewItems = function(urls) {
             + $(this)[0]
             + " class=kansas_preview></img>");
     });
+    if (has_more) {
+        $("#has_more")
+            .prop("href", "http://magiccards.info/query?q=" + term)
+            .show();
+    } else {
+        $("#has_more").hide();
+    }
     $(this.notfound).hide();
     $(this.preview_div).show().scrollTop();
 }

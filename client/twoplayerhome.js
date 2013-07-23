@@ -168,7 +168,7 @@ $(document).ready(function() {
         .bind('reset', function(x) { kansas_ui.handleReset(x); })
         .bind('removed', function(x) { kansas_ui.handleRemove(x); })
         .bind('added', function(x) { kansas_ui.handleAdd(x); })
-        .connect();
+        .connect('DEFAULT_SCOPE');
 
     if (clients.length == 0)
         c0 = client;
