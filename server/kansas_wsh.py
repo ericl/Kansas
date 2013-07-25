@@ -383,7 +383,6 @@ class KansasScopeHandler(KansasHandler):
             for gameid, handler in ranked:
                 resp.append({
                     'gameid': gameid,
-                    'private': '@private' in gameid,
                     'presence': handler.presence_count()})
             output.reply(resp)
 

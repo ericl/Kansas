@@ -101,11 +101,6 @@ function handleListGames(data) {
             var name = data[g].gameid;
             var priv = "";
 
-            if (data[g].private) {
-                name = "<i>Private Game " + data[g].gameid + "</i>"
-                priv = "disabled "
-            }
-
             if (data[g].presence > 0) {
                 online = " (" + data[g].presence + " online)";
             }
@@ -177,8 +172,6 @@ $(document).ready(function() {
     $("#newgame").click(function() {
         if ($("#gamename").val())
             gameid = $("#gamename").val();
-        if ($("#private").is(":checked"))
-            gameid += "@private_" + uuid;
         enterGame();
     });
 
