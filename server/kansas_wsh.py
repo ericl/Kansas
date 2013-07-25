@@ -614,8 +614,24 @@ class KansasGameHandler(KansasHandler):
         if presence_changed:
             self.notify_presence()
 
+    def gc_streams(self):
+        with self._lock:
+            for stream in self.streams.keys():
+                try:
+                    chk = self.streams[stream].get('last_checked', 0)
+                    if time.time() - chk < 10:
+                        continue
+                    else:
+                        self.streams[stream]['last_checked'] = time.time()
+                    stream.send_ping()
+                except Exception, e:
+                    logging.exception(e)
+                    logging.warning("Removing broken stream %s", stream)
+                    del self.streams[stream]
+
     def presence_count(self):
         with self._lock:
+            self.gc_streams()
             return len(self.streams)
 
     def notify_presence(self):
