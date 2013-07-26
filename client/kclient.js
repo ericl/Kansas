@@ -17,7 +17,7 @@
  *      kclient.send(msg_type, args);
  *
  *  to reconnect:
- *      kclient.connect(scopeName);
+ *      kclient.connect();
  *
  *  See kclient._hooks for more information on adding hooks.
  *
@@ -47,12 +47,12 @@
  *          .commit();
  */
 
-function KansasClient(hostname, ip_port, kansas_ui) {
+function KansasClient(hostname, ip_port, kansas_ui, scope) {
     this.hostname = hostname;
     this.ip_port = ip_port;
     this.ui = kansas_ui;
     this.halted = false;
-    this.scope = 'DEFAULT_SCOPE';
+    this.scope = scope || 'DEFAULT_SCOPE';
     this._ws = null;
     this._futures = {};
     this._state = 'offline';

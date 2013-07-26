@@ -153,7 +153,17 @@ $(document).ready(function() {
         $("#homescreen").hide();
     }
 
-    client = new KansasClient(hostname, kWSPort, kansas_ui)
+    var scope = 'DEFAULT_SCOPE';
+    var args = location.search.split("&");
+    for (i in args) {
+        var split = args[i].split("=");
+        if (split[0].replace("?", "") == "scope") {
+            scope = split[1].replace("/", "");
+        }
+    }
+    kansas_ui.vlog(0, "Setting scope to '" + scope + "'.");
+
+    client = new KansasClient(hostname, kWSPort, kansas_ui, scope)
         .bind('opened', handleSocketOpen)
         .bind('error', handleError)
         .bind('disconnected', function() { handleSocketClose(client); } )
@@ -163,7 +173,7 @@ $(document).ready(function() {
         .bind('reset', function(x) { kansas_ui.handleReset(x); })
         .bind('removed', function(x) { kansas_ui.handleRemove(x); })
         .bind('added', function(x) { kansas_ui.handleAdd(x); })
-        .connect('DEFAULT_SCOPE');
+        .connect(scope);
 
     if (clients.length == 0)
         c0 = client;
