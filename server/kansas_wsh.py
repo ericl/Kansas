@@ -129,6 +129,13 @@ class KansasGameState(object):
         self.data = CachingLoader(data or BLANK_DECK)
         self.index = self.buildIndex()
         self.initializeStacks(shuffle=True)
+        self.gc()
+
+    def gc(self):
+        for s in ['orientations', 'urls_small', 'urls']:
+            for card in self.data[s].keys():
+                if not self.containsCard(card):
+                    del self.data[s][card]
 
     def containsCard(self, card):
         return card in self.index
@@ -145,6 +152,7 @@ class KansasGameState(object):
             for card in hand:
                 if card not in self.data['orientations']:
                     self.data['orientations'][card] = -1
+        self.gc()
 
     def buildIndex(self):
         index = {}
@@ -458,6 +466,7 @@ class KansasGameHandler(KansasHandler):
                 if self._state.containsCard(card):
                     removed.add(card)
                     self._state.remove_card(card)
+            self._state.gc()
             self.broadcast(
                 set(self.streams.keys()),
                 'bulk_remove', list(removed))
