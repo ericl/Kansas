@@ -58,6 +58,7 @@ function KansasUI() {
  */
 function extractCards(html) {
     var text = html
+        .replace(/<br><div>/g, '<br>')
         .replace(/\<div[^\>\<]*\>/g, '\n')
         .replace(/\<br[^\>\<]*\>/g, '\n')
         .replace(/\<[^\>\<]+\>/g, '')
