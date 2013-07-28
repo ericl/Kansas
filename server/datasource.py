@@ -8,7 +8,7 @@ import logging
 import re
 import urllib2
 
-QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=2)
+QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=4)
 
 
 def _FindCards(source, name, exact):
@@ -59,7 +59,7 @@ class MagicCardsInfoPlugin(object):
         stream = urllib2.urlopen(req)
         data = stream.read()
         matches = re.finditer(
-            r'<a href="/([a-z0-9]*)/en/([a-z0-9]*).html">(.*?)</a>',
+            r'<a href="/([a-z0-9]*)/en/([a-z0-9]*).html">(.*?)</a>\s+<img',
             data)
         has_more = bool(re.findall('"\/query.*;p=2"', data))
         stream = []
