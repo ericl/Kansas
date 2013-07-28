@@ -33,7 +33,7 @@ function KansasUI() {
     this.dragging = false;
     this.initialized_once = false;
     this.disableArenaEvents = false;
-    this.previewUrls = null;
+    this.previewUrls = [];
     this.dragStartKey = null;
     this.hasDraggedOffStart = false;
     this.hoverCardId = null;
