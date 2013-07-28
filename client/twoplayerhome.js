@@ -12,6 +12,7 @@ var hostname = window.location.hostname || "localhost"
 var uuid = "p_" + Math.random().toString().substring(5);
 
 // Datasource to use for finding cards.
+//var sourceid = 'poker';
 var sourceid = 'magiccards.info';
 
 // Global vars set by home screen, then used by init().

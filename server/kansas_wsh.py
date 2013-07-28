@@ -29,7 +29,7 @@ ClientDB = namespaces.Namespace(config.kDBPath, 'ClientDB', version=2)
 BLANK_DECK = {
     'deck_name': 'Blank deck',
     'resource_prefix': '/third_party/',
-    'default_back_url': '/third_party/images/mtg_detail.jpg',
+    'default_back_url': '',
     'board': {},
     'hands': {},
     'orientations': {},
@@ -58,7 +58,10 @@ class CachingLoader(dict):
         self.highest_id += 1
         new_id = self.highest_id
         large_path = self['urls'][new_id] = self.download(front_url)
-        small_path = large_path[:-4] + ('@%dx%d.jpg' % config.kSmallImageSize)
+        small_path = os.path.join(
+            config.kCachePath,
+            os.path.basename(large_path)[:-4]
+                + ('@%dx%d.jpg' % config.kSmallImageSize))
         if not os.path.exists(small_path):
             small_path = self.resize(large_path, small_path)
         self['urls_small'][new_id] = small_path
@@ -112,8 +115,9 @@ class JSONOutput(object):
 class KansasGameState(object):
     """KansasGameState holds the entire state of the game in json format."""
 
-    def __init__(self, data=None, sourceid=None):
+    def __init__(self, sourceid, data=None):
         self.data = CachingLoader(data or BLANK_DECK)
+        self.data['default_back_url'] = datasource.BackUrl(sourceid)
         self.index = self.buildIndex()
         self.initializeStacks(shuffle=True)
         self.sourceid = sourceid
@@ -240,17 +244,14 @@ class KansasHandler(object):
         output.reply({'req': request, 'resp': resp})
 
     def handle_query(self, request, output):
-        if request['term']:
-            if request.get('allow_inexact'):
-                logging.info("Trying inexact match")
-                stream, meta = datasource.Find(
-                    request['datasource'], request['term'], exact=False)
-            else:
-                logging.info("Trying exact match")
-                stream, meta = datasource.Find(
-                    request['datasource'], request['term'], exact=True)
+        if request.get('allow_inexact'):
+            logging.info("Trying inexact match")
+            stream, meta = datasource.Find(
+                request['datasource'], request['term'], exact=False)
         else:
-            stream, meta = [], {}
+            logging.info("Trying exact match")
+            stream, meta = datasource.Find(
+                request['datasource'], request['term'], exact=True)
         output.reply({
             'stream': stream,
             'meta': meta,
@@ -526,7 +527,7 @@ class KansasGameHandler(KansasHandler):
 
     def restore(self, snapshot):
         with self._lock:
-            self._state = KansasGameState(snapshot[0], self.sourceid)
+            self._state = KansasGameState(sourceid=self.sourceid, data=snapshot[0])
             self._seqno = snapshot[1]
 
     def handle_end(self, req, output):

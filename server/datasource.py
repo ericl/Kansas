@@ -7,14 +7,18 @@ from server import plugins
 
 import logging
 
-QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=4)
+QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=5)
 
 
 _SOURCES = {
     'magiccards.info': plugins.MagicCardsInfoPlugin(),
+    'poker': plugins.PokerCardsPlugin(),
     'customscans': None,
-    'poker': None,
 }
+
+
+def BackUrl(source):
+    return _SOURCES[source].GetBackUrl()
 
 
 def _FindCards(source, name, exact):

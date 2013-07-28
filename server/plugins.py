@@ -1,14 +1,39 @@
 # Plugins for various board games compatible with Kansas.
 
+import glob
 import logging
 import re
 import urllib2
 
 
-class MagicCardsInfoPlugin(object):
-    BACK_URL = '/third_party/images/mtg_detail.jpg'
+class DefaultPlugin(object):
+
+    def GetBackUrl(self):
+        return '/third_party/cards52/cropped/Blue_Back.png'
+
+
+class PokerCardsPlugin(DefaultPlugin):
+    def Fetch(self, name, exact):
+        stream = []
+        for card in glob.glob("../third_party/cards52/cropped/[A-Z0-9][A-Z0-9].png"):
+            abbrev = card.split("/")[-1].split(".")[0]
+            if name.lower() in abbrev.lower():
+                stream.append({
+                    'name': abbrev,
+                    'img_url': card,
+                    'info_url': card,
+                })
+        return stream, {}
+
+
+class MagicCardsInfoPlugin(DefaultPlugin):
+
+    def GetBackUrl(self):
+        return '/third_party/images/mtg_detail.jpg'
 
     def Fetch(self, name, exact):
+        if name == '':
+            return [], {}
         url = "http://magiccards.info/query?q=%s%s&v=card&s=cname" %\
             ('!' if exact else 'l:en+', '+'.join(name.split()))
         logging.info("GET " + url)
