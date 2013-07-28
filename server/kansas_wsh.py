@@ -280,6 +280,7 @@ class KansasHandler(object):
 
     def handle_keepalive(self, req, output):
         logging.info('keepalive from ' + str(output.stream));
+        self.streams[output.stream]['last_keepalive'] = time.time()
 
     def handle_sleep(self, request, output):
         time.sleep(5)
@@ -417,12 +418,11 @@ class KansasScopeHandler(KansasHandler):
             if request['gameid'] in self.games:
                 logging.info("Joining existing game '%s'", request['gameid'])
                 game = self.games[request['gameid']]
-                game.streams[output.stream] = presence
             else:
                 game = self.new_game(request['gameid'])
-                game.add_stream(output.stream, presence)
                 self.games[request['gameid']] = game
                 game.save()
+            game.add_stream(output.stream, presence)
             game.notify_presence()
 
         # Atomically registers the player with the game handler.
@@ -467,6 +467,7 @@ class KansasGameHandler(KansasHandler):
 
     def add_stream(self, stream, presence_info):
         self.streams[stream] = presence_info
+        self.streams[stream]['last_keepalive'] = time.time()
 
     def handle_bulkmove(self, req, output):
         with self._lock:
@@ -582,7 +583,7 @@ class KansasGameHandler(KansasHandler):
                        'type': 'error',
                        'msg': "game terminated"}),
                        binary=False)
-                    s.close_connection()
+                    s.close_connection(wait_response=False)
                 except Exception, e:
                     logging.exception(e)
             self.streams = {}
@@ -618,17 +619,13 @@ class KansasGameHandler(KansasHandler):
     def gc_streams(self):
         with self._lock:
             for stream in self.streams.keys():
-                try:
-                    chk = self.streams[stream].get('last_checked', 0)
-                    if time.time() - chk < 10:
-                        continue
-                    else:
-                        self.streams[stream]['last_checked'] = time.time()
-                    stream.send_ping()
-                except Exception, e:
-                    logging.exception(e)
-                    logging.warning("Removing broken stream %s", stream)
-                    del self.streams[stream]
+                last = self.streams[stream]['last_keepalive']
+                if time.time() - last > 60:
+                    try:
+                        del self.streams[stream]
+                        stream.close_connection(wait_response=False)
+                    except Exception, e:
+                        logging.exception(e)
 
     def presence_count(self):
         with self._lock:

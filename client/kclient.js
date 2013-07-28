@@ -305,7 +305,7 @@ KansasClient.prototype._onOpen = function() {
 }
 
 KansasClient.prototype._onClose = function() {
-    this.ui.vlog(3, "ws:close");
+    this.ui.vlog(0, "ws:close");
     this._state = 'offline'
     this._notify('disconnected', null, true);
 }
