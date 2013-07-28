@@ -1510,8 +1510,8 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             for (i in cards) {
                 var url = data.resp[cards[i][1]];
                 if (url) {
+                    counts[urls.length] = cards[i][0];
                     urls.push(url);
-                    counts[url] = cards[i][0];
                 }
             }
             if (urls.length > 0) {
