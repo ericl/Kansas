@@ -22,12 +22,7 @@ except:
     haveImaging = False
 
 
-if not os.path.exists(config.kCachePath):
-    os.makedirs(config.kCachePath)
-
-
 Games = namespaces.Namespace(config.kDBPath, 'Games', version=2)
-LookupCache = namespaces.Namespace(config.kDBPath, 'LookupCache', version=4)
 ClientDB = namespaces.Namespace(config.kDBPath, 'ClientDB', version=2)
 
 
