@@ -1900,6 +1900,7 @@ KansasUI.prototype._resizePreview = function(urls) {
             width = 260 * columns;
         }
     }
+    console.log("set width: " + width);
     $("#search_preview").width(width + "px");
 }
 

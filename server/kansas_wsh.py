@@ -1,5 +1,8 @@
 # Implementation of Kansas websocket handler.
 
+from server import config
+from server import datasource
+from server import imagecache
 from server import namespaces
 
 import copy
@@ -10,8 +13,6 @@ import os
 import random
 import threading
 import time
-import urllib2
-import re
 
 try:
     import Image
@@ -20,20 +21,14 @@ except:
     logging.warning("Failed to import imaging module.")
     haveImaging = False
 
-kSmallImageSize = (92, 131)
-kServingPrefix = ''
-kLocalServingAddress = 'http://localhost:8000/'
-kCachePath = '../cache'
-kDBPath = '../db'
+
+if not os.path.exists(config.kCachePath):
+    os.makedirs(config.kCachePath)
 
 
-if not os.path.exists(kCachePath):
-    os.makedirs(kCachePath)
-
-
-Games = namespaces.Namespace(kDBPath, 'Games', version=2)
-LookupCache = namespaces.Namespace(kDBPath, 'LookupCache', version=4)
-ClientDB = namespaces.Namespace(kDBPath, 'ClientDB', version=2)
+Games = namespaces.Namespace(config.kDBPath, 'Games', version=2)
+LookupCache = namespaces.Namespace(config.kDBPath, 'LookupCache', version=4)
+ClientDB = namespaces.Namespace(config.kDBPath, 'ClientDB', version=2)
 
 
 BLANK_DECK = {
@@ -50,60 +45,12 @@ BLANK_DECK = {
 }
 
 
-def DownloadAndCache(url):
-    if url.startswith(kCachePath):
-        logging.info("ALREADY CACHED: " + url)
-        return url
-    path = os.path.join(kCachePath, hex(hash('$' + url))[2:] + '.jpg')
-    if not os.path.exists(path):
-        logging.info("GET " + url)
-        imgdata = urllib2.urlopen(url).read()
-        with open(path, 'wb') as f:
-            f.write(imgdata)
-    return path
-
-
-def ReturnCachedIfPresent(url):
-    if url.startswith(kCachePath):
-        logging.info("ALREADY CACHED: " + url)
-        return url
-    path = os.path.join(kCachePath, hex(hash('$' + url))[2:] + '.jpg')
-    if os.path.exists(path):
-        return path
-    else:
-        return url
-
-
-# TODO(ekl) split into game specific plugin
-def _CardNameToUrls(name, exact=False):
-    key = str((str(name), exact))
-    val = LookupCache.Get(key)
-    if val is not None:
-        logging.info("Cache HIT on '%s'", key)
-        return val
-    else:
-        logging.info("Cache miss on '%s'", key)
-    url = "http://magiccards.info/query?q=%s%s&v=card&s=cname" %\
-        ('!' if exact else 'l:en+', '+'.join(name.split()))
-    logging.info("GET " + url)
-    req = urllib2.Request(url)
-    stream = urllib2.urlopen(req)
-    data = stream.read()
-    matches = re.finditer(
-        '"http://magiccards.info/scans/en/[a-z0-9]*/[a-z0-9]*.jpg"',
-        data)
-    has_more = bool(re.findall('"\/query.*;p=2"', data))
-    urls = [m.group() for m in matches]
-    logging.info("found " + ','.join(urls))
-    urls = [a[1:-1] for a in urls]  # strips quote marks
-    result = (urls, has_more)
-    LookupCache.Put(key, result)
-    return result
-
-
 def CardNameToUrls(name, exact=False):
-    urls, has_more = _CardNameToUrls(name, exact)
-    return [ReturnCachedIfPresent(a) for a in urls], has_more
+    # TODO(ekl) deprecate this and use datasource directly
+    stream, meta = datasource.FindCards('magiccards.info', name, exact)
+    has_more = meta['has_more']
+    urls = [t['img_url'] for t in stream]
+    return urls, has_more
 
 
 class CachingLoader(dict):
@@ -116,7 +63,7 @@ class CachingLoader(dict):
             self.highest_id = 0
 
         # The cached files are assumed served from this path by another server.
-        self['resource_prefix'] = kServingPrefix
+        self['resource_prefix'] = config.kServingPrefix
 
     def new_card(self, front_url):
         """Returns id of new card."""
@@ -124,7 +71,7 @@ class CachingLoader(dict):
         self.highest_id += 1
         new_id = self.highest_id
         large_path = self['urls'][new_id] = self.download(front_url)
-        small_path = large_path[:-4] + ('@%dx%d.jpg' % kSmallImageSize)
+        small_path = large_path[:-4] + ('@%dx%d.jpg' % config.kSmallImageSize)
         if not os.path.exists(small_path):
             small_path = self.resize(large_path, small_path)
         self['urls_small'][new_id] = small_path
@@ -133,14 +80,14 @@ class CachingLoader(dict):
 
     def download(self, suffix):
         url = self.toAbsoluteURL(suffix)
-        return DownloadAndCache(url)
+        return imagecache.Cached(url)
 
     def resize(self, large_path, small_path):
         """Resizes image found at large_path and saves to small_path."""
         if haveImaging:
             logging.info("Resize %s -> %s" % (large_path, small_path))
             Image.open(large_path)\
-                 .resize(kSmallImageSize, Image.ANTIALIAS)\
+                 .resize(config.kSmallImageSize, Image.ANTIALIAS)\
                  .save(small_path)
             return small_path
         else:
@@ -148,8 +95,8 @@ class CachingLoader(dict):
 
     def toAbsoluteURL(self, url):
         # TODO these hacks need to go away
-        if url.startswith('/') or url.startswith(kCachePath):
-            return kLocalServingAddress + url
+        if url.startswith('/') or url.startswith(config.kCachePath):
+            return config.kLocalServingAddress + url
         if url.startswith('http:'):
             return url
         else:
@@ -279,7 +226,7 @@ class KansasHandler(object):
         output.reply('pong')
 
     def handle_keepalive(self, req, output):
-        logging.info('keepalive from ' + str(output.stream));
+        logging.debug('keepalive from ' + str(output.stream));
         self.streams[output.stream]['last_keepalive'] = time.time()
 
     def handle_sleep(self, request, output):
