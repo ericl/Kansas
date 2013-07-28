@@ -442,7 +442,8 @@ div.hovernote {
 #chat {
     color: #999;
     padding-top: 0;
-    max-width: 300px;
+    max-width: 270px;
+    min-width: 270px;
 }
 
 #chatbox {
