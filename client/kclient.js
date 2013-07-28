@@ -52,7 +52,7 @@ function KansasClient(hostname, ip_port, kansas_ui, scope) {
     this.ip_port = ip_port;
     this.ui = kansas_ui;
     this.halted = false;
-    this.scope = scope || 'DEFAULT_SCOPE';
+    this.scope = scope || 'DEFAULT';
     this._ws = null;
     this._futures = {};
     this._state = 'offline';

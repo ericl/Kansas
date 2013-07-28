@@ -410,7 +410,8 @@ div.hovernote {
     box-shadow: inset 0px 0px 0px 10px #33b5e5;
 }
 
-#homescreen {
+#homescreen, #scopechooser {
+    display: none;
     background-color: #fffbdf;
     font-family: sans;
     position: absolute;

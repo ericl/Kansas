@@ -153,15 +153,26 @@ $(document).ready(function() {
         $("#homescreen").hide();
     }
 
-    var scope = 'DEFAULT_SCOPE';
+    var scope = 'DEFAULT';
+    var scopeset = false;
     var args = location.search.split("&");
     for (i in args) {
         var split = args[i].split("=");
         if (split[0].replace("?", "") == "scope") {
             scope = split[1].replace("/", "");
+            scopeset = true;
         }
     }
-    kansas_ui.vlog(0, "Setting scope to '" + scope + "'.");
+    if (scopeset) {
+        kansas_ui.vlog(0, "Setting scope to '" + scope + "'.");
+        $("#scopetxt").text(scope);
+        $("#scopechooser").hide();
+        $("#homescreen").show();
+    } else {
+        $("#scopechooser").show();
+        $("#homescreen").hide();
+        return;
+    }
 
     client = new KansasClient(hostname, kWSPort, kansas_ui, scope)
         .bind('opened', handleSocketOpen)
