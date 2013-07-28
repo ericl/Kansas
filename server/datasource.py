@@ -21,7 +21,7 @@ def _FindCards(source, name, exact):
 
 
 def Find(name, exact=False):
-    return FindCards('magiccards.info', name, exact)
+    return FindCards(config.kDefaultSource, name, exact)
 
 
 def FindCards(source, name, exact=False):
