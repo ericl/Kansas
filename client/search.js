@@ -77,9 +77,9 @@ KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
         while (j < count) {
             imgs += (
                 "<img style='left: "
-                + parseInt(j * cardGap)
+                + parseInt(5 + j * cardGap)
                 + "px; top: "
-                + parseInt(j * cardGap / 0.7011)
+                + parseInt(5 + j * cardGap / 0.7011)
                 + "px; width: "
                 + width
                 + "px' class=kansas_preview src='" + url + "'>"

@@ -451,7 +451,7 @@ div.hovernote {
     background-color: rgba(0, 0, 0, 0.5);
     max-height: 90%;
     max-width: 780px;
-    padding: 15px;
+    padding: 10px;
     overflow-y: auto;
     overflow-x: hidden;
     position: absolute;
