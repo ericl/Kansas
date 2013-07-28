@@ -19,6 +19,12 @@ var user = "Anonymous";
 var client = null;
 var prev_hash = "";
 
+$("#clearerror").mouseup(function(e) {
+    $("#error").hide();
+    client && client.dropFutures();
+    kansas_ui.hideSpinner();
+});
+
 $(window).bind('hashchange', function() {
     var next = document.location.hash.substr(1);
     console.log("prev hash: " + prev_hash);

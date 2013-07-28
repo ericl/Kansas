@@ -1561,12 +1561,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         });
     });
 
-    $("#clearerror").mouseup(function(e) {
-        $("#error").hide();
-        client.dropFutures();
-        that.hideSpinner();
-    });
-
     $("#leave").mouseup(function(e) {
         document.location.hash = "";
         document.location.reload();
