@@ -25,6 +25,7 @@ function KansasUI() {
     this.user = null;
     this.uuid = null;
     this.hand_user = null;
+    this.chatHistory = [];
     this.lastFrameLocation = 0;
     this.lastFrameUpdate = 0;
     this.frameHideQueued = {};
@@ -400,6 +401,7 @@ KansasUI.prototype._removeFocus = function(doAnimation) {
     this.vlog(2, "unfocus");
     this._removeHoverMenu(doAnimation);
     this._setSnapPoint(null);
+    $("#chatbox").blur();
     hideSelectionBox();
     $(".card").removeClass("highlight");
     $(".card").css("box-shadow", "none");
@@ -1432,10 +1434,34 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
     $(window).keypress(function(e) {
         var key = e.which;
-        if (key == 47 /* '/' */ && !deckPanelVisible()) {
+        if (deckPanelVisible() || $("#chatbox").is(":focus")) {
+            return true;
+        }
+        if (key == 47 /* '/' */) {
             showDeckPanel();
             $("#kansas_typeahead").select();
             return false;
+        }
+        if (key == 109 /* 'm' */) {
+            $("#chatbox").select().prop("placeholder", "");
+            return false;
+        }
+    });
+
+    $("#chatbox").keyup(function (e) {
+        if (e.keyCode == 13 /* Enter */) {
+            var msg = $("#chatbox").val();
+            if (msg) {
+                client.send("broadcast",
+                    {
+                        subtype: "message",
+                        uuid: uuid,
+                        name: user,
+                        msg: msg,
+                        include_self: true,
+                    });
+            }
+            $("#chatbox").val("");
         }
     });
 
@@ -1856,6 +1882,10 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
     $("#selectionbox").bind("dragstop", function(event, ui) {
         that.dragging = false;
+    });
+
+    $("#chatbox").mouseup(function(event) {
+        that.disableArenaEvents = true;
     });
 
     $("#arena").mouseup(function(event) {
@@ -2473,6 +2503,24 @@ KansasUI.prototype._refreshDeckList = function() {
     });
 }
 
+/* http://stackoverflow.com/questions/4535888/jquery-text-and-newlines */
+function htmlForTextWithEmbeddedNewlines(text) {
+    var htmls = [];
+    var lines = text.split(/\n/);
+    // The temporary <div/> is to perform HTML entity encoding reliably.
+    //
+    // document.createElement() is *much* faster than jQuery('<div/>')
+    // http://stackoverflow.com/questions/268490/
+    //
+    // You don't need jQuery but then you need to struggle with browser
+    // differences in innerText/textContent yourself
+    var tmpDiv = jQuery(document.createElement('div'));
+    for (var i = 0 ; i < lines.length ; i++) {
+        htmls.push(tmpDiv.text(lines[i]).html());
+    }
+    return htmls.join("<br>");
+}
+
 KansasUI.prototype.handleBroadcast = function(data) {
     switch (data.subtype) {
         case "dragstart":
@@ -2480,6 +2528,22 @@ KansasUI.prototype.handleBroadcast = function(data) {
             break;
         case "frameupdate":
             this._handleFrameUpdateBroadcast(data);
+            break;
+        case "message":
+            var name = data.name;
+            if (this.uuid == data.uuid) {
+                name += " (self)";
+            }
+            var newtext = name + ': ' + data.msg;
+            this.chatHistory.push(newtext);
+            var lim = 5;
+            if (this.chatHistory.length > lim) {
+                this.chatHistory = this.chatHistory.slice(
+                    this.chatHistory.length - lim);
+            }
+            $("#chattext").html(
+                htmlForTextWithEmbeddedNewlines(
+                    this.chatHistory.join("\n")));
             break;
     }
 }

@@ -453,8 +453,12 @@ class KansasGameHandler(KansasHandler):
 
     def handle_broadcast(self, req, output):
         with self._lock:
+            if req.get('include_self'):
+                exclude = set()
+            else:
+                exclude = {output.stream}
             self.broadcast(
-                set(self.streams.keys()) - {output.stream},
+                set(self.streams.keys()) - exclude,
                 'broadcast_message',
                 req)
         output.reply("ok")

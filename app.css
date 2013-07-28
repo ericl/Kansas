@@ -431,11 +431,42 @@ div.hovernote {
     padding-bottom: 10px;
 }
 
-#presence {
+#presence, #chat {
     float: right;
     color: gray;
     font-size: small;
     padding: .5em;
+    clear: right;
+}
+
+#chat {
+    color: #999;
+    padding-top: 0;
+    max-width: 300px;
+}
+
+#chatbox {
+    background-color: #474747;
+    border: none;
+    padding-left: 13px;
+    width: 200px;
+    outline: 0;
+    color: gray;
+}
+
+::-webkit-input-placeholder { /* WebKit browsers */
+    color:    gray;
+}
+:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+    color:    gray;
+}
+::-moz-placeholder { /* Mozilla Firefox 19+ */
+    color:    gray;
+}
+
+#chatcaret {
+    margin-left: -213px;
+    color: gray;
 }
 
 #notfound {
