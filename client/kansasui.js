@@ -1548,9 +1548,9 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         if (ncards == 0 || !name) {
             return;
         }
-        var existing = $("#decks").children();
+        var existing = that.decksAvail;
         for (i in existing) {
-            if (name == existing[i].innerText) {
+            if (name == existing[i]) {
                 if (!confirm("Replace existing deck '" + name + "'?")) {
                     return;
                 }
@@ -2396,7 +2396,7 @@ KansasUI.prototype._refreshDeckList = function() {
     }).then(function(data) {
         that.vlog(1, 'showing deck data');
         var html = "<br>Saved Decks:";
-        this.decksAvail = data['resp'];
+        that.decksAvail = data['resp'];
         data['resp'].forEach(function(name) {
             html += "<br> &bull; " + "<span> " + name + "</span>"
                 + " <button data-name='" + name
