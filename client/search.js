@@ -70,6 +70,9 @@ KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
         that.client.ui.vlog(2, "append: " + $(this)[0]);
         var url = $(this)[0];
         var count = (counts || {})[i] || 1;
+        if (count > 30) {
+            count = 30;
+        }
         var imgs = "";
         var j = 0;
         var cardGap = 8;

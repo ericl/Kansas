@@ -1638,36 +1638,39 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
     $("#add").mouseup(function(e) {
         var cards = extractCards($('#deckinput').html())[0];
-        if (cards.length > 150) {
-            warning("Trying to add too many cards");
+        var kAddLimit = 150;
+        var toAdd = [];
+        if (that.hand_user == "Player 2") {
+            var pos = 29425869;
         } else {
-            var toAdd = [];
-            if (that.hand_user == "Player 2") {
-                var pos = 29425869;
-            } else {
-                var pos = 80545413;
-            }
-            for (i in cards) {
-                var count = cards[i][0];
-                for (var j = 0; j < count; j++) {
-                    toAdd.push({
-                        loc: pos,
-                        name: cards[i][1],
-                    });
-                }
-            }
-            shuffle(toAdd);
-            var oldStack = client.getStack('board', pos);
-            if (oldStack) {
-                /* Use callasync here to force Loading message until
-                 * this call completes. */
-                client.callAsync('remove', oldStack).done();
-            }
-            client
-                .callAsync('add', {'cards': toAdd, 'requestor': uuid})
-                .done();
-            hideDeckPanel();
+            var pos = 80545413;
         }
+        var total = 0;
+        for (i in cards) {
+            var count = cards[i][0];
+            total += count;
+            if (total > kAddLimit) {
+                alert("You cannot add more than 150 cards at once.");
+                return;
+            }
+            for (var j = 0; j < count; j++) {
+                toAdd.push({
+                    loc: pos,
+                    name: cards[i][1],
+                });
+            }
+        }
+        shuffle(toAdd);
+        var oldStack = client.getStack('board', pos);
+        if (oldStack) {
+            /* Use callasync here to force Loading message until
+             * this call completes. */
+            client.callAsync('remove', oldStack).done();
+        }
+        client
+            .callAsync('add', {'cards': toAdd, 'requestor': uuid})
+            .done();
+        hideDeckPanel();
     });
 
     $("#opposinghand").droppable({
