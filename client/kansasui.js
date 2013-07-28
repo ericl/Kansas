@@ -33,6 +33,7 @@ function KansasUI() {
     this.dragging = false;
     this.initialized_once = false;
     this.disableArenaEvents = false;
+    this.previewUrls = null;
     this.dragStartKey = null;
     this.hasDraggedOffStart = false;
     this.hoverCardId = null;
@@ -1395,7 +1396,8 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         this.client,
         "search_preview",
         "notfound",
-        "kansas_typeahead"
+        "kansas_typeahead",
+        function(urls) { that._resizePreview(urls); }
     );
 
     $("#kansas_typeahead").keypress(function() {
@@ -1842,9 +1844,30 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         that._redrawHand();
         that._redrawOtherHands();
         that._redrawBoard();
+        that._resizePreview(that._previewUrls);
     });
 
     this._redrawDivider();
+}
+
+KansasUI.prototype._resizePreview = function(urls) {
+    if (!urls) {
+        urls = this._previewUrls;
+    } else {
+        this._previewUrls = urls;
+    }
+    var maxw = $("body").outerWidth() * .65 - 100;
+    var columns = Math.min(5, urls.length);
+    if (urls.length == 1) {
+        var width = 250;
+    } else {
+        var width = 260 * columns;
+        while (width > maxw && maxw > 250 && columns > 1) {
+            columns -= 1;
+            width = 260 * columns;
+        }
+    }
+    $("#search_preview").width(width + "px");
 }
 
 /* Forces re-render of cards on board. */

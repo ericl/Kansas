@@ -1,12 +1,13 @@
 /* Provides instant search service. */
 
-function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id) {
+function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id, cb) {
     this.client = client;
     this.lastGet = 0;
     this.lastTyped = 0;
     this.preview_div = "#" + preview_div_id;
     this.notfound = "#" + notfound_id;
     this.typeahead = "#" + typeahead_id;
+    this.preview_callback = cb;
 }
 
 (function() {  /* begin namespace searcher */
@@ -106,6 +107,7 @@ KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
         var width = 270 * Math.min(3, urls.length);
     }
     $(this.preview_div).width(width + "px");
+    this.preview_callback(urls);
 }
 
 })();  /* end namespace searcher */
