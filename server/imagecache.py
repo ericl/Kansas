@@ -22,11 +22,10 @@ def CachedIfPresent(url):
 
 
 def Cached(url, dont_fetch=False):
-    if url.startswith(config.kCachePath) \
-            or url.startswith(config.kLocalServingAddress) \
-            or url.startswith("../"):
-        logging.info("skip local url: " + url)
+    if url.startswith(config.kLocalServingAddress):
         return url
+    elif url.startswith(config.kCachePath) or url.startswith("../"):
+        return config.kLocalServingAddress + url
 
     logging.debug("cache lookup: " + url)
 
