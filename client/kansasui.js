@@ -1546,6 +1546,14 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         if (ncards == 0 || !name) {
             return;
         }
+        var existing = $("#decks").children();
+        for (i in existing) {
+            if (name == existing[i].innerText) {
+                if (!confirm("Replace existing deck '" + name + "'?")) {
+                    return;
+                }
+            }
+        }
         var cards = JSON.stringify(res[0]);
         client.callAsync('kvop', {
             'namespace': 'Decks',
@@ -2388,7 +2396,7 @@ KansasUI.prototype._refreshDeckList = function() {
         var html = "<br>Saved Decks:";
         this.decksAvail = data['resp'];
         data['resp'].forEach(function(name) {
-            html += "<br> &bull; " + name
+            html += "<br> &bull; " + "<span> " + name + "</span>"
                 + " <button data-name='" + name
                 + "' class='loaddeck'>load</button>"
                 + " <button data-name='" + name
