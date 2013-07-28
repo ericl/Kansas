@@ -44,7 +44,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
 KansasSearcher.prototype.handleQueryResponse = function(data) {
     var that = this;
     this.client.ui.vlog(3, JSON.stringify(data));
-    if (data.urls.length == 0) {
+    if (data.stream.length == 0) {
         if (data.req.term == "") {
             $(this.preview_div + " img").remove();
             $(this.preview_div).hide();
@@ -54,21 +54,20 @@ KansasSearcher.prototype.handleQueryResponse = function(data) {
             $("#has_more").hide();
         }
     } else {
-        console.log(data);
-        this.previewItems(data.urls, data.has_more, data.req.term);
+        this.previewItems(data.stream, data.meta, data.req.term);
     }
 }
 
-KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
-    var ok = this.preview_callback(urls);
+KansasSearcher.prototype.previewItems = function(stream, meta, term, counts) {
+    var ok = this.preview_callback(stream, meta);
     if (!ok) {
         return;
     }
     var that = this;
     $(this.preview_div).children().remove();
-    $.each(urls, function(i) {
+    $.each(stream, function(i) {
         that.client.ui.vlog(2, "append: " + $(this)[0]);
-        var url = $(this)[0];
+        var url = this['img_url'];
         var count = (counts || {})[i] || 1;
         if (count > 30) {
             count = 30;
@@ -82,15 +81,19 @@ KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
             width = minCardWidth;
             cardGap = (240 - minCardWidth) / count;
         }
+        var prefix = "<a target='_blank' href='" + this['info_url'] + "'>"
+        var suffix = "</a>"
         while (j < count) {
             imgs += (
-                "<img style='left: "
+                prefix
+                + "<img style='left: "
                 + parseInt(5 + j * cardGap)
                 + "px; top: "
                 + parseInt(5 + j * cardGap / 0.7011)
                 + "px; width: "
                 + width
                 + "px' class=kansas_preview src='" + url + "'>"
+                + suffix
             );
             j += 1;
         }
@@ -99,9 +102,9 @@ KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
             + imgs
             + '</div>');
     });
-    if (has_more) {
+    if (meta && meta.has_more) {
         $("#has_more")
-            .prop("href", "http://magiccards.info/query?q=" + term)
+            .prop("href", meta.more_url)
             .show();
     } else {
         $("#has_more").hide();

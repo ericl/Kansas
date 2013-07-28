@@ -8,7 +8,7 @@ import logging
 import re
 import urllib2
 
-QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=0)
+QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=2)
 
 
 def _FindCards(source, name, exact):
@@ -19,6 +19,9 @@ def _FindCards(source, name, exact):
 
     return _SOURCES[source].Fetch(name, exact)
 
+
+def Find(name, exact=False):
+    return FindCards('magiccards.info', name, exact)
 
 def FindCards(source, name, exact=False):
     """Returns (stream, meta), where
@@ -56,21 +59,20 @@ class MagicCardsInfoPlugin(object):
         stream = urllib2.urlopen(req)
         data = stream.read()
         matches = re.finditer(
-            '"http://magiccards.info/scans/en/[a-z0-9]*/[a-z0-9]*.jpg"',
+            r'<a href="/([a-z0-9]*)/en/([a-z0-9]*).html">(.*?)</a>',
             data)
         has_more = bool(re.findall('"\/query.*;p=2"', data))
-        urls = [m.group() for m in matches]
-        logging.info("found " + ','.join(urls))
         stream = []
-        for a in urls:
+        for m in matches:
+            m1, m2, m3 = m.group(1), m.group(2), m.group(3)
             stream.append({
-                'name': 'Unknown(TODO)',
-                'img_url': a[1:-1],
-                'info_url': 'Unknown(TODO)',
+                'name': m3,
+                'img_url': "http://magiccards.info/scans/en/%s/%s.jpg" % (m1, m2),
+                'info_url': "http://magiccards.info/%s/en/%s.html" % (m1, m2),
             })
         meta = {
             'has_more': has_more,
-            'more_link': 'Unknown(TODO)',
+            'more_url': "http://magiccards.info/query?q=" + name,
         }
         return (stream, meta)
 

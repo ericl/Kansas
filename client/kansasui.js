@@ -1422,9 +1422,9 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         "search_preview",
         "notfound",
         "kansas_typeahead",
-        function(urls) {
+        function(stream, meta) {
             if (deckPanelVisible()) {
-                that._resizePreview(urls);
+                that._resizePreview(stream);
                 return true;
             } else {
                 return false;

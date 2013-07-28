@@ -45,14 +45,6 @@ BLANK_DECK = {
 }
 
 
-def CardNameToUrls(name, exact=False):
-    # TODO(ekl) deprecate this and use datasource directly
-    stream, meta = datasource.FindCards('magiccards.info', name, exact)
-    has_more = meta['has_more']
-    urls = [t['img_url'] for t in stream]
-    return urls, has_more
-
-
 class CachingLoader(dict):
     def __init__(self, values):
         dict.__init__(self, copy.deepcopy(values))
@@ -201,9 +193,9 @@ class KansasGameState(object):
     def add_card(self, card):
         loc = card['loc']
         name = card['name']
-        urls, _ = CardNameToUrls(name, True)
-        if urls:
-            url = urls[0]
+        stream, _ = datasource.Find(name, exact=True)
+        if stream:
+            url = stream[0]['img_url']
         else:
             raise Exception("Cannot find '%s'" % name);
         card_id = self.data.new_card(url)
@@ -244,28 +236,24 @@ class KansasHandler(object):
         resp = {}
         logging.info('bulkquery: ' + str(request));
         for term in request['terms']:
-            urls, _ = CardNameToUrls(term, True)
-            if urls:
-                resp[term] = urls[0]
+            stream, _ = datasource.Find(term, True)
+            if stream:
+                resp[term] = stream[0]
             else:
                 resp[term] = None
         output.reply({'req': request, 'resp': resp})
 
     def handle_query(self, request, output):
-        if request['term']:
-            if request.get('allow_inexact'):
-                logging.info("Trying inexact match")
-                urls, has_more = CardNameToUrls(request['term'], False)
-            else:
-                urls, has_more = CardNameToUrls(request['term'], True)
-                logging.info("Trying exact match")
-            if urls:
-                output.reply({
-                    'urls': urls,
-                    'has_more': has_more,
-                    'req': request})
-                return
-        output.reply({'urls': [], 'req': request})
+        if request.get('allow_inexact'):
+            logging.info("Trying inexact match")
+            stream, meta = datasource.Find(request['term'], exact=False)
+        else:
+            logging.info("Trying exact match")
+            stream, meta = datasource.Find(request['term'], exact=True)
+        output.reply({
+            'stream': stream,
+            'meta': meta,
+            'req': request})
 
     def notify_closed(self, stream):
         """Callback for when a stream has been closed."""
