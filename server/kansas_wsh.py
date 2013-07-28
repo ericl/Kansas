@@ -244,12 +244,15 @@ class KansasHandler(object):
         output.reply({'req': request, 'resp': resp})
 
     def handle_query(self, request, output):
-        if request.get('allow_inexact'):
-            logging.info("Trying inexact match")
-            stream, meta = datasource.Find(request['term'], exact=False)
+        if request['term']:
+            if request.get('allow_inexact'):
+                logging.info("Trying inexact match")
+                stream, meta = datasource.Find(request['term'], exact=False)
+            else:
+                logging.info("Trying exact match")
+                stream, meta = datasource.Find(request['term'], exact=True)
         else:
-            logging.info("Trying exact match")
-            stream, meta = datasource.Find(request['term'], exact=True)
+            stream, meta = [], {}
         output.reply({
             'stream': stream,
             'meta': meta,

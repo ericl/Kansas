@@ -23,6 +23,7 @@ def _FindCards(source, name, exact):
 def Find(name, exact=False):
     return FindCards('magiccards.info', name, exact)
 
+
 def FindCards(source, name, exact=False):
     """Returns (stream, meta), where
         stream is a list of
