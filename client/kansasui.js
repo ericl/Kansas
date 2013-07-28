@@ -1506,14 +1506,16 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 $('.requiresvalidation').prop("disabled", false);
             }
             var urls = [];
+            var counts = [];
             for (i in cards) {
                 var url = data.resp[cards[i][1]];
                 if (url) {
                     urls.push(url);
+                    counts[url] = cards[i][0];
                 }
             }
             if (urls.length > 0) {
-                that.searcher.previewItems(urls);
+                that.searcher.previewItems(urls, null, null, counts);
             }
         });
     });

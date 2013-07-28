@@ -58,15 +58,24 @@ KansasSearcher.prototype.handleQueryResponse = function(data) {
     }
 }
 
-KansasSearcher.prototype.previewItems = function(urls, has_more, term) {
+KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
     var that = this;
-    $(this.preview_div + " img").remove();
+    $(this.preview_div).children().remove();
     $.each(urls, function() {
         that.client.ui.vlog(2, "append: " + $(this)[0]);
+        var url = $(this)[0];
+        var count = (counts || {})[url];
+        if (!count) {
+            /* TODO buttons for adding cards to current list? */
+            var zoomstr = "";
+        } else {
+            var zoomstr = "" + count + "x";
+        }
         $(that.preview_div).append(
-            "<img src="
-            + $(this)[0]
-            + " class=kansas_preview></img>");
+            '<div class="cardbox"><img src="'
+            + url
+            + '" class=kansas_preview></img>'
+            + '<span class="zoom-icon">' + zoomstr + '</span></div>');
     });
     if (has_more) {
         $("#has_more")

@@ -156,6 +156,48 @@ li.confirm:hover, li.confirm.hover {
     height: 131px;
 }
 
+.cardbox {
+  height: 342px;
+  width: 240px;
+  text-decoration: none;
+  position: relative;
+  display: block;
+  border: none;
+  padding: 10px;
+  margin-right: none;
+  float: left;
+}
+
+.kansas_preview {
+    margin: 0;
+    width: 240px;
+}
+
+.cardbox span.zoom-icon {
+/*  visibility:hidden; */
+  opacity: 1.0;
+  position: absolute;
+  left: 28px;
+  top: 43px;
+  font-size: 30px;
+  font-family: Palatino;
+  padding-right: 10px;
+  color: white;
+  text-shadow: 0px 0px 2px #000;
+}
+
+.cardbox:hover span.zoom-icon {
+  visibility: visible;
+}
+
+.cardbox .zoombutton {
+  display: none;
+}
+
+.cardbox:hover .zoombutton {
+  display: inline-block;
+}
+
 ol, ul {
     list-style: none;
 }
@@ -439,12 +481,6 @@ div.hovernote {
     top: 0px;
     border-radius: 6px;
     display: none;
-}
-
-.kansas_preview {
-    padding: 10px;
-    margin: 0;
-    width: 240px;
 }
 
 #throbber {
