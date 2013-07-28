@@ -359,6 +359,7 @@ class KansasScopeHandler(KansasHandler):
         KansasHandler.__init__(self)
         self.handlers['connect'] = self.handle_connect
         self.handlers['list_games'] = self.handle_list_games
+        self.handlers['end_game'] = self.handle_end_game
         self.scope = scope
         self.games = {}
         self.ScopedGames = Games.Subspace(self.scope)
@@ -367,6 +368,11 @@ class KansasScopeHandler(KansasHandler):
             game = self.new_game(gameid)
             game.restore(snapshot)
             self.games[gameid] = game
+
+    def handle_end_game(self, request, output):
+        with self._lock:
+            self.games[request].terminate()
+        self.garbage_collect_games()
 
     def handle_list_games(self, request, output):
         self.garbage_collect_games()

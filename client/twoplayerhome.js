@@ -17,6 +17,20 @@ var user = "Anonymous";
 
 // Kansas client.
 var client = null;
+var prev_hash = "";
+
+$(window).bind('hashchange', function() {
+    var next = document.location.hash.substr(1);
+    console.log("prev hash: " + prev_hash);
+    console.log("next hash: " + next);
+    if (prev_hash == "" || next == "" || next == prev_hash) {
+        console.log("ignoring hashchange");
+    } else {
+        prev_hash = document.location.hash;
+        console.log("acting on hashchange");
+        client && client._ws && client._ws.close();
+    }
+});
 
 function enterGame() {
     $("#homescreen").fadeOut('slow');
@@ -29,7 +43,7 @@ function enterGame() {
         orient = "player2";
     }
     document.title = 'Kansas: ' + orient + '@' + gameid;
-    document.location.hash = user + ';' + orient + ';' + gameid;
+    prev_hash = document.location.hash = user + ';' + orient + ';' + gameid;
     document.cookie = JSON.stringify({
         orient: orient,
         username: user,
@@ -100,9 +114,11 @@ function handleListGames(data) {
             var online = "";
             var name = data[g].gameid;
             var priv = "";
+            var disabled = "";
 
             if (data[g].presence > 0) {
                 online = " (" + data[g].presence + " online)";
+                var disabled = " disabled=true ";
             }
 
             var button = "<button "
@@ -111,6 +127,14 @@ function handleListGames(data) {
                 + data[g].gameid
                 + "'>"
                 + "Join"
+                + "</button>";
+
+            var button2 = "<button "
+                + priv
+                + disabled + "class='endgame' data-gameid='"
+                + data[g].gameid
+                + "'>"
+                + "End"
                 + "</button>";
 
             var node = $("<div id='"
@@ -122,6 +146,7 @@ function handleListGames(data) {
                 + online
                 + "</span> "
                 + button
+                + button2
                 + "</div>"
             ).appendTo("#gamelist");
         }
@@ -199,6 +224,13 @@ $(document).ready(function() {
     $(".entergame").live('click', function(event) {
         gameid = $(event.currentTarget).data("gameid");
         enterGame();
+    });
+
+    $(".endgame").live('click', function(event) {
+        var gid = $(event.currentTarget).data("gameid");
+        if (confirm("Are you sure you want to end '" + gid + "'?")) {
+            client.send("end_game", gid);
+        }
     });
 });
 

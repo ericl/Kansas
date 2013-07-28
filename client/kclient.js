@@ -170,8 +170,11 @@ KansasClient.prototype.send = function(tag, data) {
 KansasClient.prototype.connect = function() {
     if (!this.scope)
         throw "must set scope name";
-    if (this.halted)
-        throw "client halted";
+    if (this.halted) {
+        alert("This game has been ended. Returning to main menu.");
+        document.location.hash = "";
+        document.location.reload();
+    }
     this.ui.showSpinner("connect");
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";

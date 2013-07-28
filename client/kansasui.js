@@ -1520,15 +1520,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         document.execCommand("insertHTML", false, text);
     });
 
-    $("#end").mouseup(function(e) {
-        if (confirm("Are you sure you want to end the game?")) {
-            that.client.send("end");
-            $("#error").remove();
-            document.location.hash = "";
-            document.location.reload();
-        }
-    });
-
     $("#closepanel").mouseup(function() {
         hideDeckPanel();
     });
