@@ -17,6 +17,10 @@ _SOURCES = {
 }
 
 
+def IsValid(source):
+    return source in _SOURCES
+
+
 def BackUrl(source):
     return _SOURCES[source].GetBackUrl()
 

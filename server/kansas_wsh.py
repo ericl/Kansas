@@ -284,6 +284,8 @@ class KansasInitHandler(KansasHandler):
     def handle_set_scope(self, request, output):
         scope = request['scope']
         sourceid = request['datasource']
+        if not datasource.IsValid(sourceid):
+            raise Exception("invalid datasource: " + sourceid);
         assert scope, scope
         if scope not in self.scopes:
             self.scopes[scope] = KansasScopeHandler(scope, sourceid)

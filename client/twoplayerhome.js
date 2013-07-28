@@ -11,10 +11,6 @@ var kWSPort = 8080
 var hostname = window.location.hostname || "localhost"
 var uuid = "p_" + Math.random().toString().substring(5);
 
-// Datasource to use for finding cards.
-//var sourceid = 'poker';
-var sourceid = 'magiccards.info';
-
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
 var user = "Anonymous";
@@ -185,18 +181,29 @@ $(document).ready(function() {
     $("#gamename").val(new Date().toJSON());
 
     var scope = 'DEFAULT';
+    var sourceid = 'magiccards.info';
     var scopeset = false;
+    var sourceset = false;
     var args = location.search.split("&");
     for (i in args) {
         var split = args[i].split("=");
-        if (split[0].replace("?", "") == "scope") {
-            scope = split[1].replace("/", "");
-            scopeset = true;
+        var key = split[0].replace("?", "");
+        if (key) {
+            var value = split[1].replace("/", "");
+            if (key == "scope") {
+                scope = value;
+                scopeset = value;
+            } else if (key == "sourceid") {
+                sourceid = value;
+                sourceset = value;
+            }
         }
     }
-    if (scopeset) {
+    if (scopeset && sourceset) {
         kansas_ui.vlog(0, "Setting scope to '" + scope + "'.");
+        kansas_ui.vlog(0, "Setting sourceid to '" + sourceid + "'.");
         $("#scopetxt").text(scope);
+        $("#sourceidtxt").text(sourceid);
         $("#scopechooser").hide();
         $("#homescreen").show();
     } else {
@@ -219,7 +226,7 @@ $(document).ready(function() {
         .bind('reset', function(x) { kansas_ui.handleReset(x); })
         .bind('removed', function(x) { kansas_ui.handleRemove(x); })
         .bind('added', function(x) { kansas_ui.handleAdd(x); })
-        .connect(scope);
+        .connect();
 
     if (clients.length == 0)
         c0 = client;

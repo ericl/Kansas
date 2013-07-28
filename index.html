@@ -26,13 +26,15 @@
             <h3>Choose your server name</h3>
             <form>
             <input id="scopename" type=textbox value="DEFAULT" name="scope">
+            using
+            <input id="datasource" type=textbox value="magiccards.info" name="sourceid">
             <input type="submit" value="Log in">
             </form>
             <br>
             <i>Anyone who knows the name of your server may log in.</i>
         </div>
         <div id="homescreen">
-            <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
+            <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 55pt; text-align: center; font-family: Arial">Kansas</h1>
             <h3>Player Settings</h3>
             <input id="username" type=textbox value="Anonymous" name="name">
             <input id="player1" type="radio" name="users" checked>Player 1
@@ -43,7 +45,8 @@
                 <input id="gamename" type=textbox>
                 <button id="newgame">New Game</button>
             </div>
-            <div style="float: right"><i>Logged onto '<span id="scopetxt"></span></i>' | <a href="/">Log out.</a></div>
+            <hr>
+            <div style="text-align: center; font-size: small;"><b>Logged in to server <span id="scopetxt"></span></b> | <a href="/">Log out.</a><br>This server is using <span id="sourceidtxt"></span> for data.</div>
         </div>
         <textarea id="console" rows=15 cols=60></textarea><br>
         <div id="deckpanel">
