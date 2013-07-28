@@ -156,7 +156,7 @@ function cardsToHtml(cards, validclass, verifiedurls) {
                 + card[2] + "</span><br>";
         }
     }
-    $("#deckname").focus();
+    placeCaretAtEnd($("#deckname")[0]);
     if (next && next != "<br>") {
         replacement += next;
     }
@@ -1525,7 +1525,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         hideDeckPanel();
     });
 
-    $("#validate").click(function(e) {
+    function doValidate() {
         var html = $("#deckinput").html();
         var cards = extractCards(html)[0];
         that.vlog(1, "validating cards: " + JSON.stringify(cards));
@@ -1560,6 +1560,10 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 that.searcher.previewItems(urls, null, null, counts);
             }
         });
+    }
+
+    $("#validate").click(function(e) {
+        doValidate();
     });
 
     $("#leave").mouseup(function(e) {
@@ -1628,6 +1632,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             that._setDeckInputHtml(cardsToHtml(cards));
             $('.requiresvalidation').prop("disabled", false);
             $('#savedeck').prop("disabled", true);
+            doValidate();
         });
     });
 
