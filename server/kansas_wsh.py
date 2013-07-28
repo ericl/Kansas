@@ -79,7 +79,7 @@ class CachingLoader(dict):
         return new_id
 
     def download(self, suffix):
-        url = self.toAbsoluteURL(suffix)
+        url = self.toLocalURL(suffix)
         return imagecache.Cached(url)
 
     def resize(self, large_path, small_path):
@@ -93,11 +93,10 @@ class CachingLoader(dict):
         else:
             return large_path
 
-    def toAbsoluteURL(self, url):
-        # TODO these hacks need to go away
-        if url.startswith('/') or url.startswith(config.kCachePath):
-            return config.kLocalServingAddress + url
-        if url.startswith('http:'):
+    def toLocalURL(self, url):
+        if url.startswith('/') \
+                or url.startswith(config.kCachePath) \
+                or url.startswith('http:'):
             return url
         else:
             return self.oldPrefix + url
