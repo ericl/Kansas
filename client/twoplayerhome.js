@@ -28,8 +28,8 @@ function enterGame() {
     } else {
         orient = "player2";
     }
-    document.title = user + ';' + orient + ';' + gameid;
-    document.location.hash = document.title;
+    document.title = 'Kansas: ' + orient + '@' + gameid;
+    document.location.hash = user + ';' + orient + ';' + gameid;
     document.cookie = JSON.stringify({
         orient: orient,
         username: user,
@@ -149,10 +149,6 @@ $(document).ready(function() {
 
     $("#gamename").val(new Date().toJSON());
 
-    if (document.location.hash) {
-        $("#homescreen").hide();
-    }
-
     var scope = 'DEFAULT';
     var scopeset = false;
     var args = location.search.split("&");
@@ -172,6 +168,10 @@ $(document).ready(function() {
         $("#scopechooser").show();
         $("#homescreen").hide();
         return;
+    }
+
+    if (document.location.hash) {
+        $("#homescreen").hide();
     }
 
     client = new KansasClient(hostname, kWSPort, kansas_ui, scope)

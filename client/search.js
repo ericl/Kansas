@@ -60,6 +60,10 @@ KansasSearcher.prototype.handleQueryResponse = function(data) {
 }
 
 KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
+    var ok = this.preview_callback(urls);
+    if (!ok) {
+        return;
+    }
     var that = this;
     $(this.preview_div).children().remove();
     $.each(urls, function(i) {
@@ -107,7 +111,6 @@ KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
         var width = 270 * Math.min(3, urls.length);
     }
     $(this.preview_div).width(width + "px");
-    this.preview_callback(urls);
 }
 
 })();  /* end namespace searcher */

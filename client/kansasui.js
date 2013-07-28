@@ -83,9 +83,31 @@ function hideDeckPanel() {
     $("#search_preview").hide();
 }
 
+function placeCaretAtEnd(el) {
+    el.focus();
+    if (typeof window.getSelection != "undefined"
+            && typeof document.createRange != "undefined") {
+        var range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    } else if (typeof document.body.createTextRange != "undefined") {
+        var textRange = document.body.createTextRange();
+        textRange.moveToElementText(el);
+        textRange.collapse(false);
+        textRange.select();
+    }
+}
+
+function deckPanelVisible() {
+    return $('#deckpanel').offset().left >= 0;
+}
+
 function showDeckPanel() {
     $('#deckpanel').animate({left:'0%'}, 300);
-    $("#kansas_typeahead").focus();
+    placeCaretAtEnd($("#deckinput")[0]);
 }
 
 /**
@@ -1397,8 +1419,37 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         "search_preview",
         "notfound",
         "kansas_typeahead",
-        function(urls) { that._resizePreview(urls); }
+        function(urls) {
+            if (deckPanelVisible()) {
+                that._resizePreview(urls);
+                return true;
+            } else {
+                return false;
+            }
+        }
     );
+
+    $(window).keypress(function(e) {
+        var key = e.which;
+        if (key == 47 /* '/' */ && !deckPanelVisible()) {
+            showDeckPanel();
+            $("#kansas_typeahead").select();
+            return false;
+        }
+        console.log(key);
+    });
+
+    $(window).keyup(function(e) {
+        var key = e.which;
+        console.log(key);
+        if (key == 27 /* Esc */) {
+            that._removeFocus();
+            if (deckPanelVisible()) {
+                hideDeckPanel();
+            }
+            $("#search_preview").hide();
+        }
+    });
 
     $("#kansas_typeahead").keypress(function() {
         that.searcher.handleQueryStringUpdate();
@@ -1852,7 +1903,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
 KansasUI.prototype._resizePreview = function(urls) {
     if (!urls) {
-        urls = this._previewUrls;
+        urls = this._previewUrls || [];
     } else {
         this._previewUrls = urls;
     }
