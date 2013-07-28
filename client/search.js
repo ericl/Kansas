@@ -8,6 +8,7 @@ function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id, cb) {
     this.notfound = "#" + notfound_id;
     this.typeahead = "#" + typeahead_id;
     this.preview_callback = cb;
+    this.sourceid = client.sourceid;
 }
 
 (function() {  /* begin namespace searcher */
@@ -22,6 +23,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
         this.lastGet = $.now();
         this.client.ui.vlog(1, "sent immediate query '" + query + "'");
         this.client.callAsync("query", {
+            "datasource": that.sourceid,
             "term": query,
             "tags": "immediate",
             "allow_inexact": true
@@ -35,7 +37,10 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
             query = $(that.typeahead).val();
             that.client.ui.vlog(1, "sent delayed query '" + query + "'");
             that.client
-                .callAsync("query", {"term": query, "allow_inexact": true})
+                .callAsync("query", {
+                    "datasource": that.sourceid,
+                    "term": query,
+                    "allow_inexact": true})
                 .then(function(v) { that.handleQueryResponse(v); });
         }
     }, kMinWaitPeriod);

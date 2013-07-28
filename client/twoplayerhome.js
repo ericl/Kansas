@@ -11,6 +11,9 @@ var kWSPort = 8080
 var hostname = window.location.hostname || "localhost"
 var uuid = "p_" + Math.random().toString().substring(5);
 
+// Datasource to use for finding cards.
+var sourceid = 'magiccards.info';
+
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
 var user = "Anonymous";
@@ -205,7 +208,7 @@ $(document).ready(function() {
         $("#homescreen").hide();
     }
 
-    client = new KansasClient(hostname, kWSPort, kansas_ui, scope)
+    client = new KansasClient(hostname, kWSPort, kansas_ui, scope, sourceid)
         .bind('opened', handleSocketOpen)
         .bind('error', handleError)
         .bind('disconnected', function() { handleSocketClose(client); } )

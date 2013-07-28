@@ -2612,8 +2612,10 @@ KansasUI.prototype.hideSpinner = function() {
 }
 
 KansasUI.prototype.warning = function(msg) {
-    $("#error span").text(msg);
-    $("#error").show();
+    if (!$("#error").is(":visible")) {
+        $("#error span").text(msg);
+        $("#error").show();
+    }
     document.title = msg;
     console.log("WARNING: " + msg);
 }

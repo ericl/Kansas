@@ -112,10 +112,11 @@ class JSONOutput(object):
 class KansasGameState(object):
     """KansasGameState holds the entire state of the game in json format."""
 
-    def __init__(self, data=None):
+    def __init__(self, data=None, sourceid=None):
         self.data = CachingLoader(data or BLANK_DECK)
         self.index = self.buildIndex()
         self.initializeStacks(shuffle=True)
+        self.sourceid = sourceid
         self.gc()
 
     def gc(self):
@@ -188,7 +189,7 @@ class KansasGameState(object):
     def add_card(self, card):
         loc = card['loc']
         name = card['name']
-        stream, _ = datasource.Find(name, exact=True)
+        stream, _ = datasource.Find(self.sourceid, name, exact=True)
         if stream:
             url = stream[0]['img_url']
         else:
@@ -231,7 +232,7 @@ class KansasHandler(object):
         resp = {}
         logging.info('bulkquery: ' + str(request));
         for term in request['terms']:
-            stream, _ = datasource.Find(term, True)
+            stream, _ = datasource.Find(self.sourceid, term, True)
             if stream:
                 resp[term] = stream[0]
             else:
@@ -242,10 +243,12 @@ class KansasHandler(object):
         if request['term']:
             if request.get('allow_inexact'):
                 logging.info("Trying inexact match")
-                stream, meta = datasource.Find(request['term'], exact=False)
+                stream, meta = datasource.Find(
+                    request['datasource'], request['term'], exact=False)
             else:
                 logging.info("Trying exact match")
-                stream, meta = datasource.Find(request['term'], exact=True)
+                stream, meta = datasource.Find(
+                    request['datasource'], request['term'], exact=True)
         else:
             stream, meta = [], {}
         output.reply({
@@ -278,15 +281,25 @@ class KansasInitHandler(KansasHandler):
         self.handlers['set_scope'] = self.handle_set_scope
 
     def handle_set_scope(self, request, output):
-        scope = request
+        scope = request['scope']
+        sourceid = request['datasource']
         assert scope, scope
         if scope not in self.scopes:
-            self.scopes[scope] = KansasScopeHandler(scope)
+            self.scopes[scope] = KansasScopeHandler(scope, sourceid)
+
+        # Enforces that each scope has a single consistent datasource.
+        ScopedClientDB = ClientDB.Subspace(scope)
+        current_sourceid = ScopedClientDB.Get('sourceid')
+        if current_sourceid is None:
+            ScopedClientDB.Put('sourceid', sourceid)
+        elif current_sourceid != sourceid:
+            raise Exception("On this server the datasource must be " + current_sourceid)
 
     def transition(self, reqtype, request, output):
         if reqtype == 'set_scope':
             KansasHandler.transition(self, reqtype, request, output)
-            return self.scopes[request]
+            scope = request['scope']
+            return self.scopes[scope]
         else:
             return KansasHandler.transition(self, reqtype, request, output)
 
@@ -296,8 +309,9 @@ class KansasScopeHandler(KansasHandler):
 
     MAX_GAMES = 5
 
-    def __init__(self, scope):
+    def __init__(self, scope, sourceid):
         KansasHandler.__init__(self)
+        self.sourceid = sourceid
         self.handlers['connect'] = self.handle_connect
         self.handlers['list_games'] = self.handle_list_games
         self.handlers['end_game'] = self.handle_end_game
@@ -309,6 +323,7 @@ class KansasScopeHandler(KansasHandler):
             game = self.new_game(gameid)
             game.restore(snapshot)
             self.games[gameid] = game
+            
 
     def handle_end_game(self, request, output):
         with self._lock:
@@ -342,7 +357,7 @@ class KansasScopeHandler(KansasHandler):
     
     def new_game(self, gameid):
         logging.info("Creating new game '%s'", gameid)
-        game = KansasGameHandler(gameid, self.scope)
+        game = KansasGameHandler(gameid, self.scope, self.sourceid)
         self.games[gameid] = game
         return game
 
@@ -384,10 +399,10 @@ class KansasGameHandler(KansasHandler):
     """There is single game handler for each game, shared among all players.
        Enforces a global ordering on game-state update broadcasts."""
 
-    def __init__(self, gameid, scope):
+    def __init__(self, gameid, scope, sourceid):
         KansasHandler.__init__(self)
         self._seqno = 1000
-        self._state = KansasGameState()
+        self._state = KansasGameState(sourceid=sourceid)
         self.gameid = gameid
         self.handlers['broadcast'] = self.handle_broadcast
         self.handlers['bulkmove'] = self.handle_bulkmove
@@ -398,6 +413,7 @@ class KansasGameHandler(KansasHandler):
         self.ScopedClientDB = ClientDB.Subspace(scope)
         self.ScopedGames = Games.Subspace(scope)
         self.streams = {}
+        self.sourceid = sourceid
         self.last_used = time.time()
         self.terminated = False
 
@@ -510,7 +526,7 @@ class KansasGameHandler(KansasHandler):
 
     def restore(self, snapshot):
         with self._lock:
-            self._state = KansasGameState(snapshot[0])
+            self._state = KansasGameState(snapshot[0], self.sourceid)
             self._seqno = snapshot[1]
 
     def handle_end(self, req, output):

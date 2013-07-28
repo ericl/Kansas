@@ -47,12 +47,13 @@
  *          .commit();
  */
 
-function KansasClient(hostname, ip_port, kansas_ui, scope) {
+function KansasClient(hostname, ip_port, kansas_ui, scope, sourceid) {
     this.hostname = hostname;
     this.ip_port = ip_port;
     this.ui = kansas_ui;
     this.halted = false;
     this.scope = scope || 'DEFAULT';
+    this.sourceid = sourceid;
     this._ws = null;
     this._futures = {};
     this._state = 'offline';
@@ -170,6 +171,8 @@ KansasClient.prototype.send = function(tag, data) {
 KansasClient.prototype.connect = function() {
     if (!this.scope)
         throw "must set scope name";
+    if (!this.sourceid)
+        throw "must set datasource id";
     if (this.halted) {
         alert("This game has been ended. Returning to main menu.");
         document.location.hash = "";
@@ -184,7 +187,10 @@ KansasClient.prototype.connect = function() {
     this._ws = $.websocket(
         "ws:///" + this.hostname + ":" + this.ip_port + "/kansas",
         { open: function() {
-            that._ws.send("set_scope", that.scope);
+            that._ws.send("set_scope", {
+                "scope": that.scope,
+                "datasource": that.sourceid,
+            });
             that._onOpen.call(that);
           },
           close: function() { that._onClose.call(that); },
