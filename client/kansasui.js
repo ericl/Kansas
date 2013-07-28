@@ -1436,12 +1436,10 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             $("#kansas_typeahead").select();
             return false;
         }
-        console.log(key);
     });
 
     $(window).keyup(function(e) {
         var key = e.which;
-        console.log(key);
         if (key == 27 /* Esc */) {
             that._removeFocus();
             if (deckPanelVisible()) {
@@ -1517,7 +1515,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         text = text.replace(/\r\n/g, '\<br\>');
         text = text.replace(/\n/g, '\<br\>');
         text = text.replace(/^\<br\>/g, '');
-        console.log(text);
 
         // insert text manually
         document.execCommand("insertHTML", false, text);
