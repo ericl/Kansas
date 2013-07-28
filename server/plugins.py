@@ -17,12 +17,20 @@ class PokerCardsPlugin(DefaultPlugin):
         stream = []
         for card in glob.glob("../third_party/cards52/cropped/[A-Z0-9][A-Z0-9].png"):
             abbrev = card.split("/")[-1].split(".")[0]
-            if name.lower() in abbrev.lower():
-                stream.append({
-                    'name': abbrev,
-                    'img_url': card,
-                    'info_url': card,
-                })
+            if exact:
+                if name.lower() == abbrev.lower():
+                    stream.append({
+                        'name': abbrev,
+                        'img_url': card,
+                        'info_url': card,
+                    })
+            else:
+                if name.lower() in abbrev.lower():
+                    stream.append({
+                        'name': abbrev,
+                        'img_url': card,
+                        'info_url': card,
+                    })
         return stream, {}
 
 
