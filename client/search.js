@@ -99,7 +99,7 @@ KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
         $("#has_more").hide();
     }
     $(this.notfound).hide();
-    $(this.preview_div).show().scrollTop();
+    $(this.preview_div).show().scrollTop(0);
     if (urls.length == 1) {
         var width = 250;
     } else {
