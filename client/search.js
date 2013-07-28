@@ -100,6 +100,12 @@ KansasSearcher.prototype.previewItems = function(urls, has_more, term, counts) {
     }
     $(this.notfound).hide();
     $(this.preview_div).show().scrollTop();
+    if (urls.length == 1) {
+        var width = 250;
+    } else {
+        var width = 270 * Math.min(3, urls.length);
+    }
+    $(this.preview_div).width(width + "px");
 }
 
 })();  /* end namespace searcher */

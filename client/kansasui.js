@@ -2001,7 +2001,7 @@ KansasUI.prototype._redrawOtherHands = function() {
             );
             var xOffset = $("#opposinghand").offset().left + kHandSpacing;
             var yOffset = -115;
-            var baseZIndex = 4200001;
+            var baseZIndex = 2300001;
             for (j in hand) {
                 var card = $("#card_" + hand[j]);
                 card.animate({

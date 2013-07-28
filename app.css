@@ -40,13 +40,16 @@ html, body {
 }
 
 #deckinput {
-    width: 100%;
-    height: 50%;
+    margin-top: 1%;
+    margin-bottom: 2%;
+    width: 98%;
+    height: 47%;
     float: left;
+    background-color: #111;
+    padding: 1%;
     color: white;
-    overflow-y: auto;
+    overflow-y: scroll;
     overflow-x: hidden;
-    border: 1px solid #222;
 }
 
 .invalid {
@@ -76,18 +79,19 @@ html, body {
 #deckpanel {
     background-color: black;
     left: -45%;
-    background-color: rgba(0, 0, 0, 0.8);
-    padding: 5px;
-    height: 90%;
+    background-color: rgba(0, 0, 0, 0.9);
+    border-radius: 6px;
+    padding: 10px;
+    height: 100%;
     width: 35%;
     position: absolute;
-    z-index: 9999999;
+    z-index: 4400000;
     top: 0px;
 }
 
 #opposinghand {
     position: absolute;
-    z-index: 4200000;
+    z-index: 2300000;
     border: 0 !important;
     opacity: 0.8;
     background-color: #555;
@@ -447,17 +451,18 @@ div.hovernote {
 }
 
 #search_preview {
-    left: 36%;
-    background-color: rgba(0, 0, 0, 0.5);
-    max-height: 90%;
-    max-width: 780px;
+    left: 100%;
+    top: 0;
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.7);
+    max-height: 95.5%;
+    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 6px;
     padding: 10px;
     overflow-y: auto;
     overflow-x: hidden;
-    position: absolute;
-    z-index: 9999999;
+    z-index: 4400000;
     top: 0px;
-    border-radius: 6px;
     display: none;
 }
 
