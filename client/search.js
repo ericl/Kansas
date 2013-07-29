@@ -81,7 +81,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts) {
         var j = 0;
         var cardGap = 8;
         var minCardWidth = 180;
-        if (count > 15) {
+        if (count > 20) {
             minCardWidth = 210;
         }
         var width = 240 - cardGap * (count - 1);
