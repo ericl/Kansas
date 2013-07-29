@@ -28,7 +28,7 @@ ClientDB = namespaces.Namespace(config.kDBPath, 'ClientDB', version=2)
 
 BLANK_DECK = {
     'deck_name': 'Blank deck',
-    'resource_prefix': '/third_party/',
+    'resource_prefix': '',
     'default_back_url': '',
     'board': {},
     'hands': {},
