@@ -85,7 +85,7 @@ html, body {
     height: 100%;
     width: 35%;
     position: absolute;
-    z-index: 19400000;
+    z-index: 194000000;
     top: 0px;
 }
 
@@ -494,7 +494,7 @@ div.hovernote {
     padding: 10px;
     overflow-y: auto;
     overflow-x: hidden;
-    z-index: 19400000;
+    z-index: 194000000;
     top: 0px;
     display: none;
 }
