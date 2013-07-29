@@ -219,6 +219,21 @@ class KansasHandler(object):
         self.handlers['query'] = self.handle_query
         self.handlers['bulkquery'] = self.handle_bulkquery
         self.handlers['sleep'] = self.handle_sleep
+        self.handlers['clone_scope'] = self.handle_clone_scope
+
+    def handle_clone_scope(self, request, output):
+        """Copies data from one scope to another - for sysadmin purposes."""
+
+        src = request['src']
+        dest = request['dest']
+        dbs = [ClientDB, Games]
+        for db in dbs:
+            src_space = db.Subspace(src)
+            dest_space = db.Subspace(dest)
+            for k, _ in dest_space:
+                dest_space.Delete(k)
+            for k, v in src_space:
+                dest_space.Put(k, v)
 
     def handle_ping(self, request, output):
         logging.debug("served ping")
