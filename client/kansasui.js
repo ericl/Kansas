@@ -66,7 +66,7 @@ function extractCards(html) {
         .replace(/&nbsp;/g, ' ');
     var cardNames = text.split("\n");
     var validated = [];
-    var regex = /^([0-9]+)\s+([^\s][a-zA-Z,\-\' \/]*)(.*)$/;
+    var regex = /^([0-9]+)\s+([^\s][0-9a-zA-Z,\-\' \/]*)(.*)$/;
     var count = 0;
     for (i in cardNames) {
         var match = regex.exec(cardNames[i]);
