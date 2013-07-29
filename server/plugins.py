@@ -15,7 +15,7 @@ class DefaultPlugin(object):
 class PokerCardsPlugin(DefaultPlugin):
     def Fetch(self, name, exact):
         stream = []
-        for card in glob.glob("../third_party/cards52/cropped/[A-Z0-9][A-Z0-9].png"):
+        for card in glob.glob("../third_party/cards52/cropped/[A-Z0-9]*.png"):
             abbrev = card.split("/")[-1].split(".")[0]
             if exact:
                 if name.lower() == abbrev.lower():
