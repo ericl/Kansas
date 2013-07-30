@@ -26,6 +26,12 @@ Games = namespaces.Namespace(config.kDBPath, 'Games', version=2)
 ClientDB = namespaces.Namespace(config.kDBPath, 'ClientDB', version=2)
 
 
+class KansasRedirect(Exception):
+    def __init__(self, msg, url):
+        Exception.__init__(self, msg)
+        self.url = url
+
+
 BLANK_DECK = {
     'deck_name': 'Blank deck',
     'resource_prefix': '',
@@ -299,11 +305,6 @@ class KansasInitHandler(KansasHandler):
     def handle_set_scope(self, request, output):
         scope = request['scope']
         sourceid = request['datasource']
-        if not datasource.IsValid(sourceid):
-            raise Exception("invalid datasource: " + sourceid);
-        assert scope, scope
-        if scope not in self.scopes:
-            self.scopes[scope] = KansasScopeHandler(scope, sourceid)
 
         # Enforces that each scope has a single consistent datasource.
         ScopedClientDB = ClientDB.Subspace(scope)
@@ -311,7 +312,15 @@ class KansasInitHandler(KansasHandler):
         if current_sourceid is None:
             ScopedClientDB.Put('sourceid', sourceid)
         elif current_sourceid != sourceid:
-            raise Exception("On this server the datasource must be " + current_sourceid)
+            raise KansasRedirect(
+                "On this server, the datasource must be " + current_sourceid,
+                "/?scope=%s&sourceid=%s" % (scope, current_sourceid))
+        elif not datasource.IsValid(sourceid):
+            raise KansasRedirect("invalid datasource: " + sourceid, "/");
+
+        assert scope, scope
+        if scope not in self.scopes:
+            self.scopes[scope] = KansasScopeHandler(scope, sourceid)
 
     def transition(self, reqtype, request, output):
         if reqtype == 'set_scope':
@@ -669,6 +678,15 @@ def web_socket_transfer_data(request):
                 req['type'],
                 req.get('data'),
                 output)
+        except KansasRedirect, e:
+            logging.info("redirecting to: " + e.url)
+            request.ws_stream.send_message(
+               json.dumps({
+                    'type': 'redirect',
+                    'msg': e.message,
+                    'url': e.url,
+               }),
+               binary=False)
         except Exception, e:
             logging.exception(e)
             request.ws_stream.send_message(

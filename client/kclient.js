@@ -348,6 +348,10 @@ KansasClient.prototype._eventHandlers = function(that) {
         error: function(e) {
             that._notify('error', e.msg);
         },
+        redirect: function(e) {
+            alert(e.msg);
+            document.location = e.url;
+        },
         broadcast_message: function(e) {
             that._notify('broadcast', e.data);
         },

@@ -23,15 +23,18 @@
     <body>
         <div id="scopechooser">
             <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
-            <h3>Choose your server name</h3>
+            <h3>Choose a server name</h3>
             <form>
             <input id="scopename" type=textbox value="DEFAULT" name="scope">
             using
-            <input id="datasource" type=textbox value="magiccards.info" name="sourceid">
+            <select name="sourceid">
+                <option value="magiccards.info">magiccards.info</option>
+                <option value="poker">standard 52-card deck</option>
+            </select>
             <input type="submit" value="Log in">
             </form>
             <br>
-            <i>Anyone who knows the name of your server may log in.</i>
+            <i>Anyone who knows the name you choose may also log in.</i>
         </div>
         <div id="homescreen">
             <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 55pt; text-align: center; font-family: Arial">Kansas</h1>
