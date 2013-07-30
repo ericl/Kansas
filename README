@@ -12,7 +12,7 @@ Features:
     real-time synchronization
     cross-platform support
 
-Dependencies:
+Dependencies (use ./install_deps.sh):
 
     pywebsocket - http://code.google.com/p/pywebsocket/
     python-leveldb
