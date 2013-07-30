@@ -1667,9 +1667,9 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         var kAddLimit = 150;
         var toAdd = [];
         if (that.hand_user == "Player 2") {
-            var pos = 29425869;
+            var pos = 39059672;
         } else {
-            var pos = 80545413;
+            var pos = 72025744;
         }
         var total = 0;
         for (i in cards) {
