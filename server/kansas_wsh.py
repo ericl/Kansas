@@ -299,39 +299,31 @@ class KansasInitHandler(KansasHandler):
 
     def __init__(self):
         KansasHandler.__init__(self)
-        self.scopes = {}
+        self.spaces = {}
         self.handlers['set_scope'] = self.handle_set_scope
 
     def handle_set_scope(self, request, output):
         scope = request['scope']
         sourceid = request['datasource']
 
-        # Enforces that each scope has a single consistent datasource.
-        ScopedClientDB = ClientDB.Subspace(scope)
-        current_sourceid = ScopedClientDB.Get('sourceid')
-        if current_sourceid is None:
-            ScopedClientDB.Put('sourceid', sourceid)
-        elif current_sourceid != sourceid:
-            raise KansasRedirect(
-                "On this server, the datasource must be " + current_sourceid,
-                "/?scope=%s&sourceid=%s" % (scope, current_sourceid))
-        elif not datasource.IsValid(sourceid):
+        if not datasource.IsValid(sourceid):
             raise KansasRedirect("invalid datasource: " + sourceid, "/");
 
         assert scope, scope
-        if scope not in self.scopes:
-            self.scopes[scope] = KansasScopeHandler(scope, sourceid)
+        if (scope, sourceid) not in self.spaces:
+            self.spaces[scope, sourceid] = KansasSpaceHandler(scope, sourceid)
 
     def transition(self, reqtype, request, output):
         if reqtype == 'set_scope':
             KansasHandler.transition(self, reqtype, request, output)
             scope = request['scope']
-            return self.scopes[scope]
+            sourceid = request['datasource']
+            return self.spaces[scope, sourceid]
         else:
             return KansasHandler.transition(self, reqtype, request, output)
 
 
-class KansasScopeHandler(KansasHandler):
+class KansasSpaceHandler(KansasHandler):
     """The request handler created for Kansas scope."""
 
     MAX_GAMES = 5
@@ -342,9 +334,10 @@ class KansasScopeHandler(KansasHandler):
         self.handlers['connect'] = self.handle_connect
         self.handlers['list_games'] = self.handle_list_games
         self.handlers['end_game'] = self.handle_end_game
+        self.subspaceId = "%s::%s" % (scope, sourceid)
         self.scope = scope
         self.games = {}
-        self.ScopedGames = Games.Subspace(self.scope)
+        self.ScopedGames = Games.Subspace(self.subspaceId)
         for gameid, snapshot in self.ScopedGames:
             logging.debug("Restoring %s as %s" % (gameid, str(snapshot)))
             game = self.new_game(gameid)
@@ -431,14 +424,15 @@ class KansasGameHandler(KansasHandler):
         self._seqno = 1000
         self._state = KansasGameState(sourceid=sourceid)
         self.gameid = gameid
+        self.subspaceId = "%s::%s" % (scope, sourceid)
         self.handlers['broadcast'] = self.handle_broadcast
         self.handlers['bulkmove'] = self.handle_bulkmove
         self.handlers['end'] = self.handle_end
         self.handlers['remove'] = self.handle_remove
         self.handlers['add'] = self.handle_add
         self.handlers['kvop'] = self.handle_kvop
-        self.ScopedClientDB = ClientDB.Subspace(scope)
-        self.ScopedGames = Games.Subspace(scope)
+        self.ScopedClientDB = ClientDB.Subspace(self.subspaceId)
+        self.ScopedGames = Games.Subspace(self.subspaceId)
         self.streams = {}
         self.sourceid = sourceid
         self.last_used = time.time()
