@@ -230,6 +230,17 @@ class KansasHandler(object):
         self.handlers['bulkquery'] = self.handle_bulkquery
         self.handlers['sleep'] = self.handle_sleep
         self.handlers['clone_scope'] = self.handle_clone_scope
+        self.handlers['list_scope'] = self.handle_list_scope
+
+    def handle_list_scope(self, request, output):
+        scope = request['scope']
+        sourceid = request['sourceid']
+        clientdb = ClientDB.Subspace(SubspaceKey(scope, sourceid))
+        games = Games.Subspace(SubspaceKey(scope, sourceid))
+        output.reply({
+            'decks': clientdb.List(),
+            'games': games.List(),
+        })
 
     def handle_clone_scope(self, request, output):
         """Copies data from one scope to another - for sysadmin purposes."""
