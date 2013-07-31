@@ -17,6 +17,10 @@ _SOURCES = {
 }
 
 
+def AllSources():
+    return _SOURCES.keys()
+
+
 def IsValid(source):
     return source in _SOURCES
 

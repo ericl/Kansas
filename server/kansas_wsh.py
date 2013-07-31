@@ -26,6 +26,10 @@ Games = namespaces.Namespace(config.kDBPath, 'Games', version=2)
 ClientDB = namespaces.Namespace(config.kDBPath, 'ClientDB', version=2)
 
 
+def SubspaceKey(scope, sourceid):
+    return "%s::%s" % (scope, sourceid)
+
+
 class KansasRedirect(Exception):
     def __init__(self, msg, url):
         Exception.__init__(self, msg)
@@ -234,12 +238,13 @@ class KansasHandler(object):
         dest = request['dest']
         dbs = [ClientDB, Games]
         for db in dbs:
-            src_space = db.Subspace(src)
-            dest_space = db.Subspace(dest)
-            for k, _ in dest_space:
-                dest_space.Delete(k)
-            for k, v in src_space:
-                dest_space.Put(k, v)
+            for sourcetype in datasource.AllSources():
+                src_space = db.Subspace(SubspaceKey(src, sourcetype))
+                dest_space = db.Subspace(SubspaceKey(dest, sourcetype))
+                for k, _ in dest_space:
+                    dest_space.Delete(k)
+                for k, v in src_space:
+                    dest_space.Put(k, v)
 
     def handle_ping(self, request, output):
         logging.debug("served ping")
@@ -334,10 +339,10 @@ class KansasSpaceHandler(KansasHandler):
         self.handlers['connect'] = self.handle_connect
         self.handlers['list_games'] = self.handle_list_games
         self.handlers['end_game'] = self.handle_end_game
-        self.subspaceId = "%s::%s" % (scope, sourceid)
+        self.subspaceKey = SubspaceKey(scope, sourceid)
         self.scope = scope
         self.games = {}
-        self.ScopedGames = Games.Subspace(self.subspaceId)
+        self.ScopedGames = Games.Subspace(self.subspaceKey)
         for gameid, snapshot in self.ScopedGames:
             logging.debug("Restoring %s as %s" % (gameid, str(snapshot)))
             game = self.new_game(gameid)
@@ -424,15 +429,15 @@ class KansasGameHandler(KansasHandler):
         self._seqno = 1000
         self._state = KansasGameState(sourceid=sourceid)
         self.gameid = gameid
-        self.subspaceId = "%s::%s" % (scope, sourceid)
+        self.subspaceKey = SubspaceKey(scope, sourceid)
         self.handlers['broadcast'] = self.handle_broadcast
         self.handlers['bulkmove'] = self.handle_bulkmove
         self.handlers['end'] = self.handle_end
         self.handlers['remove'] = self.handle_remove
         self.handlers['add'] = self.handle_add
         self.handlers['kvop'] = self.handle_kvop
-        self.ScopedClientDB = ClientDB.Subspace(self.subspaceId)
-        self.ScopedGames = Games.Subspace(self.subspaceId)
+        self.ScopedClientDB = ClientDB.Subspace(self.subspaceKey)
+        self.ScopedGames = Games.Subspace(self.subspaceKey)
         self.streams = {}
         self.sourceid = sourceid
         self.last_used = time.time()
