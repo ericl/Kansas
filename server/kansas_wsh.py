@@ -318,16 +318,32 @@ class KansasInitHandler(KansasHandler):
         self.spaces = {}
         self.handlers['set_scope'] = self.handle_set_scope
 
+    def presence_count(self):
+        count = 0
+        with self._lock:
+            for handler in self.spaces.values():
+                count += handler.presence_count()
+        return count
+
+    def presence_breakdown(self):
+        stats = {}
+        with self._lock:
+            for k, handler in self.spaces.iteritems():
+                stats[k] = handler.presence_breakdown()
+        return stats
+
     def handle_set_scope(self, request, output):
         scope = request['scope']
         sourceid = request['datasource']
 
         if not datasource.IsValid(sourceid):
             raise KansasRedirect("invalid datasource: " + sourceid, "/");
+        elif not scope:
+            raise KansasRedirect("scope not valid", "/")
 
-        assert scope, scope
-        if (scope, sourceid) not in self.spaces:
-            self.spaces[scope, sourceid] = KansasSpaceHandler(scope, sourceid)
+        with self._lock:
+            if (scope, sourceid) not in self.spaces:
+                self.spaces[scope, sourceid] = KansasSpaceHandler(scope, sourceid)
 
     def transition(self, reqtype, request, output):
         if reqtype == 'set_scope':
@@ -365,6 +381,20 @@ class KansasSpaceHandler(KansasHandler):
         with self._lock:
             self.games[request].terminate()
         self.garbage_collect_games()
+
+    def presence_count(self):
+        count = 0
+        with self._lock:
+            for handler in self.games.values():
+                count += handler.presence_count()
+        return count
+
+    def presence_breakdown(self):
+        stats = {}
+        with self._lock:
+            for k, handler in self.games.iteritems():
+                stats[k] = handler.presence_breakdown()
+        return stats
 
     def handle_list_games(self, request, output):
         self.garbage_collect_games()
@@ -630,6 +660,11 @@ class KansasGameHandler(KansasHandler):
             self.gc_streams()
             return len(self.streams)
 
+    def presence_breakdown(self):
+        with self._lock:
+            self.gc_streams()
+            return self.streams.values()
+
     def notify_presence(self):
         with self._lock:
             self.broadcast(
@@ -658,7 +693,27 @@ class KansasGameHandler(KansasHandler):
             return src_type, src_key, self.nextseqno()
 
 
+class BackgroundStats(threading.Thread):
+    def __init__(self, target):
+        threading.Thread.__init__(self)
+        self.setDaemon(True)
+        self.target = target
+        self.logger = logging.getLogger("stats")
+
+    def run(self):
+        old_count = -1
+        while True:
+            time.sleep(60)
+            count = self.target.presence_count()
+            if count != old_count:
+                old_count = count
+                self.logger.info("%d online users", count)
+                self.logger.info("presence: %s", self.target.presence_breakdown())
+
+
 initHandler = KansasInitHandler()
+stats = BackgroundStats(initHandler)
+stats.start()
 
 
 def web_socket_do_extra_handshake(request):
