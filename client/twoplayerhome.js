@@ -65,10 +65,12 @@ function enterGame() {
     });
 }
 
+function handleRedirect(e) {
+    alert(e.msg);
+    document.location = e.url;
+}
+
 function handleError(msg) {
-    if (msg == 'game terminated') {
-        client.halted = true;
-    }
     kansas_ui.warning("Server: " + msg);
 }
 
@@ -124,7 +126,7 @@ function handleListGames(data) {
 
             if (data[g].presence > 0) {
                 online = " (" + data[g].presence + " online)";
-                var disabled = " disabled=true ";
+//                var disabled = " disabled=true ";
             }
 
             var button = "<button "
@@ -156,6 +158,14 @@ function handleListGames(data) {
                 + "</div>"
             ).appendTo("#gamelist");
         }
+    }
+    var kMaxGames = 5;
+    if (data.length >= kMaxGames) {
+        $("#newgame").prop("disabled", true);
+        $("#newgame").text("(Too Many Open Games)");
+    } else {
+        $("#newgame").prop("disabled", false);
+        $("#newgame").text("New Game");
     }
     setTimeout(function() {
         if (client._state == 'opened') {
@@ -219,6 +229,7 @@ $(document).ready(function() {
     client = new KansasClient(hostname, kWSPort, kansas_ui, scope, sourceid)
         .bind('opened', handleSocketOpen)
         .bind('error', handleError)
+        .bind('redirect', handleRedirect)
         .bind('disconnected', function() { handleSocketClose(client); } )
         .bind('broadcast', function(x) { kansas_ui.handleBroadcast(x); })
         .bind('presence', function(x) { kansas_ui.handlePresence(x); })

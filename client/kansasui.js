@@ -52,6 +52,27 @@ function KansasUI() {
 
 (function() {  /* begin namespace kansasui */
 
+var isMobile = {
+    Android: function() {
+        return navigator.userAgent.match(/Android/i) ? true : false;
+    },
+    BlackBerry: function() {
+        return navigator.userAgent.match(/BlackBerry/i) ? true : false;
+    },
+    iOS: function() {
+        return navigator.userAgent.match(/iPhone|iPad|iPod/i) ? true : false;
+    },
+    Windows: function() {
+        return navigator.userAgent.match(/IEMobile/i) ? true : false;
+    },
+    any: function() {
+        return (isMobile.Android()
+            || isMobile.BlackBerry()
+            || isMobile.iOS()
+            || isMobile.Windows());
+    }
+};
+
 /**
  * Returns list of cards found in the following html blob.
  * Returns [cards_list, #cards].
@@ -109,7 +130,9 @@ function deckPanelVisible() {
 
 function showDeckPanel() {
     $('#deckpanel').animate({left:'0%'}, 300);
-    placeCaretAtEnd($("#deckinput")[0]);
+    if (!isMobile.any()) {
+        placeCaretAtEnd($("#deckinput")[0]);
+    }
 }
 
 /**
@@ -336,8 +359,6 @@ KansasUI.prototype._computeContainmentHint = function(selectedSet, bb) {
 
 /* Draws selection box about items. */
 KansasUI.prototype._createSelection = function(items, popupMenu) {
-    // On mobile, always pop up the hover menu,
-    // since middle-click shortcuts are not possible.
     selectedSet = items;
     if (selectedSet.length < 2) {
         this._updateFocus(selectedSet);
@@ -1496,7 +1517,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         this.view = new KansasView(
             client, 2, [-kCardWidth, -kCardHeight], getBBox());
     }
-    this._redrawDivider();
+    this._setSizes();
 
     this.eventTable = {
         'flip': this._flipCard,
@@ -1913,13 +1934,17 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
 
     $(window).resize(function() {
         that.view.resize(getBBox());
-        that._redrawHand();
-        that._redrawOtherHands();
-        that._redrawBoard();
-        that._resizePreview(that._previewUrls);
+        if (isMobile.any()) {
+            that._setSizes();
+        } else {
+            that._redrawHand();
+            that._redrawOtherHands();
+            that._redrawBoard();
+            that._resizePreview(that._previewUrls);
+        }
     });
 
-    this._redrawDivider();
+    this._setSizes();
 }
 
 KansasUI.prototype._resizePreview = function(urls) {
@@ -1948,12 +1973,17 @@ KansasUI.prototype._redrawBoard = function() {
     for (i in stacks) {
         this._redrawStack(stacks[i]);
     }
-    this._redrawDivider();
+    this._setSizes();
 }
 
 /* Sets position of center divider. */
-KansasUI.prototype._redrawDivider = function() {
+KansasUI.prototype._setSizes = function() {
     $("#divider").fadeIn().css("top", this.view.height / 2);
+    if (isMobile.any()) {
+        var height = ($("#arena").outerHeight() - 20) + "px";
+        $("#deckpanel").height(height);
+        $("#search_preview").css("max-height", height);
+    }
 }
 
 /* Returns absolute url of a resource. */
@@ -2225,7 +2255,6 @@ KansasUI.prototype._normalizedX = function(target) {
     return left;
 }
 
-
 /* Animates a card move to a destination on the board. */
 KansasUI.prototype._redrawCard = function(card) {
     this.updateCount += 1;
@@ -2438,19 +2467,6 @@ KansasUI.prototype.handleAdd = function(data) {
         var card = $("#card_" + cards[i]);
         card.fadeIn();
         this._initCards(card);
-    }
-
-    if (requestor == this.uuid) {
-        /* TODO is this even the right UI - looks kinda weird.
-        // TODO why do we need this timeout... immediate => box in wrong place
-        setTimeout(function() {
-            var set = $();
-            for (i in cards) {
-                set = set.add($("#card_" + cards[i]));
-            }
-            that._createSelection(set, false);
-        }, kAnimationLength / 2);
-        */
     }
 }
 

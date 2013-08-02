@@ -604,12 +604,16 @@ class KansasGameHandler(KansasHandler):
         with self._lock:
             self.terminated = True
             self.ScopedGames.Delete(self.gameid)
+            msg = ("Game terminated - a maximum of %d games "
+                   "is allowed per named server.") % KansasSpaceHandler.MAX_GAMES
             for s in self.streams:
                 try:
                     s.send_message(
                        json.dumps({
-                       'type': 'error',
-                       'msg': "game terminated"}),
+                            'type': 'redirect',
+                            'msg': msg,
+                            'url': "/",
+                       }),
                        binary=False)
                     s.close_connection(wait_response=False)
                 except Exception, e:

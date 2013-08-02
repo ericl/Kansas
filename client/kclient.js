@@ -51,7 +51,6 @@ function KansasClient(hostname, ip_port, kansas_ui, scope, sourceid) {
     this.hostname = hostname;
     this.ip_port = ip_port;
     this.ui = kansas_ui;
-    this.halted = false;
     this.scope = scope || 'DEFAULT';
     this.sourceid = sourceid;
     this._ws = null;
@@ -173,11 +172,6 @@ KansasClient.prototype.connect = function() {
         throw "must set scope name";
     if (!this.sourceid)
         throw "must set datasource id";
-    if (this.halted) {
-        alert("This game has been ended. Returning to main menu.");
-        document.location.hash = "";
-        document.location.reload();
-    }
     this.ui.showSpinner("connect");
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";
@@ -349,8 +343,7 @@ KansasClient.prototype._eventHandlers = function(that) {
             that._notify('error', e.msg);
         },
         redirect: function(e) {
-            alert(e.msg);
-            document.location = e.url;
+            that._notify('redirect', e);
         },
         broadcast_message: function(e) {
             that._notify('broadcast', e.data);
@@ -452,6 +445,7 @@ KansasClient.prototype._notify = function(hook, arg, keep_spinner) {
 KansasClient.prototype._hooks = {
     opened: function() {},
     error: function(data) {},
+    redirect: function(data) {},
     disconnected: function() {},
     broadcast: function(data) {},
     presence: function(data) {},
