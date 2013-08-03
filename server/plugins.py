@@ -48,9 +48,14 @@ class MagicCardsInfoPlugin(DefaultPlugin):
         req = urllib2.Request(url)
         stream = urllib2.urlopen(req)
         data = stream.read()
-        matches = re.finditer(
-            r'<a href="/([a-z0-9]*)/en/([a-z0-9]*).html">(.*?)</a>',
-            data)
+        if 'selected="selected">View as a List' in data:
+            matches = re.finditer(
+                r'<a href="/([a-z0-9]*)/en/([a-z0-9]*).html">(.*?)</a>',
+                data)
+        else:
+            matches = re.finditer(
+                r'<a href="/([a-z0-9]*)/en/([a-z0-9]*).html">(.*?)</a>\s+<img',
+                data)
         has_more = bool(re.findall('"\/query.*;p=2"', data))
         stream = []
         for m in matches:
