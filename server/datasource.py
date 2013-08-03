@@ -6,8 +6,10 @@ from server import namespaces
 from server import plugins
 
 import logging
+import time
 
 QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=5)
+Knowledge = namespaces.Namespace(config.kDBPath, 'Knowledge', version=1)
 
 
 _SOURCES = {
@@ -59,7 +61,12 @@ def Find(source, name, exact=False):
         logging.info("Cache HIT on '%s'", key)
 
     # Rewrites result stream to use cached images if possible.
+    start = time.time()
+    ss = Knowledge.Subspace(source)
     for card in result[0]:
+        ss.Put(card['name'], (card['img_url'], card['info_url']))
         card['img_url'] = imagecache.CachedIfPresent(card['img_url'])
+    print time.time() - start
+    print "Knowledge of %s is now %d." % (source, len(ss.List()))
 
     return result
