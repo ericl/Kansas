@@ -21,6 +21,10 @@ def CachedIfPresent(url):
     return Cached(url, dont_fetch=True) or url
 
 
+def CachePeek(url):
+    return CacheMap.Get(url)
+
+
 def Cached(url, dont_fetch=False):
     if url.startswith(config.kCachePath) \
             or url.startswith(config.kLocalServingAddress) \
