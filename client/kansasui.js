@@ -1460,6 +1460,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         }
         if (key == 47 /* '/' */) {
             showDeckPanel();
+            that._refreshDeckList();
             $("#kansas_typeahead").select();
             return false;
         }
