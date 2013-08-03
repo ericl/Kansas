@@ -14,7 +14,8 @@ function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id, cb) {
 (function() {  /* begin namespace searcher */
 
 // The time to wait between queries, in milliseconds.
-var kMinWaitPeriod = 500
+var kMinWaitPeriod = 500;
+var kMaxPreviewItems = 20;
 
 KansasSearcher.prototype.handleQueryStringUpdate = function() {
     var that = this;
@@ -25,6 +26,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
         this.client.callAsync("query", {
             "datasource": that.sourceid,
             "term": query,
+            "limit": kMaxPreviewItems,
             "tags": "immediate",
             "allow_inexact": true
         }).then(function(v) { that.handleQueryResponse(v); });
@@ -39,6 +41,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
             that.client
                 .callAsync("query", {
                     "datasource": that.sourceid,
+                    "limit": kMaxPreviewItems,
                     "term": query,
                     "allow_inexact": true})
                 .then(function(v) { that.handleQueryResponse(v); });

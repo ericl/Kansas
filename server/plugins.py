@@ -42,14 +42,14 @@ class MagicCardsInfoPlugin(DefaultPlugin):
     def Fetch(self, name, exact):
         if name == '':
             return [], {}
-        url = "http://magiccards.info/query?q=%s%s&v=card&s=cname" %\
+        url = "http://magiccards.info/query?q=%s%s&v=olist&s=cname" %\
             ('!' if exact else 'l:en+', '+'.join(name.split()))
         logging.info("GET " + url)
         req = urllib2.Request(url)
         stream = urllib2.urlopen(req)
         data = stream.read()
         matches = re.finditer(
-            r'<a href="/([a-z0-9]*)/en/([a-z0-9]*).html">(.*?)</a>\s+<img',
+            r'<a href="/([a-z0-9]*)/en/([a-z0-9]*).html">(.*?)</a>',
             data)
         has_more = bool(re.findall('"\/query.*;p=2"', data))
         stream = []

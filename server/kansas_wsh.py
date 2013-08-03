@@ -289,6 +289,10 @@ class KansasHandler(object):
             logging.info("Trying exact match")
             stream, meta = datasource.Find(
                 request['datasource'], request['term'], exact=True)
+        lim = request.get('limit')
+        if lim and len(stream) > lim:
+            stream = stream[:lim]
+            meta['has_more'] = True
         output.reply({
             'stream': stream,
             'meta': meta,
