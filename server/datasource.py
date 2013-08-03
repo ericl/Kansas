@@ -10,7 +10,7 @@ import time
 import threading
 import random
 
-QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=5)
+QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=6)
 Knowledge = namespaces.Namespace(config.kDBPath, 'Knowledge', version=1)
 
 
