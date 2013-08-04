@@ -94,4 +94,6 @@ if __name__ == '__main__':
     print '-- Namespaces --'
     for name, stats in ListNamespaces(path):
         print name, stats
-        print "num keys =", len(list(Namespace(path, name, version=stats[1])))
+        ns = Namespace(path, name, version=stats[1])
+        print "num keys =", len(list(ns))
+        vars()[name] = ns

@@ -2,6 +2,7 @@
 
 import glob
 import logging
+import os
 import re
 import urllib2
 
@@ -32,6 +33,52 @@ class PokerCardsPlugin(DefaultPlugin):
                         'info_url': card,
                     })
         return stream, {}
+
+
+class LocalDBPlugin(DefaultPlugin):
+    DB_PATH = '../localdb'
+
+    def __init__(self):
+        self.catalog = {}
+        if not os.path.isdir(self.DB_PATH):
+            return
+        for f in os.listdir(self.DB_PATH):
+            key = str(f.replace('_', '/').replace('.jpg', '').lower())
+            self.catalog[key] = urllib2.quote(os.path.join(self.DB_PATH, f))
+
+    def GetBackUrl(self):
+        return '/third_party/images/mtg_detail.jpg'
+
+    def Fetch(self, name, exact):
+        stream, meta = [], {}
+        if name == '':
+            return stream, meta
+        needle = str(name.lower())
+        if exact:
+            if needle in self.catalog:
+                stream.append({
+                    'needle': needle,
+                    'img_url': self.catalog[needle],
+                    'info_url': self.catalog[needle],
+                })
+        else:
+            ct = 0
+            for fullname, url in self.catalog.iteritems():
+                if needle in fullname:
+                    print fullname, self.catalog[fullname]
+                    stream.append({
+                        'name': fullname,
+                        'img_url': self.catalog[fullname],
+                        'info_url': self.catalog[fullname],
+                    })
+                    ct += 1
+                    if ct > 1000:
+                        break
+        meta = {
+            'has_more': False,
+            'more_url': "",
+        }
+        return stream, meta
 
 
 class MagicCardsInfoPlugin(DefaultPlugin):

@@ -3,3 +3,4 @@ cache
 *.swp
 db
 pywebsocket-read-only
+localdb

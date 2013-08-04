@@ -7,14 +7,14 @@ from server import plugins
 
 import logging
 
-QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=6)
+QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=8)
 Knowledge = namespaces.Namespace(config.kDBPath, 'Knowledge', version=1)
 
 
 _SOURCES = {
+    'localdb': plugins.LocalDBPlugin(),
     'magiccards.info': plugins.MagicCardsInfoPlugin(),
-    'poker': plugins.PokerCardsPlugin(),
-    'customscans': None,
+    'pokerdb': plugins.PokerCardsPlugin(),
 }
 
 
