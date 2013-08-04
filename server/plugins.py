@@ -43,7 +43,10 @@ class LocalDBPlugin(DefaultPlugin):
         if not os.path.isdir(self.DB_PATH):
             return
         for f in os.listdir(self.DB_PATH):
-            key = str(f.replace('_', '/').replace('.jpg', '').lower())
+            key = str(f.replace('_', '/')
+                       .replace('\xc3\x86', 'ae')
+                       .replace('.jpg', '')
+                       .lower())
             self.catalog[key] = urllib2.quote(os.path.join(self.DB_PATH, f))
 
     def GetBackUrl(self):

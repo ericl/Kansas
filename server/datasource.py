@@ -7,7 +7,7 @@ from server import plugins
 
 import logging
 
-QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=8)
+QueryCache = namespaces.Namespace(config.kDBPath, 'QueryCache', version=9)
 Knowledge = namespaces.Namespace(config.kDBPath, 'Knowledge', version=1)
 
 
