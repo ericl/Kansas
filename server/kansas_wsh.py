@@ -481,6 +481,7 @@ class KansasGameHandler(KansasHandler):
         self.handlers['remove'] = self.handle_remove
         self.handlers['add'] = self.handle_add
         self.handlers['kvop'] = self.handle_kvop
+        self.handlers['samplecards'] = self.handle_samplecards
         self.ScopedClientDB = ClientDB.Subspace(self.subspaceKey)
         self.ScopedGames = Games.Subspace(self.subspaceKey)
         self.streams = {}
@@ -547,7 +548,7 @@ class KansasGameHandler(KansasHandler):
             self.broadcast(
                 set(self.streams.keys()),
                 'bulk_remove', list(removed))
-            self.save()
+        self.save()
         output.reply("done")
 
     def handle_add(self, req, output):
@@ -572,6 +573,9 @@ class KansasGameHandler(KansasHandler):
                 })
             self.save()
         output.reply("done")
+
+    def handle_samplecards(self, req, output):
+        output.reply(datasource.Sample(self.sourceid))
     
     def handle_kvop(self, req, output):
         op = req['op']
@@ -608,8 +612,7 @@ class KansasGameHandler(KansasHandler):
         with self._lock:
             self.terminated = True
             self.ScopedGames.Delete(self.gameid)
-            msg = ("Game terminated - a maximum of %d games "
-                   "is allowed per named server.") % KansasSpaceHandler.MAX_GAMES
+            msg = "This game has been ended."
             for s in self.streams:
                 try:
                     s.send_message(

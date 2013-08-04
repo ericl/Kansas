@@ -48,6 +48,7 @@ function KansasUI() {
     this.eventTable = {};
     this.searcher = null;
     this.oldtitle = null;
+    this.firstTimeShowingPanel = true;
 }
 
 (function() {  /* begin namespace kansasui */
@@ -128,10 +129,26 @@ function deckPanelVisible() {
     return $('#deckpanel').offset().left >= 0;
 }
 
-function showDeckPanel() {
-    $('#deckpanel').animate({left:'0%'}, 300);
-    if (!isMobile.any()) {
-        placeCaretAtEnd($("#deckinput")[0]);
+KansasUI.prototype._showDeckPanel = function() {
+    this._refreshDeckList();
+    function load() {
+        $('#deckpanel').animate({left:'0%'}, 300);
+        if (!isMobile.any()) {
+            placeCaretAtEnd($("#deckinput")[0]);
+        }
+    }
+    if (this.firstTimeShowingPanel) {
+        this.firstTimeShowingPanel = false;
+        this.client.callAsync("samplecards").then(function(data) {
+            var html = "<br>";
+            for (i in data) {
+                html = "<br>" + (parseInt(i) + 1) + " " + data[i] + html;
+            }
+            $("#samplecards").html(html);
+            load();
+        });
+    } else {
+        load();
     }
 }
 
@@ -1459,8 +1476,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             return true;
         }
         if (key == 47 /* '/' */) {
-            showDeckPanel();
-            that._refreshDeckList();
+            that._showDeckPanel();
             $("#kansas_typeahead").select();
             return false;
         }
@@ -1620,8 +1636,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $("#deck").mouseup(function(e) {
-        showDeckPanel();
-        that._refreshDeckList();
+        that._showDeckPanel();
         e.stopPropagation();
     });
 

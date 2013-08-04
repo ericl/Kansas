@@ -3,6 +3,7 @@
 import glob
 import logging
 import os
+import random
 import re
 import urllib2
 
@@ -12,11 +13,21 @@ class DefaultPlugin(object):
     def GetBackUrl(self):
         return '/third_party/cards52/cropped/Blue_Back.png'
 
+    def Fetch(self, name, exact):
+        return []
+
+    def Sample(self):
+        return []
+
 
 class PokerCardsPlugin(DefaultPlugin):
+    def Sample(self):
+        cards, _ = self.Fetch("", False)
+        return [c['name'] for c in random.sample(cards, 5)]
+
     def Fetch(self, name, exact):
         stream = []
-        for card in glob.glob("../third_party/cards52/cropped/[A-Z0-9]*.png"):
+        for card in glob.glob("../third_party/cards52/cropped/[A-Z0-9][A-Z0-9]*.png"):
             abbrev = card.split("/")[-1].split(".")[0]
             if exact:
                 if name.lower() == abbrev.lower():
@@ -40,14 +51,17 @@ class LocalDBPlugin(DefaultPlugin):
 
     def __init__(self):
         self.catalog = {}
+        self.index = {}
         if not os.path.isdir(self.DB_PATH):
             return
         for f in os.listdir(self.DB_PATH):
-            key = str(f.replace('_', '/')
-                       .replace('\xc3\x86', 'ae')
-                       .replace('.jpg', '')
-                       .lower())
+            name = f.replace('_', '/').replace('.jpg', '')
+            key = str(name.replace('\xc3\x86', 'ae').lower())
             self.catalog[key] = urllib2.quote(os.path.join(self.DB_PATH, f))
+            self.index[key] = name
+
+    def Sample(self):
+        return [self.index[c] for c in random.sample(self.catalog, 5)]
 
     def GetBackUrl(self):
         return '/third_party/images/mtg_detail.jpg'
@@ -56,6 +70,7 @@ class LocalDBPlugin(DefaultPlugin):
         stream, meta = [], {}
         if name == '':
             return stream, meta
+        name = name.strip()
         needle = str(name.lower())
         if exact:
             if needle in self.catalog:
@@ -88,6 +103,9 @@ class MagicCardsInfoPlugin(DefaultPlugin):
 
     def GetBackUrl(self):
         return '/third_party/images/mtg_detail.jpg'
+
+    def Sample(self):
+        return ["Island", "Plains", "Mountain", "Swamp", "Forest"]
 
     def Fetch(self, name, exact):
         if name == '':

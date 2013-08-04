@@ -30,6 +30,10 @@ def BackUrl(source):
     return _SOURCES[source].GetBackUrl()
 
 
+def Sample(source):
+    return _SOURCES[source].Sample()
+
+
 def _FindCards(source, name, exact):
     """Same as FindCards but skips caches."""
 
