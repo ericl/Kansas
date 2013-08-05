@@ -8,6 +8,7 @@
         <script type="text/javascript" src="third_party/jquery-1.8.3.min.js"></script>
         <script type="text/javascript" src="third_party/jquery.websocket-0.0.1.js"></script>
         <script type="text/javascript" src="third_party/jquery-ui-1.9.2.custom.min.js"></script>
+        <script type="text/javascript" src="client/localstore.js"></script>
         <script type="text/javascript" src="client/kansasui.js"></script>
         <script type="text/javascript" src="client/kclient.js"></script>
         <script type="text/javascript" src="client/kview.js"></script>
@@ -24,7 +25,7 @@
         <div id="scopechooser">
             <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
             <h3>Choose a server name</h3>
-            <form>
+            <form id="login">
             <input id="scopename" type=textbox value="DEFAULT" name="scope">
             using
             <select name="sourceid">
@@ -50,7 +51,7 @@
                 <button id="newgame">New Game</button>
             </div>
             <hr>
-            <div style="text-align: center; font-size: small;"><b>Logged in to server <span id="scopetxt"></span></b> | <a href="/">Log out.</a><br>This server is using <span id="sourceidtxt"></span> for data.</div>
+            <div style="text-align: center; font-size: small;"><b>Logged in to server <span id="scopetxt"></span></b> | <a id="logout" href="/">Log out.</a><br>This server is using <span id="sourceidtxt"></span> for data.</div>
         </div>
         <textarea id="console" rows=15 cols=60></textarea><br>
         <div id="deckpanel">

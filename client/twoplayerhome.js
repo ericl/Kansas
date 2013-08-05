@@ -50,10 +50,8 @@ function enterGame() {
     }
     document.title = 'Kansas: ' + orient + '@' + gameid;
     prev_hash = document.location.hash = user + ';' + orient + ';' + gameid;
-    document.cookie = JSON.stringify({
-        orient: orient,
-        username: user,
-    });
+    localstore.put('orient', orient);
+    localstore.put('username', user);
 
     kansas_ui.init(client, uuid, user, $("#player1").is(":checked"));
 
@@ -175,23 +173,24 @@ function handleListGames(data) {
 }
 
 $(document).ready(function() {
-
-    try {
-        var config = JSON.parse(document.cookie);
-        if (config.orient == "player2") {
-            $("#player2").prop("checked", true);
-        }
-        if (config.username) {
-            $("#username").val(config.username);
-        }
-    } catch (err) {
-        kansas_ui.vlog(3, "could not parse cookie: " + document.cookie);
+    var orient = localstore.get('orient', "player1");
+    if (orient == "player2") {
+        $("#player2").prop("checked", true);
+    }
+    var username = localstore.get('username');
+    if (username) {
+        $("#username").val(username);
     }
 
     $("#gamename").val(new Date().toJSON());
 
-    var scope = 'DEFAULT';
-    var sourceid = 'magiccards.info';
+    $("#login").submit(function() {
+        localstore.put('scope', $("#scopename").val());
+        localstore.put('sourceid', $("select[name=sourceid]").val());
+    });
+
+    var scope = localstore.get('scope', 'DEFAULT');
+    var sourceid = localstore.get('sourceid', 'magiccards.info');
     var scopeset = false;
     var sourceset = false;
     var args = location.search.split("&");
@@ -208,6 +207,12 @@ $(document).ready(function() {
                 sourceset = value;
             }
         }
+    }
+    if (localstore.get('scope')) {
+        scopeset = true;
+    }
+    if (localstore.get('sourceid')) {
+        sourceset = true;
     }
     if (scopeset && sourceset) {
         kansas_ui.vlog(0, "Setting scope to '" + scope + "'.");
@@ -247,6 +252,11 @@ $(document).ready(function() {
         if ($("#gamename").val())
             gameid = $("#gamename").val();
         enterGame();
+    });
+
+    $("#logout").click(function() {
+        localstore.put('scope', undefined);
+        localstore.put('sourceid', undefined);
     });
 
     $(".entergame").live('click', function(event) {
