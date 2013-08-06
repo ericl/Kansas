@@ -13,6 +13,7 @@ import os
 import random
 import threading
 import time
+import urllib2
 
 try:
     import Image
@@ -38,7 +39,6 @@ class KansasRedirect(Exception):
 
 BLANK_DECK = {
     'deck_name': 'Blank deck',
-    'resource_prefix': '',
     'default_back_url': '',
     'board': {},
     'hands': {},
@@ -53,7 +53,6 @@ BLANK_DECK = {
 class CachingLoader(dict):
     def __init__(self, values):
         dict.__init__(self, copy.deepcopy(values))
-        self.oldPrefix = self['resource_prefix']
         if self['urls']:
             self.highest_id = max(self['urls'].keys())
         else:
@@ -79,7 +78,7 @@ class CachingLoader(dict):
         return new_id
 
     def download(self, suffix):
-        url = self.toLocalURL(suffix)
+        url = urllib2.unquote(suffix)
         return imagecache.Cached(url)
 
     def resize(self, large_path, small_path):
@@ -92,14 +91,6 @@ class CachingLoader(dict):
             return small_path
         else:
             return large_path
-
-    def toLocalURL(self, url):
-        if url.startswith('/') \
-                or url.startswith(config.kCachePath) \
-                or url.startswith('http:'):
-            return url
-        else:
-            return self.oldPrefix + url
 
 
 class JSONOutput(object):
