@@ -88,7 +88,7 @@ function extractCards(html) {
         .replace(/&nbsp;/g, ' ');
     var cardNames = text.split("\n");
     var validated = [];
-    var regex = /^([0-9]+)\s+([^\s][0-9a-zA-Z,\-\' \/]*)(.*)$/;
+    var regex = /^([0-9]+)\s+([^\s][0-9a-zA-Z,!\-\' \/]*)(.*)$/;
     var count = 0;
     for (i in cardNames) {
         var match = regex.exec(cardNames[i]);
@@ -2594,7 +2594,7 @@ KansasUI.prototype.handlePresence = function(data) {
             if (d.uuid == myuuid)
                 return d.name + " (self)";
             else
-                return d.name;
+                return d.name + " (" + d.addr + ")";
         }).join(", "));
 
     /* Removes frames of clients no longer present. */

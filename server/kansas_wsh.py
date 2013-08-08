@@ -430,7 +430,15 @@ class KansasSpaceHandler(KansasHandler):
     def handle_connect(self, request, output):
         with self._lock:
             logging.info(request)
-            presence = {'uuid': request['uuid'], 'name': request['user']}
+            presence = {
+                'uuid': request['uuid'],
+                'name': request['user'],
+                'addr': output
+                    .stream._request
+                    .connection
+                    .remote_addr[0]
+                    .replace('::ffff:', '')
+            }
             if request['gameid'] in self.games:
                 logging.info("Joining existing game '%s'", request['gameid'])
                 game = self.games[request['gameid']]
