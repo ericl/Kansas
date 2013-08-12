@@ -191,6 +191,8 @@ $(document).ready(function() {
 
     var scope = localstore.get('scope', 'DEFAULT');
     var sourceid = localstore.get('sourceid', 'magiccards.info');
+    var scopeset_URL = false;
+    var sourceset_URL = false;
     var scopeset = false;
     var sourceset = false;
     var args = location.search.split("&");
@@ -200,9 +202,11 @@ $(document).ready(function() {
         if (key) {
             var value = split[1].replace("/", "");
             if (key == "scope") {
+                scopeset_URL = true;
                 scope = value;
                 scopeset = value;
             } else if (key == "sourceid") {
+                sourceset_URL = true;
                 sourceid = value;
                 sourceset = value;
             }
@@ -217,6 +221,12 @@ $(document).ready(function() {
     if (scopeset && sourceset) {
         kansas_ui.vlog(0, "Setting scope to '" + scope + "'.");
         kansas_ui.vlog(0, "Setting sourceid to '" + sourceid + "'.");
+        if (!sourceset_URL || !scopeset_URL) {
+            if (window.history && window.history.pushState) {
+                window.history.pushState(null, null,
+                    '?scope=' + scope + '&sourceid=' + sourceid + '/');
+            }
+        }
         $("#scopetxt").text(scope);
         $("#sourceidtxt").text(sourceid);
         $("#scopechooser").hide();

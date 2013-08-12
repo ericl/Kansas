@@ -2548,7 +2548,11 @@ function htmlForTextWithEmbeddedNewlines(text) {
     // differences in innerText/textContent yourself
     var tmpDiv = jQuery(document.createElement('div'));
     for (var i = 0 ; i < lines.length ; i++) {
-        htmls.push(tmpDiv.text(lines[i]).html());
+        var html = tmpDiv.text(lines[i]).html()
+        if (i == lines.length - 1) {
+            html = '<span class=lastmsg>' + html + '</span>';
+        }
+        htmls.push(html);
     }
     return htmls.join("<br>");
 }
@@ -2563,8 +2567,12 @@ KansasUI.prototype.handleBroadcast = function(data) {
             break;
         case "message":
             var name = data.name;
+            var selfmsg = false;
             if (this.uuid == data.uuid) {
                 name += " (self)";
+                selfmsg = true;
+            } else {
+                notifications.notify(name + ' says...');
             }
             var newtext = name + ': ' + data.msg;
             this.chatHistory.push(newtext);
@@ -2576,6 +2584,9 @@ KansasUI.prototype.handleBroadcast = function(data) {
             $("#chattext").html(
                 htmlForTextWithEmbeddedNewlines(
                     this.chatHistory.join("\n")));
+            if (selfmsg) {
+                $(".lastmsg").removeClass("lastmsg");
+            }
             break;
     }
 }

@@ -26,6 +26,10 @@ html, body {
     right: 0;
 }
 
+.lastmsg {
+  color: orange;
+}
+
 #add, #validate {
     height: 5%;
     width: 45%;
