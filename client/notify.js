@@ -22,12 +22,15 @@ notifications.notify = function(msg) {
             }
             notifications.ctr += 1;
         }, 1000);
+        if (document.hasFocus()) {
+            notifications.defocus();
+        }
     } else {
         notifications.currentmsg = msg;
     }
 }
 
-window.onfocus = function(event) {
+notifications.defocus = function() {
     clearInterval(notifications.interval);
     notifications.active = false;
     notifications.interval = null;
@@ -35,3 +38,5 @@ window.onfocus = function(event) {
     var last = $(".lastmsg");
     setTimeout(function() { last.removeClass("lastmsg"); }, 1000);
 }
+
+window.onfocus = notifications.defocus;
