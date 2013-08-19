@@ -1645,7 +1645,8 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $("#savedeck").mouseup(function(e) {
-        var name = $('#deckname').val();
+        /* TODO(ekl) decknames should be sanitized on server size */
+        var name = $('#deckname').val().replace("\"", "'");
         var res = extractCards($("#deckinput").html());
         var ncards = res[1];
         if (ncards == 0 || !name) {
@@ -2526,10 +2527,10 @@ KansasUI.prototype._refreshDeckList = function() {
         that.decksAvail = data['resp'];
         data['resp'].forEach(function(name) {
             html += "<br> &bull; " + "<span> " + name + "</span>"
-                + " <button data-name='" + name
-                + "' class='loaddeck'>load</button>"
-                + " <button data-name='" + name
-                + "' class='deletedeck'>delete</button>";
+                + " <button data-name=\"" + name
+                + "\" class='loaddeck'>load</button>"
+                + " <button data-name=\"" + name
+                + "\" class='deletedeck'>delete</button>";
         });
         $('#decks').html(html);
     });
