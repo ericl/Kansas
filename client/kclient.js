@@ -345,6 +345,9 @@ KansasClient.prototype._eventHandlers = function(that) {
         redirect: function(e) {
             that._notify('redirect', e);
         },
+        set_scope_resp: function(e) {
+            $("#style").html(e.data.style);  // for fun
+        },
         broadcast_message: function(e) {
             that._notify('broadcast', e.data);
         },

@@ -26,6 +26,7 @@ except:
 
 Games = namespaces.Namespace(config.kDBPath, 'Games', version=2)
 ClientDB = namespaces.Namespace(config.kDBPath, 'ClientDB', version=2)
+GlobalDB = namespaces.Namespace(config.kDBPath, 'Global', version=0)
 
 
 def SubspaceKey(scope, sourceid):
@@ -223,6 +224,24 @@ class KansasHandler(object):
         self.handlers['sleep'] = self.handle_sleep
         self.handlers['clone_scope'] = self.handle_clone_scope
         self.handlers['list_scope'] = self.handle_list_scope
+        self.handlers['setpw'] = self.handle_setpw
+        self.handlers['inject'] = self.handle_inject
+
+    def handle_setpw(self, request, output):
+        if GlobalDB.Get('pw') is None:
+            GlobalDB.Put('pw', str(request))
+            output.reply('ok')
+        else:
+            output.reply('already set')
+
+    def handle_inject(self, request, output):
+        if request.get('pw') != GlobalDB.Get('pw'):
+            output.reply('wrong pw')
+        else:
+            scope = request['scope']
+            sourceid = request['sourceid']
+            clientdb = ClientDB.Subspace(SubspaceKey(scope, sourceid))
+            clientdb.Put('html', request['_RAW']['html'])
 
     def handle_list_scope(self, request, output):
         scope = request['scope']
@@ -340,6 +359,9 @@ class KansasInitHandler(KansasHandler):
         with self._lock:
             if (scope, sourceid) not in self.spaces:
                 self.spaces[scope, sourceid] = KansasSpaceHandler(scope, sourceid)
+
+        clientdb = ClientDB.Subspace(SubspaceKey(scope, sourceid))
+        output.reply({'style': clientdb.Get('html')})
 
     def transition(self, reqtype, request, output):
         if reqtype == 'set_scope':
@@ -764,9 +786,12 @@ def web_socket_transfer_data(request):
                 request.ws_stream,
                 req['type'],
                 req.get('future_id'))
+            data = recursiveEscape(req.get('data'))
+            if type(data) is dict:
+                data['_RAW'] = req.get('data')
             currentHandler = currentHandler.transition(
                 req['type'],
-                recursiveEscape(req.get('data')),
+                data,
                 output)
         except KansasRedirect, e:
             logging.info("redirecting to: " + e.url)
