@@ -42,7 +42,6 @@ function enterGame() {
     $("#homescreen").fadeOut('slow');
     $(".home-hidden").fadeIn('slow');
     var orient;
-    /* TODO(ekl) usernames should be sanitized on server size */
     user = $("#username").val() || 'Undefined_User';
     if ($("#player1").is(":checked")) {
         orient = "player1";
@@ -130,17 +129,17 @@ function handleListGames(data) {
 
             var button = "<button "
                 + priv
-                + "class='entergame' data-gameid='"
+                + "class='entergame' data-gameid=\""
                 + data[g].gameid
-                + "'>"
+                + "\">"
                 + "Join"
                 + "</button>";
 
             var button2 = "<button "
                 + priv
-                + disabled + "class='endgame' data-gameid='"
+                + disabled + "class='endgame' data-gameid=\""
                 + data[g].gameid
-                + "'>"
+                + "\">"
                 + "End"
                 + "</button>";
 
@@ -260,7 +259,6 @@ $(document).ready(function() {
     clients.push(client);
 
     $("#newgame").click(function() {
-        /* TODO(ekl) decknames should be sanitized on server size */
         if ($("#gamename").val())
             gameid = $("#gamename").val();
         enterGame();

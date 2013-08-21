@@ -1645,7 +1645,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     });
 
     $("#savedeck").mouseup(function(e) {
-        /* TODO(ekl) decknames should be sanitized on server size */
         var name = $('#deckname').val().replace("\"", "'");
         var res = extractCards($("#deckinput").html());
         var ncards = res[1];

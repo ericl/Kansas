@@ -5,8 +5,9 @@ from server import datasource
 from server import imagecache
 from server import namespaces
 
-import copy
+import cgi
 import collections
+import copy
 import json
 import logging
 import os
@@ -726,6 +727,20 @@ stats = BackgroundStats(initHandler)
 stats.start()
 
 
+def recursiveEscape(obj):
+    if type(obj) in [str, unicode]:
+        return cgi.escape(obj).replace('"', "'")
+    elif type(obj) is dict:
+        out = {}
+        for k, v in obj.items():
+            out[cgi.escape(k)] = recursiveEscape(v)
+        return out
+    elif type(obj) is list:
+        return [recursiveEscape(x) for x in obj]
+    else:
+        return obj
+
+
 def web_socket_do_extra_handshake(request):
     pass
 
@@ -751,7 +766,7 @@ def web_socket_transfer_data(request):
                 req.get('future_id'))
             currentHandler = currentHandler.transition(
                 req['type'],
-                req.get('data'),
+                recursiveEscape(req.get('data')),
                 output)
         except KansasRedirect, e:
             logging.info("redirecting to: " + e.url)
