@@ -604,7 +604,7 @@ class KansasGameHandler(KansasHandler):
         ns = self.ScopedClientDB.Subspace(req['namespace'])
         resp = None
         if op == 'Put':
-            resp = ns.Put(req['key'], req['value'])
+            resp = ns.Put(req['key'], req['_RAW']['value'])
         elif op == 'Delete':
             resp = ns.Delete(req['key'])
         elif op == 'Get':
