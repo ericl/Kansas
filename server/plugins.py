@@ -53,7 +53,7 @@ class Card(object):
         self.name = row[0]
         self.type = row[1]
         self.mana = row[2]
-        self.cost = row[3]
+        self.cost = int(row[3]) if row[3] else 0
 
     def colors(self):
         return set(self.mana).intersection(set('WRBGU'))
@@ -68,14 +68,13 @@ class CardCatalog(object):
         self.byName = {}
         self.byColor = collections.defaultdict(list)
         self.byCost = collections.defaultdict(list)
-        print "Building card catalog...",
+        logging.info("Building card catalog.")
         for c in csv.reader(open(catalogFile), escapechar='\\'):
             try:
                 self._register(Card(c))
             except Exception, e:
                 print "Failed to parse", c, e
-        print "done"
-        print self.byColor.keys()
+        logging.info("Done building card catalog.")
 
     def basicLands(self):
         return ['Plains', 'Mountain', 'Island', 'Swamp', 'Forest']
