@@ -142,7 +142,7 @@ KansasUI.prototype._showDeckPanel = function() {
         this.client.callAsync("samplecards").then(function(data) {
             var html = "<br>";
             for (i in data) {
-                html = "<br>" + (parseInt(i) + 1) + " " + data[i] + html;
+                html = "<br>" + data[i] + html;
             }
             $("#samplecards").html(html);
             load();

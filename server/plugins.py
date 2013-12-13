@@ -1,5 +1,7 @@
 # Plugins for various board games compatible with Kansas.
 
+import collections
+import csv
 import glob
 import logging
 import os
@@ -46,8 +48,88 @@ class PokerCardsPlugin(DefaultPlugin):
         return stream, {}
 
 
+class Card(object):
+    def __init__(self, row):
+        self.name = row[0]
+        self.type = row[1]
+        self.mana = row[2]
+        self.cost = row[3]
+
+    def colors(self):
+        return set(self.mana).intersection(set('WRBGU'))
+
+    def __repr__(self):
+        return str((self.name, self.type, self.mana, self.cost))
+
+
+class CardCatalog(object):
+    def __init__(self, catalog, catalogFile):
+        self.byType = collections.defaultdict(list)
+        self.byName = {}
+        self.byColor = collections.defaultdict(list)
+        self.byCost = collections.defaultdict(list)
+        print "Building card catalog...",
+        for c in csv.reader(open(catalogFile), escapechar='\\'):
+            try:
+                self._register(Card(c))
+            except Exception, e:
+                print "Failed to parse", c, e
+        print "done"
+        print self.byColor.keys()
+
+    def basicLands(self):
+        return ['Plains', 'Mountain', 'Island', 'Swamp', 'Forest']
+
+    def complement(self, land, lands):
+        byLand = {
+            'Plains': 'W',
+            'Mountain': 'R',
+            'Island': 'U',
+            'Swamp': 'B',
+            'Forest': 'G',
+        }
+        color = byLand[land]
+        colors = set([byLand[l] for l in lands])
+        return [
+            "4 " + self.choose(color, colors, 0, 2),
+            "4 " + self.choose(color, colors, 0, 3),
+            "3 " + self.choose(color, colors, 2, 5),
+            "3 " + self.choose(color, colors, 2, 5),
+            "2 " + self.choose(color, colors, 3, 7),
+            "2 " + self.choose(color, colors, 5, 99),
+        ]
+
+    def choose(self, color, colors, minCost, maxCost):
+        for _ in range(20):
+            cand = random.choice(self.byColor[color])
+            if len(cand.colors() - colors) == 0 \
+                    and cand.cost >= minCost and cand.cost <= maxCost:
+                break
+        return cand.name
+
+    def makeDeck(self):
+        land1 = random.choice(self.basicLands())
+        land2 = random.choice(self.basicLands())
+        if land1 == land2:
+            base = ["24 " + land1]
+        else:
+            base = ["12 " + land1, "12 " + land2]
+        cards = []
+        cards.extend(self.complement(land1, [land1, land2]))
+        cards.extend(self.complement(land2, [land1, land2]))
+        return cards + base
+
+    def _register(self, card):
+        self.byName[card.name] = card
+        self.byType[card.type].append(card)
+        for color in card.colors():
+            self.byColor[color].append(card)
+        self.byCost[card.cost].append(card)
+
+
 class LocalDBPlugin(DefaultPlugin):
     DB_PATH = '../localdb'
+    SCRAPE_PATH = '../scrape.txt'
 
     def __init__(self):
         self.catalog = {}
@@ -59,9 +141,10 @@ class LocalDBPlugin(DefaultPlugin):
             key = str(name.replace('\xc3\x86', 'ae').lower())
             self.catalog[key] = urllib2.quote(os.path.join(self.DB_PATH, f))
             self.index[key] = name
+        self.cards = CardCatalog(self.catalog, LocalDBPlugin.SCRAPE_PATH)
 
     def Sample(self):
-        return [self.index[c] for c in random.sample(self.catalog, 5)]
+        return self.cards.makeDeck()
 
     def GetBackUrl(self):
         return '/third_party/images/mtg_detail.jpg'
