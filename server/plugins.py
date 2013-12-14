@@ -63,7 +63,7 @@ class Card(object):
 
 
 class CardCatalog(object):
-    def __init__(self, catalog, catalogFile):
+    def __init__(self, catalogFile):
         self.byType = collections.defaultdict(list)
         self.byName = {}
         self.byColor = collections.defaultdict(list)
@@ -126,9 +126,11 @@ class CardCatalog(object):
         self.byCost[card.cost].append(card)
 
 
+Catalog = CardCatalog("../scrape.txt")
+
+
 class LocalDBPlugin(DefaultPlugin):
     DB_PATH = '../localdb'
-    SCRAPE_PATH = '../scrape.txt'
 
     def __init__(self):
         self.catalog = {}
@@ -140,10 +142,9 @@ class LocalDBPlugin(DefaultPlugin):
             key = str(name.replace('\xc3\x86', 'ae').lower())
             self.catalog[key] = urllib2.quote(os.path.join(self.DB_PATH, f))
             self.index[key] = name
-        self.cards = CardCatalog(self.catalog, LocalDBPlugin.SCRAPE_PATH)
 
     def Sample(self):
-        return self.cards.makeDeck()
+        return Catalog.makeDeck()
 
     def GetBackUrl(self):
         return '/third_party/images/mtg_detail.jpg'
@@ -187,7 +188,7 @@ class MagicCardsInfoPlugin(DefaultPlugin):
         return '/third_party/images/mtg_detail.jpg'
 
     def Sample(self):
-        return ["Island", "Plains", "Mountain", "Swamp", "Forest"]
+        return Catalog.makeDeck()
 
     def Fetch(self, name, exact):
         if name == '':
