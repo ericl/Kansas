@@ -109,14 +109,17 @@ class CardCatalog(object):
         colors = set([self.byLand[l] for l in lands])
         return [
             "2 " + self.chooseLand(colors),
-            "2 " + self.chooseLand(colors),
-            "4 " + self.chooseSpell(color, colors, 0, 2),
-            "3 " + self.chooseSpell(color, colors, 0, 3),
-            "3 " + self.chooseSpell(color, colors, 2, 5),
-            "3 " + self.chooseSpell(color, colors, 2, 5),
+            "2 " + self.chooseSpell(color, colors, 0, 2),
+            "2 " + self.chooseSpell(color, colors, 0, 2),
+            "2 " + self.chooseSpell(color, colors, 0, 3),
+            "2 " + self.chooseSpell(color, colors, 0, 3),
+            "2 " + self.chooseSpell(color, colors, 2, 5),
+            "2 " + self.chooseSpell(color, colors, 2, 5),
+            "2 " + self.chooseSpell(color, colors, 2, 5),
             "2 " + self.chooseSpell(color, colors, 3, 7),
-            "2 " + self.chooseSpell(color, colors, 5, 99),
-
+            "1 " + self.chooseSpell(color, colors, 5, 99),
+            "1 " + self.chooseSpell(color, colors, 5, 99),
+            "1 " + self.chooseSpell(color, colors, 5, 99),
         ]
 
     def chooseSpell(self, color, colors, minCost, maxCost):
