@@ -123,7 +123,6 @@ class CardCatalog(object):
         for _ in range(20):
             if random.random() < 0.1:
                 cand = random.choice(self.byColor['colorless'])
-                print cand
                 if cand.type == 'land': continue
                 break
             else:
