@@ -88,7 +88,7 @@ function extractCards(html) {
         .replace(/&nbsp;/g, ' ');
     var cardNames = text.split("\n");
     var validated = [];
-    var regex = /^([0-9]+)\s+([^\s][0-9a-zA-Z,!\-\' \/]*)(.*)$/;
+    var regex = /^([0-9]+)\s+([^\s][0-9a-zA-Z,!\-\' \(\)\/]*)(.*)$/;
     var count = 0;
     for (i in cardNames) {
         var match = regex.exec(cardNames[i]);
@@ -956,9 +956,9 @@ KansasUI.prototype._changeOrient = function(card, orient) {
 KansasUI.prototype._removeCard = function() {
     // extra card ID, (substr(5) == length of _card)
     var cards = $.map(selectedSet, function(x) {
-        return parseInt(x.id.substr(5));   
+        return parseInt(x.id.substr(5));
     });
- 
+
     this.client.callAsync("remove", cards).done();
 }
 
@@ -1250,7 +1250,7 @@ KansasUI.prototype._menuForSelection = function(selectedSet) {
         + '<li style="margin-left: -130px"'
         + ' class="bottom removeconfirm" data-key="removeconfirm">Remove'
         + '</li>'
- 
+
         );
 
     var height = kCardHeight * kHoverCardRatio;
@@ -1745,7 +1745,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         },
         tolerance: "touch",
     });
-    
+
     $("#hand").droppable({
         over: function(event, ui) {
             if (ui.draggable.hasClass("card")) {
@@ -1802,7 +1802,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             throw "fn not defined: " + target.data("key");
         var action = fn.call(that, that.activeCard);
         switch (action) {
-            case "keepmenu": 
+            case "keepmenu":
                 oldButtons.not(target).addClass("disabled");
                 break;
             case "disablethis":
