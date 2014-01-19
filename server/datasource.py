@@ -34,6 +34,10 @@ def Sample(source):
     return _SOURCES[source].Sample()
 
 
+def SampleDeck(source, term, num_decks):
+    return _SOURCES[source].SampleDeck(term, num_decks)
+
+
 def _FindCards(source, name, exact):
     """Same as FindCards but skips caches."""
 

@@ -5,3 +5,4 @@ db
 pywebsocket-read-only
 localdb
 mtg_info.txt
+*.log

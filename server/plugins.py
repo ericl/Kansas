@@ -21,6 +21,9 @@ class DefaultPlugin(object):
     def Sample(self):
         return []
 
+    def SampleDeck(self, term, num_decks):
+        return []
+
 
 class PokerCardsPlugin(DefaultPlugin):
     def Sample(self):
@@ -48,6 +51,14 @@ class PokerCardsPlugin(DefaultPlugin):
         return stream, {}
 
 
+landsByColor = {
+    'W': 'Plains',
+    'R': 'Mountain',
+    'U': 'Island',
+    'B': 'Swamp',
+    'G': 'Forest',
+}
+
 class MagicCard(object):
 
     def __init__(self, row):
@@ -57,6 +68,7 @@ class MagicCard(object):
         self.cost = int(row[3]) if row[3] else 0
         self.text = row[4]
         self.set = row[5] # Format: setname (rarity)
+        self.tokens = [x.lower() for x in set(self.name.split()) if len(x) > 2]
 
         self.byLand = {
             'Plains': 'W',
@@ -87,6 +99,7 @@ class CardCatalog(object):
         self.byName = {}
         self.byColor = collections.defaultdict(list)
         self.byCost = collections.defaultdict(list)
+        self.byTokens = collections.defaultdict(list)
         logging.info("Building card catalog.")
         for c in csv.reader(open(catalogFile), escapechar='\\'):
             try:
@@ -94,6 +107,11 @@ class CardCatalog(object):
             except Exception, e:
                 print "Failed to parse", c, e
         logging.info("Done building card catalog.")
+        self.topTokens = []
+        for k, v in self.byTokens.iteritems():
+            if len(v) >= 10:
+                self.topTokens.append(k)
+        print self.topTokens
 
         self.byLand = {
             'Plains': 'W',
@@ -104,36 +122,55 @@ class CardCatalog(object):
         }
         self.basicLands = ['Plains', 'Mountain', 'Island', 'Swamp', 'Forest']
 
-    def complement(self, land, lands):
+    def complement(self, land, lands, theme=None):
         color = self.byLand[land]
         colors = set([self.byLand[l] for l in lands])
+        taken = set()
         return [
             "2 " + self.chooseLand(colors),
-            "2 " + self.chooseSpell(color, colors, 0, 2),
-            "2 " + self.chooseSpell(color, colors, 0, 2),
-            "2 " + self.chooseSpell(color, colors, 0, 3),
-            "2 " + self.chooseSpell(color, colors, 0, 3),
-            "2 " + self.chooseSpell(color, colors, 2, 5),
-            "2 " + self.chooseSpell(color, colors, 2, 5),
-            "2 " + self.chooseSpell(color, colors, 2, 5),
-            "2 " + self.chooseSpell(color, colors, 3, 7),
-            "1 " + self.chooseSpell(color, colors, 5, 99),
-            "1 " + self.chooseSpell(color, colors, 5, 99),
-            "1 " + self.chooseSpell(color, colors, 5, 99),
+            "2 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 0, 3, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 0, 3, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 3, 7, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
         ]
 
-    def chooseSpell(self, color, colors, minCost, maxCost):
-        for _ in range(20):
+    def chooseSpell(self, color, colors, minCost, maxCost, taken, theme=None):
+
+        def valid(cand):
+            if cand is None: return False
+            if cand.type == 'land': return False
+            if cand.name in taken: return False
+            if cand.cost < minCost: return False
+            if cand.cost > maxCost: return False
+            if len(cand.colors() - colors) > 0: return False
+            return True
+
+        cand = None
+
+        if theme and random.random() > 0.5:
+            tries = 20
+            pool = Catalog.byTokens[random.choice(theme)]
+            while not valid(cand) and tries > 0:
+                tries -= 1
+                cand = random.choice(pool)
+            logging.info(str(["chooseSpell", color, colors, minCost, maxCost, theme, len(taken), cand.name, tries]))
+
+        tries = 10
+        while not valid(cand) and tries > 0:
+            tries -= 1
             if random.random() < 0.1:
                 cand = random.choice(self.byColor['colorless'])
-                if cand.type == 'land': continue
-                break
             else:
                 cand = random.choice(self.byColor[color])
-            if cand.type == 'land': continue
-            if len(cand.colors() - colors) == 0 \
-                    and cand.cost >= minCost and cand.cost <= maxCost:
-                break
+
+        taken.add(cand.name)
         return cand.name
 
     def chooseLand(self, colors):
@@ -156,9 +193,40 @@ class CardCatalog(object):
         cards.extend(self.complement(land2, [land1, land2]))
         return cards + base
 
+    def randomTheme(self):
+        return random.choice(self.topTokens)
+
+    def makeThemedDeck(self, theme):
+        colorVotes = collections.defaultdict(float)
+        for t in theme:
+            pool = self.byTokens[t]
+            for card in pool:
+                colors = card.colors()
+                for color in colors:
+                    colorVotes[color] += 1.0 / (len(colors) + len(pool))
+        rankedColors = sorted([(v, k) for (k, v) in colorVotes.items()], reverse=True)
+        if len(rankedColors) > 0:
+            land1 = landsByColor[rankedColors[0][1]]
+        else:
+            land1 = random.choice(self.basicLands)
+        if len(rankedColors) > 1:
+            land2 = landsByColor[rankedColors[1][1]]
+        else:
+            land1 = random.choice(self.basicLands)
+        if land1 == land2:
+            base = ["18 " + land1]
+        else:
+            base = ["9 " + land1, "9 " + land2]
+        cards = []
+        cards.extend(self.complement(land1, [land1, land2], theme))
+        cards.extend(self.complement(land2, [land1, land2], theme))
+        return cards + base
+
     def _register(self, card):
         self.byName[card.name] = card
         self.byType[card.type].append(card)
+        for token in card.tokens:
+            self.byTokens[token].append(card)
         for color in card.colors():
             self.byColor[color].append(card)
         if not card.colors():
@@ -229,6 +297,20 @@ class MagicCardsInfoPlugin(DefaultPlugin):
 
     def Sample(self):
         return Catalog.makeDeck()
+
+    def SampleDeck(self, term, num_decks):
+        output = {}
+        for _ in range(num_decks):
+            theme = set()
+            for word in term.split():
+                if word in Catalog.byTokens:
+                    theme.add(word)
+            while len(theme) < 2:
+                theme.add(Catalog.randomTheme())
+            key = ' '.join([w[0].upper() + w[1:] for w in theme])
+            theme = tuple(list(theme))
+            output[key] = Catalog.makeThemedDeck(theme)
+        return output
 
     def Fetch(self, name, exact):
         if name == '':
