@@ -2,7 +2,7 @@ import os
 
 kSmallImageSize = (92, 131)
 kServingPrefix = ''
-kLocalServingAddress = 'http://localhost:9000/'
+kLocalServingAddress = 'http://localhost:8000/'
 kCachePath = '../cache'
 kDBPath = '../db'
 

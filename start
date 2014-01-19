@@ -3,7 +3,7 @@
 if [ `whoami` == 'root' ]; then
     python -m SimpleHTTPServer 80 &
 else
-    python -m SimpleHTTPServer 9000 &
+    python -m SimpleHTTPServer 8000 &
 fi
 
 ./test_server.py 8080
