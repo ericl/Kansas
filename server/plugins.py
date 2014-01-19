@@ -48,15 +48,34 @@ class PokerCardsPlugin(DefaultPlugin):
         return stream, {}
 
 
-class Card(object):
+class MagicCard(object):
+
     def __init__(self, row):
         self.name = row[0]
         self.type = row[1]
         self.mana = row[2]
         self.cost = int(row[3]) if row[3] else 0
+        self.text = row[4]
+        self.set = row[5] # Format: setname (rarity)
+
+        self.byLand = {
+            'Plains': 'W',
+            'Mountain': 'R',
+            'Island': 'U',
+            'Swamp': 'B',
+            'Forest': 'G',
+        }
+        self.basicLands = ['Plains', 'Mountain', 'Island', 'Swamp', 'Forest']
 
     def colors(self):
-        return set(self.mana).intersection(set('WRBGU'))
+        text_colors = set([c for c in 'WRBGU' if '{%s}' %c \
+            if '{%s}' %c in self.text])
+
+        if self.type == 'Land':
+            text_colors = text_colors | set([self.byLand[land] \
+                for land in self.basicLands if land in self.text])
+
+        return set(self.mana).union(text_colors).intersection(set('WRBGU'))
 
     def __repr__(self):
         return str((self.name, self.type, self.mana, self.cost))
@@ -71,48 +90,65 @@ class CardCatalog(object):
         logging.info("Building card catalog.")
         for c in csv.reader(open(catalogFile), escapechar='\\'):
             try:
-                self._register(Card(c))
+                self._register(MagicCard(c))
             except Exception, e:
                 print "Failed to parse", c, e
         logging.info("Done building card catalog.")
 
-    def basicLands(self):
-        return ['Plains', 'Mountain', 'Island', 'Swamp', 'Forest']
-
-    def complement(self, land, lands):
-        byLand = {
+        self.byLand = {
             'Plains': 'W',
             'Mountain': 'R',
             'Island': 'U',
             'Swamp': 'B',
             'Forest': 'G',
         }
-        color = byLand[land]
-        colors = set([byLand[l] for l in lands])
+        self.basicLands = ['Plains', 'Mountain', 'Island', 'Swamp', 'Forest']
+
+    def complement(self, land, lands):
+        color = self.byLand[land]
+        colors = set([self.byLand[l] for l in lands])
         return [
-            "4 " + self.choose(color, colors, 0, 2),
-            "4 " + self.choose(color, colors, 0, 3),
-            "3 " + self.choose(color, colors, 2, 5),
-            "3 " + self.choose(color, colors, 2, 5),
-            "2 " + self.choose(color, colors, 3, 7),
-            "2 " + self.choose(color, colors, 5, 99),
+            "2 " + self.chooseLand(colors),
+            "2 " + self.chooseLand(colors),
+            "4 " + self.chooseSpell(color, colors, 0, 2),
+            "3 " + self.chooseSpell(color, colors, 0, 3),
+            "3 " + self.chooseSpell(color, colors, 2, 5),
+            "3 " + self.chooseSpell(color, colors, 2, 5),
+            "2 " + self.chooseSpell(color, colors, 3, 7),
+            "2 " + self.chooseSpell(color, colors, 5, 99),
+
         ]
 
-    def choose(self, color, colors, minCost, maxCost):
+    def chooseSpell(self, color, colors, minCost, maxCost):
         for _ in range(20):
-            cand = random.choice(self.byColor[color])
+            if random.random() < 0.1:
+                cand = random.choice(self.byColor['colorless'])
+                print cand
+                if cand.type == 'land': continue
+                break
+            else:
+                cand = random.choice(self.byColor[color])
+            if cand.type == 'land': continue
             if len(cand.colors() - colors) == 0 \
                     and cand.cost >= minCost and cand.cost <= maxCost:
                 break
         return cand.name
 
+    def chooseLand(self, colors):
+        for _ in range(20):
+            cand = random.choice(self.byType['Land'])
+            if cand in self.basicLands: continue
+            if len(cand.colors() - colors) == 0:
+                break
+        return cand.name
+
     def makeDeck(self):
-        land1 = random.choice(self.basicLands())
-        land2 = random.choice(self.basicLands())
+        land1 = random.choice(self.basicLands)
+        land2 = random.choice(self.basicLands)
         if land1 == land2:
-            base = ["24 " + land1]
+            base = ["18 " + land1]
         else:
-            base = ["12 " + land1, "12 " + land2]
+            base = ["9 " + land1, "9 " + land2]
         cards = []
         cards.extend(self.complement(land1, [land1, land2]))
         cards.extend(self.complement(land2, [land1, land2]))
@@ -123,10 +159,12 @@ class CardCatalog(object):
         self.byType[card.type].append(card)
         for color in card.colors():
             self.byColor[color].append(card)
+        if not card.colors():
+            self.byColor['colorless'].append(card)
         self.byCost[card.cost].append(card)
 
 
-Catalog = CardCatalog("../scrape.txt")
+Catalog = CardCatalog("../mtg_info.txt")
 
 
 class LocalDBPlugin(DefaultPlugin):
