@@ -1,13 +1,16 @@
 /* Provides instant search service. */
 
-function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id, cb) {
+function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id,
+                        preview_cb, deck_cb) {
     this.client = client;
     this.lastGet = 0;
     this.lastTyped = 0;
+    this.lastSent = "";
     this.preview_div = "#" + preview_div_id;
     this.notfound = "#" + notfound_id;
     this.typeahead = "#" + typeahead_id;
-    this.preview_callback = cb;
+    this.preview_callback = preview_cb;
+    this.deck_callback = deck_cb;
     this.sourceid = client.sourceid;
 }
 
@@ -22,6 +25,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
     var query = $(this.typeahead).val();
     if ($.now() - this.lastGet > kMinWaitPeriod) {
         this.lastGet = $.now();
+        this.lastSent = query;
         this.client.ui.vlog(1, "sent immediate query '" + query + "'");
         this.client.callAsync("query", {
             "datasource": that.sourceid,
@@ -37,6 +41,10 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
         if (that.lastTyped == timestamp) {
             that.lastGet = $.now();
             query = $(that.typeahead).val();
+            if (query == that.lastSent) {
+                return;
+            }
+            that.lastSent = query;
             that.client.ui.vlog(1, "sent delayed query '" + query + "'");
             that.client
                 .callAsync("query", {
@@ -51,7 +59,8 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
 
 KansasSearcher.prototype.handleQueryResponse = function(data) {
     var that = this;
-    this.client.ui.vlog(3, JSON.stringify(data));
+    this.client.ui.vlog(1, JSON.stringify(data));
+    this.deck_callback(data.deck_suggestions);
     if (data.stream.length == 0) {
         if (data.req.term == "") {
             $(this.preview_div + " img").remove();

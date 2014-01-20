@@ -675,7 +675,7 @@ class KansasGameHandler(KansasHandler):
                 logging.warning("Removing broken stream %s", stream)
                 presence_changed = True
                 del self.streams[stream]
-        logging.info("Broadcast took %.2f seconds" % (time.time() - start))
+        logging.info("Broadcast took %.2fms" % (1000*(time.time() - start)))
         if presence_changed:
             self.notify_presence()
 

@@ -1467,6 +1467,17 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             } else {
                 return false;
             }
+        },
+        function(decks) {
+            that.vlog(1, JSON.stringify(decks));
+            for (key in decks) {
+                var html = "== Suggested deck `" + key + "` ==<br><br>";
+                for (i in decks[key]) {
+                    html += decks[key][i] + "<br>";
+                }
+                $("#deckinput").html(html);
+                break;
+            }
         }
     );
 

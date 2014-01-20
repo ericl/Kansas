@@ -7,6 +7,7 @@ import logging
 import os
 import random
 import re
+import time
 import urllib2
 
 
@@ -62,13 +63,15 @@ landsByColor = {
 class MagicCard(object):
 
     def __init__(self, row):
-        self.name = row[0]
+        self.name = row[0].decode('ascii', errors='ignore')
         self.type = row[1]
         self.mana = row[2]
         self.cost = int(row[3]) if row[3] else 0
-        self.text = row[4]
+        self.text = row[4].decode('ascii', errors='ignore')
         self.set = row[5] # Format: setname (rarity)
-        self.tokens = [x.lower() for x in set(self.name.split()) if len(x) > 2]
+        self.tokens = (
+            [x.lower() for x in set(self.name.split()) if len(x) > 2] +
+            [x.lower() for x in set(self.text.split()) if len(x) > 3 and re.match('^[a-zA-Z]+$', x)])
 
         self.byLand = {
             'Plains': 'W',
@@ -122,16 +125,13 @@ class CardCatalog(object):
         }
         self.basicLands = ['Plains', 'Mountain', 'Island', 'Swamp', 'Forest']
 
-    def complement(self, land, lands, theme=None):
+    def complement(self, land, lands, taken, theme=None):
         color = self.byLand[land]
         colors = set([self.byLand[l] for l in lands])
-        taken = set()
         return [
             "2 " + self.chooseLand(colors),
-            "2 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 0, 3, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 0, 3, taken, theme),
+            "4 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
+            "4 " + self.chooseSpell(color, colors, 0, 3, taken, theme),
             "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
             "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
             "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
@@ -160,7 +160,7 @@ class CardCatalog(object):
             while not valid(cand) and tries > 0:
                 tries -= 1
                 cand = random.choice(pool)
-            logging.info(str(["chooseSpell", color, colors, minCost, maxCost, theme, len(taken), cand.name, tries]))
+            logging.debug(str(["chooseSpell", color, colors, minCost, maxCost, theme, len(taken), cand.name, tries]))
 
         tries = 10
         while not valid(cand) and tries > 0:
@@ -189,9 +189,10 @@ class CardCatalog(object):
         else:
             base = ["9 " + land1, "9 " + land2]
         cards = []
-        cards.extend(self.complement(land1, [land1, land2]))
-        cards.extend(self.complement(land2, [land1, land2]))
-        return cards + base
+        taken = set()
+        cards.extend(self.complement(land1, [land1, land2], taken))
+        cards.extend(self.complement(land2, [land1, land2], taken))
+        return sorted(base + cards, reverse=True)
 
     def randomTheme(self):
         return random.choice(self.topTokens)
@@ -218,9 +219,10 @@ class CardCatalog(object):
         else:
             base = ["9 " + land1, "9 " + land2]
         cards = []
-        cards.extend(self.complement(land1, [land1, land2], theme))
-        cards.extend(self.complement(land2, [land1, land2], theme))
-        return cards + base
+        taken = set()
+        cards.extend(self.complement(land1, [land1, land2], taken, theme))
+        cards.extend(self.complement(land2, [land1, land2], taken, theme))
+        return sorted(base + cards, reverse=True)
 
     def _register(self, card):
         self.byName[card.name] = card
@@ -299,17 +301,24 @@ class MagicCardsInfoPlugin(DefaultPlugin):
         return Catalog.makeDeck()
 
     def SampleDeck(self, term, num_decks):
+        start = time.time()
         output = {}
         for _ in range(num_decks):
             theme = set()
             for word in term.split():
                 if word in Catalog.byTokens:
                     theme.add(word)
+                else:
+                    for key in Catalog.byTokens:
+                        if word in key:
+                            theme.add(key)
+                            break
             while len(theme) < 2:
                 theme.add(Catalog.randomTheme())
             key = ' '.join([w[0].upper() + w[1:] for w in theme])
             theme = tuple(list(theme))
             output[key] = Catalog.makeThemedDeck(theme)
+        logging.info("Deck gen took %.2fms", 1000*(time.time() - start))
         return output
 
     def Fetch(self, name, exact):
