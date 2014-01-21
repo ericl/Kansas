@@ -311,6 +311,8 @@ class MagicCardsInfoPlugin(DefaultPlugin):
     def SampleDeck(self, term, num_decks):
         start = time.time()
         output = {}
+        # TODO(ekl) dynamically chose the number of decks based on number of search
+        # results and number of available combinations based on the input term.
         for i in range(num_decks):
             theme = []
             for word in term.split():
