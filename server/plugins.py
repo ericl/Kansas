@@ -60,14 +60,17 @@ landsByColor = {
     'G': 'Forest',
 }
 
+def sanitize(s):
+    return s.replace("\xc3\x86", "Ae").decode('ascii', errors='ignore')
+
 class MagicCard(object):
 
     def __init__(self, row):
-        self.name = row[0].decode('ascii', errors='ignore')
+        self.name = sanitize(row[0])
         self.type = row[1]
         self.mana = row[2]
         self.cost = int(row[3]) if row[3] else 0
-        self.text = row[4].decode('ascii', errors='ignore')
+        self.text = sanitize(row[4])
         self.set = row[5] # Format: setname (rarity)
         self.tokens = (
             [x.lower() for x in set(self.name.split()) if len(x) > 2] +
@@ -106,6 +109,8 @@ class CardCatalog(object):
         logging.info("Building card catalog.")
         for c in csv.reader(open(catalogFile), escapechar='\\'):
             try:
+                if len(c[0]) > 35:
+                    raise Exception("the name is way too long")
                 self._register(MagicCard(c))
             except Exception, e:
                 print "Failed to parse", c, e
@@ -130,10 +135,10 @@ class CardCatalog(object):
         colors = set([self.byLand[l] for l in lands])
         return [
             "4 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
-            "4 " + self.chooseSpell(color, colors, 2, 4, taken, theme),
-            "4 " + self.chooseSpell(color, colors, 5, 8, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 5, 8, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 5, 8, taken, theme),
+            "4 " + self.chooseSpell(color, colors, 1, 3, taken, theme),
+            "4 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 3, 7, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 4, 8, taken, theme),
             "2 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
         ]
 
@@ -302,7 +307,7 @@ class MagicCardsInfoPlugin(DefaultPlugin):
 
     def SampleDeck(self, term, num_decks):
         start = time.time()
-        random.seed(0)
+        random.seed(hash(term))
         output = {}
         for _ in range(num_decks):
             theme = set()

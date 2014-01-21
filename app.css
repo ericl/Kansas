@@ -184,7 +184,6 @@ li.confirm:hover, li.confirm.hover {
 .cardboxactive div {
   background-color: #333;
   cursor: wait;
-  font-weight: bold;
 }
 
 .kansas_preview {
@@ -490,7 +489,7 @@ div.hovernote {
 #notfound {
     position: relative;
     left: 5px;
-    color: red;
+    color: gray;
 }
 
 #has_more {

@@ -308,7 +308,7 @@ class KansasHandler(object):
             'stream': stream,
             'meta': meta,
             'deck_suggestions': datasource.SampleDeck(
-                request['datasource'], request['term'], 1),
+                request['datasource'], request['term'], 3),
             'req': request})
 
     def notify_closed(self, stream):

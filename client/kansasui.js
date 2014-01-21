@@ -142,7 +142,7 @@ KansasUI.prototype._showDeckPanel = function() {
         this.client.callAsync("samplecards").then(function(data) {
             var html = "<br>";
             for (i in data) {
-                html = "<br>" + data[i] + html;
+                html += data[i] + "<br>";
             }
             $("#samplecards").html(html);
             load();
@@ -1515,7 +1515,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         }
         if (key == 47 /* '/' */) {
             that._showDeckPanel();
-            $("#kansas_typeahead").select();
+            setTimeout(function() { $("#kansas_typeahead").select(); }, 10);
             return false;
         }
         if (key == 109 /* 'm' */) {

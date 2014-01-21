@@ -81,16 +81,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
     }
     var that = this;
     $(this.preview_div).children().remove();
-    for (key in decks) {
-        var html = "";
-        for (i in decks[key]) {
-            html += decks[key][i] + "<br>";
-        }
-        var deck = $('<div class="cardbox" style="color: white">' +
-            '<div style="border: 1px solid white; padding: 5px;">' +
-            '<i>Try `' + key + '`</i><br>' +
-            '<span style="font-size: small; line-height: 5pt !important;">' + html +
-            '</span></div></div>').appendTo(this.preview_div);
+    function bind(deck, key, html) {
         deck.hover(
             function() { deck.addClass("cardboxhover"); },
             function() { deck.removeClass("cardboxhover"); });
@@ -103,6 +94,18 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             deck.addClass
             that.validate_callback();
         });
+    }
+    for (key in decks) {
+        var html = "";
+        for (i in decks[key]) {
+            html += decks[key][i] + "<br>";
+        }
+        var deck = $('<div class="cardbox" style="color: white">' +
+            '<div style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
+            '<i>Try <span class="suggesteddeckname">`' + key + '`</span></i><hr>' +
+            '<span style="font-size: small;">' + html +
+            '</span></div></div>').appendTo(this.preview_div);
+        bind(deck, key, html);
     }
     $.each(stream, function(i) {
         that.client.ui.vlog(2, "append: " + $(this)[0]);
