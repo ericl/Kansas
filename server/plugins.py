@@ -61,7 +61,10 @@ landsByColor = {
 }
 
 def sanitize(s):
-    return s.replace("\xc3\x86", "Ae").decode('ascii', errors='ignore')
+    return s \
+        .replace("\xc3\x86", "Ae") \
+        .replace("\xc3\xa1", "a") \
+        .decode('ascii', errors='ignore')
 
 class MagicCard(object):
 
@@ -119,7 +122,6 @@ class CardCatalog(object):
         for k, v in self.byTokens.iteritems():
             if len(v) >= 10:
                 self.topTokens.append(k)
-        print self.topTokens
 
         self.byLand = {
             'Plains': 'W',

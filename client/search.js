@@ -93,6 +93,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
                 .addClass("cardboxactive");
             deck.addClass
             that.validate_callback();
+            $("#deckname").val(key);
         });
     }
     for (key in decks) {
