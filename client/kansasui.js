@@ -1455,30 +1455,57 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     this.user = user;
     this.oldtitle = document.title;
 
+    function doValidate() {
+        var html = $("#deckinput").html();
+        var cards = extractCards(html)[0];
+        that.vlog(1, "validating cards: " + JSON.stringify(cards));
+        that._setDeckInputHtml(cardsToHtml(cards, 'maybe_valid'));
+        client.callAsync('bulkquery', {
+            'terms': $.map(cards, function(x) {
+                if (x[0] > 0) {
+                    return [x[1]];
+                } else {
+                    return [];
+                }
+            }),
+        }).then(function(data) {
+            var html = $("#deckinput").html();
+            var cards = extractCards(html)[0];
+            var resp = cardsToHtml(cards, 'validated', data.resp);
+            that._setDeckInputHtml(resp);
+            // Only allows actions if verification had no errors.
+            if (resp[2] == 0 && resp[1] > 0) {
+                $('.requiresvalidation').prop("disabled", false);
+            }
+            var urls = [];
+            var counts = [];
+            for (i in cards) {
+                var url = data.resp[cards[i][1]];
+                if (url) {
+                    counts[urls.length] = cards[i][0];
+                    urls.push(url);
+                }
+            }
+            if (urls.length > 0) {
+                that.searcher.previewItems(urls, null, null, counts);
+            }
+        });
+    }
+
     this.searcher = new KansasSearcher(
         this.client,
         "search_preview",
         "notfound",
         "kansas_typeahead",
-        function(stream, meta) {
+        function(stream, meta, decks) {
             if (deckPanelVisible()) {
-                that._resizePreview(stream);
+                that._resizePreview(stream, decks);
                 return true;
             } else {
                 return false;
             }
         },
-        function(decks) {
-            that.vlog(1, JSON.stringify(decks));
-            for (key in decks) {
-                var html = "== Suggested deck `" + key + "` ==<br><br>";
-                for (i in decks[key]) {
-                    html += decks[key][i] + "<br>";
-                }
-                $("#deckinput").html(html);
-                break;
-            }
-        }
+        doValidate
     );
 
     $(window).keypress(function(e) {
@@ -1599,43 +1626,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     $("#closepanel").mouseup(function() {
         hideDeckPanel();
     });
-
-    function doValidate() {
-        var html = $("#deckinput").html();
-        var cards = extractCards(html)[0];
-        that.vlog(1, "validating cards: " + JSON.stringify(cards));
-        that._setDeckInputHtml(cardsToHtml(cards, 'maybe_valid'));
-        client.callAsync('bulkquery', {
-            'terms': $.map(cards, function(x) {
-                if (x[0] > 0) {
-                    return [x[1]];
-                } else {
-                    return [];
-                }
-            }),
-        }).then(function(data) {
-            var html = $("#deckinput").html();
-            var cards = extractCards(html)[0];
-            var resp = cardsToHtml(cards, 'validated', data.resp);
-            that._setDeckInputHtml(resp);
-            // Only allows actions if verification had no errors.
-            if (resp[2] == 0 && resp[1] > 0) {
-                $('.requiresvalidation').prop("disabled", false);
-            }
-            var urls = [];
-            var counts = [];
-            for (i in cards) {
-                var url = data.resp[cards[i][1]];
-                if (url) {
-                    counts[urls.length] = cards[i][0];
-                    urls.push(url);
-                }
-            }
-            if (urls.length > 0) {
-                that.searcher.previewItems(urls, null, null, counts);
-            }
-        });
-    }
 
     $("#validate").click(function(e) {
         doValidate();
@@ -1974,15 +1964,19 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     this._setSizes();
 }
 
-KansasUI.prototype._resizePreview = function(urls) {
+KansasUI.prototype._resizePreview = function(urls, decks) {
+    if (!decks) {
+        decks = {};
+    }
     if (!urls) {
         urls = this._previewUrls || [];
     } else {
         this._previewUrls = urls;
     }
-    var maxw = $("body").outerWidth() * .65 - 100;
-    var columns = Math.min(5, urls.length);
-    if (urls.length == 1) {
+    var length = urls.length + Object.keys(decks).length;
+    var maxw = $("body").outerWidth() * .65 - 50;
+    var columns = Math.min(5, length);
+    if (length == 1) {
         var width = 250;
     } else {
         var width = 260 * columns;

@@ -1,7 +1,7 @@
 /* Provides instant search service. */
 
 function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id,
-                        preview_cb, deck_cb) {
+                        preview_cb, validate_cb) {
     this.client = client;
     this.lastGet = 0;
     this.lastTyped = 0;
@@ -10,7 +10,7 @@ function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id,
     this.notfound = "#" + notfound_id;
     this.typeahead = "#" + typeahead_id;
     this.preview_callback = preview_cb;
-    this.deck_callback = deck_cb;
+    this.validate_callback = validate_cb;
     this.sourceid = client.sourceid;
 }
 
@@ -59,8 +59,9 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
 
 KansasSearcher.prototype.handleQueryResponse = function(data) {
     var that = this;
-    this.client.ui.vlog(1, JSON.stringify(data));
-    this.deck_callback(data.deck_suggestions);
+    this.client.ui.vlog(3, JSON.stringify(data));
+    this.previewItems(data.stream, data.meta, data.req.term,
+                      null, data.deck_suggestions);
     if (data.stream.length == 0) {
         if (data.req.term == "") {
             $(this.preview_div + " img").remove();
@@ -70,18 +71,39 @@ KansasSearcher.prototype.handleQueryResponse = function(data) {
             $(this.notfound).show();
             $("#has_more").hide();
         }
-    } else {
-        this.previewItems(data.stream, data.meta, data.req.term);
     }
 }
 
-KansasSearcher.prototype.previewItems = function(stream, meta, term, counts) {
-    var ok = this.preview_callback(stream, meta);
+KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, decks) {
+    var ok = this.preview_callback(stream, meta, decks);
     if (!ok) {
         return;
     }
     var that = this;
     $(this.preview_div).children().remove();
+    for (key in decks) {
+        var html = "";
+        for (i in decks[key]) {
+            html += decks[key][i] + "<br>";
+        }
+        var deck = $('<div class="cardbox" style="color: white">' +
+            '<div style="border: 1px solid white; padding: 5px;">' +
+            '<i>Try `' + key + '`</i><br>' +
+            '<span style="font-size: small; line-height: 5pt !important;">' + html +
+            '</span></div></div>').appendTo(this.preview_div);
+        deck.hover(
+            function() { deck.addClass("cardboxhover"); },
+            function() { deck.removeClass("cardboxhover"); });
+        deck.click(function() {
+            var contents = "== `" + key + "` ==<br><br>" + html;
+            $("#deckinput").html(contents);
+            deck.unbind("mouseenter mouseleave")
+                .removeClass("cardboxhover")
+                .addClass("cardboxactive");
+            deck.addClass
+            that.validate_callback();
+        });
+    }
     $.each(stream, function(i) {
         that.client.ui.vlog(2, "append: " + $(this)[0]);
         var url = this['img_url'];

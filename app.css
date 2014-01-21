@@ -176,6 +176,17 @@ li.confirm:hover, li.confirm.hover {
   float: left;
 }
 
+.cardboxhover div {
+  background-color: #333;
+  cursor: pointer;
+}
+
+.cardboxactive div {
+  background-color: #333;
+  cursor: wait;
+  font-weight: bold;
+}
+
 .kansas_preview {
     margin: 0;
     border-top: 1px solid #222;
