@@ -315,7 +315,9 @@ class MagicCardsInfoPlugin(DefaultPlugin):
                 if word in Catalog.byTokens:
                     theme.append(word)
                 else:
-                    for key in Catalog.byTokens:
+                    tokens = list(Catalog.byTokens)
+                    random.shuffle(tokens)
+                    for key in tokens:
                         if word in key:
                             theme.append(key)
                             break
