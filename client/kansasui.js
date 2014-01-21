@@ -146,6 +146,7 @@ KansasUI.prototype._showDeckPanel = function() {
             }
             $("#samplecards").html(html);
             load();
+            $("#kansas_typeahead").select();
         });
     } else {
         load();
@@ -1515,7 +1516,6 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         }
         if (key == 47 /* '/' */) {
             that._showDeckPanel();
-            setTimeout(function() { $("#kansas_typeahead").select(); }, 10);
             return false;
         }
         if (key == 109 /* 'm' */) {
