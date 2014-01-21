@@ -308,7 +308,6 @@ class MagicCardsInfoPlugin(DefaultPlugin):
 
     def SampleDeck(self, term, num_decks):
         start = time.time()
-        random.seed(0)
         output = {}
         for i in range(num_decks):
             theme = []
@@ -317,16 +316,18 @@ class MagicCardsInfoPlugin(DefaultPlugin):
                     theme.append(word)
                 else:
                     tokens = list(Catalog.byTokens)
+                    random.seed(hash(tuple(theme)) + i)
                     random.shuffle(tokens)
                     for key in tokens:
                         if word in key:
                             theme.append(key)
                             break
             while len(theme) < 2:
+                random.seed(hash(tuple(theme)) + i)
                 theme.insert(0, Catalog.randomTheme())
             key = ' '.join([w[0].upper() + w[1:] for w in theme])
-            random.seed(hash(key) + i)
             theme = tuple(theme)
+            random.seed(hash(theme) + i)
             output[key] = Catalog.makeThemedDeck(theme)
         logging.info("Deck gen took %.2fms", 1000*(time.time() - start))
         return output
