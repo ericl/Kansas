@@ -119,6 +119,7 @@ class CardCatalog(object):
         for k, v in self.byTokens.iteritems():
             if len(v) >= 10:
                 self.topTokens.append(k)
+        print self.topTokens
 
         self.byLand = {
             'Plains': 'W',
@@ -307,9 +308,9 @@ class MagicCardsInfoPlugin(DefaultPlugin):
 
     def SampleDeck(self, term, num_decks):
         start = time.time()
-        random.seed(hash(term))
+        random.seed(0)
         output = {}
-        for _ in range(num_decks):
+        for i in range(num_decks):
             theme = []
             for word in term.split():
                 if word in Catalog.byTokens:
@@ -324,6 +325,7 @@ class MagicCardsInfoPlugin(DefaultPlugin):
             while len(theme) < 2:
                 theme.insert(0, Catalog.randomTheme())
             key = ' '.join([w[0].upper() + w[1:] for w in theme])
+            random.seed(hash(key) + i)
             theme = tuple(theme)
             output[key] = Catalog.makeThemedDeck(theme)
         logging.info("Deck gen took %.2fms", 1000*(time.time() - start))
