@@ -2637,7 +2637,7 @@ KansasUI.prototype.showSpinner = function(hint) {
 KansasUI.prototype._reallyShowSpinner = function() {
     if (this.spinnerShowQueued && this.client._state != 'offline') {
         this.vlog(3, "really show spinner");
-        $("#spinner").show();
+        $("#spinner").fadeIn();
         document.title = "Waiting for server..."
         this.spinnerShowQueued = false;
     } else {
