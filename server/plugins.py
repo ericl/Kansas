@@ -155,7 +155,7 @@ class CardCatalog(object):
 
         cand = None
 
-        if theme and random.random() > 0.5:
+        if theme and random.random() < 0.66:
             tries = 20
             pool = Catalog.byTokens[random.choice(theme)]
             while not valid(cand) and tries > 0:
