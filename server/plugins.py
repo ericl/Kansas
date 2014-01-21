@@ -119,7 +119,6 @@ class CardCatalog(object):
         for k, v in self.byTokens.iteritems():
             if len(v) >= 10:
                 self.topTokens.append(k)
-        print self.topTokens
 
         self.byLand = {
             'Plains': 'W',
@@ -190,9 +189,10 @@ class CardCatalog(object):
         else:
             base = ["10 " + land1, "10 " + land2]
         colors = set([self.byLand[l] for l in [land1, land2]])
-        base.append("4 " + self.chooseLand(colors))
+        land3 = self.chooseLand(colors)
+        base.append("4 " + land3)
         cards = []
-        taken = set()
+        taken = {land1, land2, land3}
         cards.extend(self.complement(land1, [land1, land2], taken))
         cards.extend(self.complement(land2, [land1, land2], taken))
         return base + sorted(cards, reverse=True)
