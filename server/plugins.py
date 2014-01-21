@@ -129,14 +129,12 @@ class CardCatalog(object):
         color = self.byLand[land]
         colors = set([self.byLand[l] for l in lands])
         return [
-            "2 " + self.chooseLand(colors),
             "4 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
-            "4 " + self.chooseSpell(color, colors, 0, 3, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 3, 7, taken, theme),
-            "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
+            "3 " + self.chooseSpell(color, colors, 0, 3, taken, theme),
+            "3 " + self.chooseSpell(color, colors, 2, 4, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 3, 5, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 3, 5, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 4, 7, taken, theme),
             "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
             "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
         ]
@@ -185,14 +183,16 @@ class CardCatalog(object):
         land1 = random.choice(self.basicLands)
         land2 = random.choice(self.basicLands)
         if land1 == land2:
-            base = ["18 " + land1]
+            base = ["20 " + land1]
         else:
-            base = ["9 " + land1, "9 " + land2]
+            base = ["10 " + land1, "10 " + land2]
+        colors = set([self.byLand[l] for l in [land1, land2]])
+        base.append("4 " + self.chooseLand(colors))
         cards = []
         taken = set()
         cards.extend(self.complement(land1, [land1, land2], taken))
         cards.extend(self.complement(land2, [land1, land2], taken))
-        return sorted(base + cards, reverse=True)
+        return base + sorted(cards, reverse=True)
 
     def randomTheme(self):
         return random.choice(self.topTokens)
@@ -215,14 +215,16 @@ class CardCatalog(object):
         else:
             land1 = random.choice(self.basicLands)
         if land1 == land2:
-            base = ["18 " + land1]
+            base = ["20 " + land1]
         else:
-            base = ["9 " + land1, "9 " + land2]
+            base = ["10 " + land1, "10 " + land2]
+        colors = set([self.byLand[l] for l in [land1, land2]])
+        base.append("4 " + self.chooseLand(colors))
         cards = []
         taken = set()
         cards.extend(self.complement(land1, [land1, land2], taken, theme))
         cards.extend(self.complement(land2, [land1, land2], taken, theme))
-        return sorted(base + cards, reverse=True)
+        return base + sorted(cards, reverse=True)
 
     def _register(self, card):
         self.byName[card.name] = card
