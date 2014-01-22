@@ -200,6 +200,34 @@ class CardCatalog(object):
         cards.extend(self.complement(land2, [land1, land2], taken))
         return base + sorted(cards, reverse=True)
 
+    def makeDecks(self, term, num_decks):
+        start = time.time()
+        output = {}
+        # TODO(ekl) dynamically chose the number of decks based on number of search
+        # results and number of available combinations based on the input term.
+        for i in range(num_decks):
+            theme = []
+            for word in term.split():
+                if word in Catalog.byTokens:
+                    theme.append(word)
+                else:
+                    tokens = list(Catalog.byTokens)
+                    random.seed(hash(tuple(theme)) + i)
+                    random.shuffle(tokens)
+                    for key in tokens:
+                        if word in key:
+                            theme.append(key)
+                            break
+            while len(theme) < 2:
+                random.seed(hash(tuple(theme)) + i)
+                theme.insert(0, Catalog.randomTheme())
+            key = ' '.join([w[0].upper() + w[1:] for w in theme])
+            theme = tuple(theme)
+            random.seed(hash(theme) + i)
+            output[key] = self.makeThemedDeck(theme)
+        logging.info("Deck gen took %.2fms", 1000*(time.time() - start))
+        return output
+
     def randomTheme(self):
         return random.choice(self.topTokens)
 
@@ -264,6 +292,9 @@ class LocalDBPlugin(DefaultPlugin):
     def Sample(self):
         return Catalog.makeDeck()
 
+    def SampleDeck(self, term, num_decks):
+        return Catalog.makeDecks(term, num_decks)
+
     def GetBackUrl(self):
         return '/third_party/images/mtg_detail.jpg'
 
@@ -308,32 +339,7 @@ class MagicCardsInfoPlugin(DefaultPlugin):
         return Catalog.makeDeck()
 
     def SampleDeck(self, term, num_decks):
-        start = time.time()
-        output = {}
-        # TODO(ekl) dynamically chose the number of decks based on number of search
-        # results and number of available combinations based on the input term.
-        for i in range(num_decks):
-            theme = []
-            for word in term.split():
-                if word in Catalog.byTokens:
-                    theme.append(word)
-                else:
-                    tokens = list(Catalog.byTokens)
-                    random.seed(hash(tuple(theme)) + i)
-                    random.shuffle(tokens)
-                    for key in tokens:
-                        if word in key:
-                            theme.append(key)
-                            break
-            while len(theme) < 2:
-                random.seed(hash(tuple(theme)) + i)
-                theme.insert(0, Catalog.randomTheme())
-            key = ' '.join([w[0].upper() + w[1:] for w in theme])
-            theme = tuple(theme)
-            random.seed(hash(theme) + i)
-            output[key] = Catalog.makeThemedDeck(theme)
-        logging.info("Deck gen took %.2fms", 1000*(time.time() - start))
-        return output
+        return Catalog.makeDecks(term, num_decks)
 
     def Fetch(self, name, exact):
         if name == '':

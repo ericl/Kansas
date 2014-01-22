@@ -169,6 +169,7 @@ li.confirm:hover, li.confirm.hover {
   width: 240px;
   text-decoration: none;
   position: relative;
+  overflow: hidden;
   display: block;
   border: none;
   padding: 5px;
