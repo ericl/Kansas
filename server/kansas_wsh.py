@@ -292,6 +292,11 @@ class KansasHandler(object):
         output.reply({'req': request, 'resp': resp})
 
     def handle_query(self, request, output):
+        # Hidden commands for debugging.
+        if request['term'] == 'quitquitquit':
+            raise Exception("debugquit")
+        elif request['term'] == 'sleepsleepsleep':
+            time.sleep(5)
         if request.get('allow_inexact'):
             logging.info("Trying inexact match")
             stream, meta = datasource.Find(
