@@ -104,6 +104,7 @@ class MagicCard(object):
 
 class CardCatalog(object):
     def __init__(self, catalogFile):
+        self.initialized = True
         self.byType = collections.defaultdict(list)
         self.byName = {}
         self.byColor = collections.defaultdict(list)
@@ -120,6 +121,7 @@ class CardCatalog(object):
                     logging.warning("Failed to parse %s: %s", c, e)
         except Exception, e:
             logging.warning("Failed to load catalog: %s", e)
+            self.initialized = False
         logging.info("Done building card catalog.")
         self.topTokens = []
         for k, v in self.byTokens.iteritems():
@@ -188,6 +190,8 @@ class CardCatalog(object):
         return cand.name
 
     def makeDeck(self):
+        if not self.initialized:
+            return []
         land1 = random.choice(self.basicLands)
         land2 = random.choice(self.basicLands)
         if land1 == land2:
@@ -204,6 +208,8 @@ class CardCatalog(object):
         return base + sorted(cards, reverse=True)
 
     def makeDecks(self, term, num_decks):
+        if not self.initialized:
+            return {}
         start = time.time()
         output = {}
         # TODO(ekl) dynamically chose the number of decks based on number of search
