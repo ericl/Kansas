@@ -92,8 +92,7 @@ function handleSocketOpen() {
 }
 
 function handleSocketClose(client) {
-    kansas_ui.warning("Connecting...");
-    kansas_ui.hideSpinner();
+    kansas_ui.showSpinner(null, "Connecting...");
     setTimeout(function() { client.connect(); }, 1000);
 }
 

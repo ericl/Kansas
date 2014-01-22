@@ -2635,10 +2635,13 @@ KansasUI.prototype.handlePresence = function(data) {
     });
 }
 
-KansasUI.prototype.showSpinner = function(hint) {
-    if (!this.client)
-        return;
-    if (!this.spinnerShowQueued && this.client._state != 'offline') {
+KansasUI.prototype.showSpinner = function(hint, text) {
+    if (text) {
+        $("#spintext").text(text);
+    } else {
+        $("#spintext").text("Working...");
+    }
+    if (!this.spinnerShowQueued) {
         this.vlog(3, "Showing spinner for: " + hint);
         this.spinnerShowQueued = true;
         var that = this;
@@ -2649,7 +2652,7 @@ KansasUI.prototype.showSpinner = function(hint) {
 }
 
 KansasUI.prototype._reallyShowSpinner = function() {
-    if (this.spinnerShowQueued && this.client._state != 'offline') {
+    if (this.spinnerShowQueued) {
         this.vlog(3, "really show spinner");
         $("#spinner").slideDown();
         document.title = "Waiting for server..."
