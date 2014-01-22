@@ -116,7 +116,7 @@ class CardCatalog(object):
                     raise Exception("the name is way too long")
                 self._register(MagicCard(c))
             except Exception, e:
-                print "Failed to parse", c, e
+                logging.warning("Failed to parse %s %s", c, e)
         logging.info("Done building card catalog.")
         self.topTokens = []
         for k, v in self.byTokens.iteritems():
@@ -284,7 +284,6 @@ class LocalDBPlugin(DefaultPlugin):
             ct = 0
             for fullname, url in self.catalog.iteritems():
                 if needle in fullname:
-                    print fullname, self.catalog[fullname]
                     stream.append({
                         'name': fullname,
                         'img_url': self.catalog[fullname],
