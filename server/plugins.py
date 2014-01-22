@@ -165,7 +165,7 @@ class CardCatalog(object):
                 cand = random.choice(pool)
             logging.debug(str(["chooseSpell", color, colors, minCost, maxCost, theme, len(taken), cand.name, tries]))
 
-        tries = 10
+        tries = 30
         while not valid(cand) and tries > 0:
             tries -= 1
             if random.random() < 0.1:
