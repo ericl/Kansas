@@ -1,4 +1,7 @@
+#!/bin/bash
+
 cd /var/www
 git pull
 pkill -9 python
-(./test_server.py 8080 | tee -a kansas-server.log) & disown
+(stdbuf -o0 ./test_server.py 8080 2>&1 >>kansas-server.log) & disown
+tail -f kansas-server.log
