@@ -110,13 +110,16 @@ class CardCatalog(object):
         self.byCost = collections.defaultdict(list)
         self.byTokens = collections.defaultdict(list)
         logging.info("Building card catalog.")
-        for c in csv.reader(open(catalogFile), escapechar='\\'):
-            try:
-                if len(c[0]) > 35:
-                    raise Exception("the name is way too long")
-                self._register(MagicCard(c))
-            except Exception, e:
-                logging.warning("Failed to parse %s %s", c, e)
+        try:
+            for c in csv.reader(open(catalogFile), escapechar='\\'):
+                try:
+                    if len(c[0]) > 35:
+                        raise Exception("the name is way too long")
+                    self._register(MagicCard(c))
+                except Exception, e:
+                    logging.warning("Failed to parse %s: %s", c, e)
+        except Exception, e:
+            logging.warning("Failed to load catalog: %s", e)
         logging.info("Done building card catalog.")
         self.topTokens = []
         for k, v in self.byTokens.iteritems():
