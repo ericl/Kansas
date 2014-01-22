@@ -2605,12 +2605,13 @@ KansasUI.prototype.handlePresence = function(data) {
     }
 
     var myuuid = this.uuid;
-    $("#presence").text("Online: " +
+    $("#presence").html("Online: " +
         $.map(data, function(d) {
             if (d.uuid == myuuid)
-                return d.name + " (self)";
+                return encodeURI(d.name) + " (self)";
             else
-                return d.name + " (" + d.addr + ")";
+                return "<a class=geoip href='http://freegeoip.net/?q=" +
+                       d.addr + "&map=1' target=_blank>" + encodeURI(d.name) + "</a>";
         }).join(", "));
 
     /* Removes frames of clients no longer present. */

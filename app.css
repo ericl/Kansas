@@ -449,10 +449,14 @@ div.hovernote {
 
 #presence, #chat {
     float: right;
-    color: gray;
+    color: lightgray;
     font-size: small;
     padding: .5em;
     clear: right;
+}
+
+.geoip {
+  color: lightgray;
 }
 
 #chat {
