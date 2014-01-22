@@ -257,7 +257,7 @@ class LocalDBPlugin(DefaultPlugin):
             return
         for f in os.listdir(self.DB_PATH):
             name = f.replace('_', '/').replace('.jpg', '')
-            key = str(name.replace('\xc3\x86', 'ae').lower())
+            key = sanitize(name).lower()
             self.catalog[key] = urllib2.quote(os.path.join(self.DB_PATH, f))
             self.index[key] = name
 
