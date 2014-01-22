@@ -150,6 +150,7 @@ KansasUI.prototype._showDeckPanel = function() {
         });
     } else {
         load();
+        $("#kansas_typeahead").select();
     }
 }
 
@@ -1509,14 +1510,18 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         doValidate
     );
 
+    // Rebinds ctrl-f.
+    $(window).keydown(function(e){
+        if ((e.ctrlKey || e.metaKey) && e.keyCode === 70) {
+            that._showDeckPanel();
+            e.preventDefault();
+        }
+    });
+
     $(window).keypress(function(e) {
         var key = e.which;
         if (deckPanelVisible() || $("#chatbox").is(":focus")) {
             return true;
-        }
-        if (key == 47 /* '/' */) {
-            that._showDeckPanel();
-            return false;
         }
         if (key == 109 /* 'm' */) {
             $("#chatbox").select().prop("placeholder", "");
