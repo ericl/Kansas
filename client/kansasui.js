@@ -2596,6 +2596,13 @@ KansasUI.prototype.handleBroadcast = function(data) {
     }
 }
 
+function HTMLEscape(html) {
+    return document.createElement('div')
+        .appendChild(document.createTextNode(html))
+        .parentNode
+        .innerHTML
+}
+
 KansasUI.prototype.handlePresence = function(data) {
     this.vlog(1, "Presence changed: " + JSON.stringify(data));
 
@@ -2608,10 +2615,11 @@ KansasUI.prototype.handlePresence = function(data) {
     $("#presence").html("Online: " +
         $.map(data, function(d) {
             if (d.uuid == myuuid)
-                return encodeURI(d.name) + " (self)";
+                return HTMLEscape(d.name) + " (self)";
             else
                 return "<a class=geoip href='http://freegeoip.net/?q=" +
-                       d.addr + "&map=1' target=_blank>" + encodeURI(d.name) + "</a>";
+                       d.addr + "&map=1' target=_blank>" + HTMLEscape(d.name) +
+                       "</a>";
         }).join(", "));
 
     /* Removes frames of clients no longer present. */
