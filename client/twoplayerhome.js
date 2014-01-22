@@ -42,7 +42,10 @@ function enterGame() {
     $("#homescreen").fadeOut('slow');
     $(".home-hidden").fadeIn('slow');
     var orient;
-    user = $("#username").val() || 'Undefined_User';
+    user = $("#username").val();
+    while (user == "Anonymous" || !user) {
+        user = prompt("Who are you?");
+    }
     if ($("#player1").is(":checked")) {
         orient = "player1";
     } else {
@@ -76,8 +79,6 @@ function handleSocketOpen() {
     kansas_ui.clear();
     if (document.location.hash) {
         var arr = document.location.hash.split(';');
-        user = arr[0].substr(1);
-        $("#username").val(user);
         gameid = arr[2];
         if (arr[1] == "player1")
             $("#player1").prop("checked", true);
