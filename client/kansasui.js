@@ -2637,7 +2637,7 @@ KansasUI.prototype.showSpinner = function(hint) {
 KansasUI.prototype._reallyShowSpinner = function() {
     if (this.spinnerShowQueued && this.client._state != 'offline') {
         this.vlog(3, "really show spinner");
-        $("#spinner").fadeIn();
+        $("#spinner").slideDown();
         document.title = "Waiting for server..."
         this.spinnerShowQueued = false;
     } else {
@@ -2653,7 +2653,7 @@ KansasUI.prototype.hideSpinner = function() {
     }
     this.spinnerShowQueued = false;
     this.vlog(3, "hiding spinner");
-    $("#spinner").hide();
+    $("#spinner").slideUp();
     if (this.oldtitle) {
         document.title = this.oldtitle;
     }
