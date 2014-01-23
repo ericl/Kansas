@@ -71,12 +71,16 @@ class MagicCard(object):
     def __init__(self, row):
         self.name = sanitize(row[0])
         self.type = row[1]
-        self.mana = row[2]
-        self.cost = int(row[3]) if row[3] else 0
-        self.text = sanitize(row[4])
-        self.set = row[5] # Format: setname (rarity)
+        self.subtype = row[2]
+        self.mana = row[3]
+        self.cost = int(row[4]) if row[3] else 0
+        self.text = sanitize(row[5])
+        self.set = row[6]
+        self.rarity = row[7]
         self.tokens = (
             [x.lower() for x in set(self.name.split()) if len(x) > 2] +
+            [x.lower() for x in set(self.type.split()) if len(x) > 2] +
+            [x.lower() for x in set(self.subtype.split()) if len(x) > 2] +
             [x.lower() for x in set(self.text.split()) if len(x) > 3 and re.match('^[a-zA-Z]+$', x)])
 
         self.byLand = {
