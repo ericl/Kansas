@@ -44,7 +44,7 @@ function enterGame() {
     var orient;
     user = $("#username").val();
     while (user == "Anonymous" || !user) {
-        user = prompt("Who are you?");
+        user = $.trim(prompt("Who are you?"));
     }
     if ($("#player1").is(":checked")) {
         orient = "player1";
