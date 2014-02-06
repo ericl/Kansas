@@ -221,6 +221,8 @@ class CardCatalog(object):
         for i in range(num_decks):
             theme = []
             for word in term.split():
+                if word in ['of', 'a', 'the', 'in']:
+                    continue
                 if word in Catalog.byTokens:
                     theme.append(word)
                 else:
