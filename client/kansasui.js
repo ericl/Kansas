@@ -167,9 +167,6 @@ KansasUI.prototype._showDeckPanel = function() {
  */
 var lastVerifiedUrls = {};
 function cardsToHtml(cards, validclass, verifiedurls, usingPartialData) {
-    if (verifiedurls) {
-        lastVerifiedUrls = verifiedurls;
-    }
     var replacement = "";
     var count = 0;
     var failed = 0;
@@ -209,8 +206,12 @@ function cardsToHtml(cards, validclass, verifiedurls, usingPartialData) {
                 + card[0] + " " + card[1] + "</span><span>"
                 + card[2] + "</span><br>";
         } else {
+            var cls = validclass;
+            if (lastVerifiedUrls[card[1]]) {
+                cls = "validated"
+            }
             count += card[0];
-            next = "<span class=" + validclass + ">"
+            next = "<span class=" + cls + ">"
                 + card[0] + " " + card[1] + "</span><span>"
                 + card[2] + "</span><br>";
         }
@@ -218,6 +219,9 @@ function cardsToHtml(cards, validclass, verifiedurls, usingPartialData) {
     placeCaretAtEnd($("#deckname")[0]);
     if (next && next != "<br>") {
         replacement += next;
+    }
+    if (verifiedurls) {
+        lastVerifiedUrls = verifiedurls;
     }
     return [replacement, count, failed];
 }
