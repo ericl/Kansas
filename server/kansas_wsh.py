@@ -283,13 +283,19 @@ class KansasHandler(object):
     def handle_bulkquery(self, request, output):
         resp = {}
         logging.info('bulkquery: ' + str(request));
-        for term in request['terms']:
+        total = 0
+        for count, term in request['terms']:
+            total += count
             stream, _ = datasource.Find(self.sourceid, term, True)
             if stream:
                 resp[term] = stream[0]
             else:
                 resp[term] = None
-        output.reply({'req': request, 'resp': resp})
+        output.reply({
+            'req': request,
+            'resp': resp,
+            'suggested': ["%d Relentless Rats" % (60 - total)] if total < 60 else [],
+        })
 
     def handle_query(self, request, output):
         # Hidden commands for debugging.

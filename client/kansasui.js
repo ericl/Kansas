@@ -1473,7 +1473,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         client.callAsync('bulkquery', {
             'terms': $.map(cards, function(x) {
                 if (x[0] > 0) {
-                    return [x[1]];
+                    return [[x[0], x[1]]];
                 } else {
                     return [];
                 }
@@ -1497,10 +1497,12 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 }
             }
             if (urls.length > 0) {
-                that.searcher.previewItems(urls, null, null, counts);
+                that.searcher.previewItems(urls, null, null, counts, undefined, data['suggested']);
                 if (!inPlace) {
                     $("#search_preview").scrollTop(0);
                 }
+            } else {
+                $("#search_preview").hide();
             }
         });
     }
@@ -1529,25 +1531,37 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                         found = true;
                     }
                 }
-                var addButton = $("<div class=addbutton>+1</div>").appendTo(cardbox);
+                var addButton = $("<div class='addbutton lone'>+</div>").appendTo(cardbox);
                 if (found) {
                     addButton.addClass("found");
-                } else {
-                    addButton.on("click", function(event) {
-                        event.preventDefault();
-                        if (addButton.hasClass("found")) {
-                            return;
-                        }
+                    addButton.text("✓");
+                }
+                addButton.on("click", function(event) {
+                    event.preventDefault();
+                    if (addButton.hasClass("found")) {
                         var html = $("#deckinput").html();
                         var cards = extractCards(html)[0];
-                        cards.push([1, name, ""]);
+                        for (i in cards) {
+                            if (cards[i][1] == name) {
+                                cards[i][0] = 0;
+                                cards[i][1] = null;  // remove card on hitting zero
+                            }
+                        }
                         that._setDeckInputHtml(cardsToHtml(cards, 'unvalidated'));
-                        addButton.addClass("found");
-                    });
-                }
+                        addButton.removeClass("found");
+                        addButton.text("+");
+                        return;
+                    }
+                    var html = $("#deckinput").html();
+                    var cards = extractCards(html)[0];
+                    cards.push([1, name, ""]);
+                    that._setDeckInputHtml(cardsToHtml(cards, 'unvalidated'));
+                    addButton.addClass("found");
+                    addButton.text("✓");
+                });
             } else {
-                var removeButton = $("<div class=removebutton>-1</div>").appendTo(cardbox);
-                var addButton = $("<div class=addbutton>+1</div>").appendTo(cardbox);
+                var removeButton = $("<div class=removebutton>−</div>").appendTo(cardbox);
+                var addButton = $("<div class=addbutton>+</div>").appendTo(cardbox);
                 removeButton.on("click", function(event) {
                     var html = $("#deckinput").html();
                     var cards = extractCards(html)[0];

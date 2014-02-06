@@ -75,7 +75,7 @@ KansasSearcher.prototype.handleQueryResponse = function(data) {
     }
 }
 
-KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, decks) {
+KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, decks, suggested) {
     var ok = this.preview_callback(stream, meta, decks);
     if (!ok) {
         return;
@@ -155,6 +155,27 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             .show();
     } else {
         $("#has_more").hide();
+    }
+    if (suggested && suggested.length > 0) {
+        var html = "";
+        for (i in suggested) {
+            html += suggested[i] + "<br>";
+        }
+        var addition = $('<div class="cardbox" style="color: white">' +
+            '<div style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
+            'Add these cards?<hr>' +
+            '<span style="font-size: small;">' + html +
+            '</span></div></div>').appendTo(this.preview_div);
+        addition.hover(
+            function() { addition.addClass("cardboxhover"); },
+            function() { addition.removeClass("cardboxhover"); });
+        addition.click(function() {
+            $("#deckinput").html($("#deckinput").html() + html);
+            addition.unbind("mouseenter mouseleave")
+                    .removeClass("cardboxhover")
+                    .addClass("cardboxactive");
+            that.validate_callback();
+        });
     }
     $(this.notfound).hide();
     $(this.preview_div).show();

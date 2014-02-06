@@ -201,39 +201,78 @@ li.confirm:hover, li.confirm.hover {
   font-weight: bold;
   padding-left: 5px;
   padding-right: 5px;
-  background-color: red;
+  background-color: rgba(0,0,0,0.3);
   text-align: center;
   cursor: pointer;
   margin: 5px;
-  border: 1px solid white;
-  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0);
+  border-bottom-left-radius: 5px;
+  border-top-left-radius: 5px;
   color: white;
   position: absolute;
-  right: 35px;
-  top: 0;
+  right: 25px;
+  width: 15px;
+  top: 0px;
+  text-shadow:
+  -1px -1px 0 #000,
+  1px -1px 0 #000,
+  -1px 1px 0 #000,
+  1px 1px 0 #000;
+}
+
+.removebutton:hover {
+  background-color: red;
+  border: 1px solid rgba(75,75,75,0.7);
+  text-shadow: none;
 }
 
 .addbutton {
   font-weight: bold;
   padding-left: 5px;
   padding-right: 5px;
-  background-color: green;
+  background-color: rgba(0,0,0,0.3);
   text-align: center;
   cursor: pointer;
   margin: 5px;
-  border: 1px solid white;
-  border-radius: 5px;
+  width: 15px;
+  border: 1px solid rgba(0, 0, 0, 0);
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
   float: right;
   color: white;
   position: absolute;
-  right: 0;
-  top: 0;
+  right: 0px;
+  top: 0px;
+  text-shadow:
+  -1px -1px 0 #000,
+  1px -1px 0 #000,
+  -1px 1px 0 #000,
+  1px 1px 0 #000;
+}
+
+.addbutton:hover {
+  background-color: green;
+  border: 1px solid rgba(75,75,75,0.7);
+  text-shadow: none;
+}
+
+.lone {
+  border-radius: 5px;
 }
 
 .found {
-  cursor: default;
-  background-color: gray;
+  cursor: pointer;
+  background-color: white;
+  color: black;
+  border: 1px solid rgba(75,75,75,0.7);
+  text-shadow: none;
 }
+
+.found:hover {
+  background-color: white;
+  color: black;
+}
+
 
 ol, ul {
     list-style: none;
