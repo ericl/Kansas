@@ -2070,7 +2070,7 @@ KansasUI.prototype._resizePreview = function(urls, decks, suggestions) {
         this._previewUrls = urls;
     }
     var length = urls.length + Object.keys(decks).length;
-    if (suggestions) {
+    if (suggestions && suggestions.length > 0) {
         length += 1;
     }
     var maxw = $("body").outerWidth() * .65 - 50;
