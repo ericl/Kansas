@@ -102,6 +102,9 @@ function extractCards(html) {
     while (validated.length > 0 && validated[validated.length - 1][1] == "") {
         validated.pop();
     }
+    if (validated.length > 0 && validated[validated.length - 1][0] == 0) {
+        validated.push([0, "", ""]);
+    }
     return [validated, count];
 }
 
@@ -1531,12 +1534,15 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                     addButton.addClass("found");
                 } else {
                     addButton.on("click", function(event) {
+                        event.preventDefault();
+                        if (addButton.hasClass("found")) {
+                            return;
+                        }
                         var html = $("#deckinput").html();
                         var cards = extractCards(html)[0];
                         cards.push([1, name, ""]);
                         that._setDeckInputHtml(cardsToHtml(cards, 'unvalidated'));
                         addButton.addClass("found");
-                        event.preventDefault();
                     });
                 }
             } else {
