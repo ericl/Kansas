@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <title>Kansas</title>
-        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=0.5">
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=0.75">
         <link rel="stylesheet" href="app.css" type="text/css" />
         <script type="text/javascript" src="third_party/jquery-1.8.3.min.js"></script>
         <script type="text/javascript" src="third_party/jquery.websocket-0.0.1.js"></script>
@@ -31,8 +31,8 @@
             <input id="scopename" type=textbox value="DEFAULT" name="scope">
             using
             <select name="sourceid">
-                <option value="magiccards.info">magiccards.info</option>
                 <option value="localdb">local database</option>
+                <option value="magiccards.info">magiccards.info</option>
                 <option value="pokerdb">standard 52-card deck</option>
             </select>
             <input type="submit" value="Log in">
@@ -67,7 +67,7 @@
             <br>
             <br>
             <div id="deckinput" contentEditable=true>
-                === Welcome to the deck editor ===<br><br>You can list cards in plain text below. For example,<br><span id=samplecards></span><br>Hit 'Preview' below to preview your deck and then add it to the board.<br><br>Tip: use Ctrl-F to jump to card search.</div>
+                === Welcome to the deck editor ===<br><br>You can list cards in plain text below. Hit 'Preview' below to preview your deck and then add it to the board.<br><br>Tip: use Ctrl-F to jump to card search.<br><span id=samplecards></span><br></div>
                 <br>
                 <button id="validate">Preview</button>
                 <button id="add" class="requiresvalidation" disabled=true>Add to Board</button>

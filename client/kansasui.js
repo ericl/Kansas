@@ -99,6 +99,9 @@ function extractCards(html) {
             validated.push([0, cardNames[i]]);
         }
     }
+    while (validated.length > 0 && validated[validated.length - 1][1] == "") {
+        validated.pop();
+    }
     return [validated, count];
 }
 
@@ -178,6 +181,8 @@ function cardsToHtml(cards, validclass, verifiedurls) {
         if (card[0] == 0) {
             if (card[1]) {
                 next = "" + card[1] + "<br>";
+            } else if (card[1] === null) {
+                next = "";
             } else if (replacement != "") {
                 next = "<br>";
             }
@@ -1217,7 +1222,7 @@ KansasUI.prototype._showHoverMenu = function(card) {
         if (oldimg.prop("src") == newImg.prop("src")) {
             oldimg.fadeOut();
         }
-        newNode.fadeIn();
+        newNode.fadeIn('slow');
     } else {
         newNode.show();
     }
@@ -1457,7 +1462,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     this.user = user;
     this.oldtitle = document.title;
 
-    function doValidate() {
+    function doValidate(inPlace) {
         var html = $("#deckinput").html();
         var cards = extractCards(html)[0];
         that.vlog(1, "validating cards: " + JSON.stringify(cards));
@@ -1490,6 +1495,9 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
             }
             if (urls.length > 0) {
                 that.searcher.previewItems(urls, null, null, counts);
+                if (!inPlace) {
+                    $("#search_preview").scrollTop(0);
+                }
             }
         });
     }
@@ -1507,7 +1515,62 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                 return false;
             }
         },
-        doValidate
+        doValidate,
+        function(cardbox, name, search_term) {
+            if (search_term) {
+                var found = false;
+                var html = $("#deckinput").html();
+                var cards = extractCards(html)[0];
+                for (i in cards) {
+                    if (cards[i][1] == name) {
+                        found = true;
+                    }
+                }
+                var addButton = $("<div class=addbutton>+1</div>").appendTo(cardbox);
+                if (found) {
+                    addButton.addClass("found");
+                } else {
+                    addButton.on("click", function(event) {
+                        var html = $("#deckinput").html();
+                        var cards = extractCards(html)[0];
+                        cards.push([1, name, ""]);
+                        that._setDeckInputHtml(cardsToHtml(cards, 'unvalidated'));
+                        addButton.addClass("found");
+                        event.preventDefault();
+                    });
+                }
+            } else {
+                var removeButton = $("<div class=removebutton>-1</div>").appendTo(cardbox);
+                var addButton = $("<div class=addbutton>+1</div>").appendTo(cardbox);
+                removeButton.on("click", function(event) {
+                    var html = $("#deckinput").html();
+                    var cards = extractCards(html)[0];
+                    for (i in cards) {
+                        if (cards[i][1] == name) {
+                            cards[i][0] -= 1;
+                            if (cards[i][0] == 0) { 
+                                cards[i][1] = null;  // remove card on hitting zero
+                            }
+                        }
+                    }
+                    that._setDeckInputHtml(cardsToHtml(cards, 'maybe_valid'));
+                    doValidate(true);
+                    event.preventDefault();
+                });
+                addButton.on("click", function(event) {
+                    var html = $("#deckinput").html();
+                    var cards = extractCards(html)[0];
+                    for (i in cards) {
+                        if (cards[i][1] == name) {
+                            cards[i][0] += 1;
+                        }
+                    }
+                    that._setDeckInputHtml(cardsToHtml(cards, 'maybe_valid'));
+                    doValidate(true);
+                    event.preventDefault();
+                });
+            }
+        }
     );
 
     // Rebinds ctrl-f.
@@ -2645,7 +2708,7 @@ KansasUI.prototype.showSpinner = function(hint, text) {
         this.vlog(3, "Showing spinner for: " + hint);
         this.spinnerShowQueued = true;
         var that = this;
-        setTimeout(function() { that._reallyShowSpinner(); }, 1000);
+        setTimeout(function() { that._reallyShowSpinner(); }, 3000);
     } else {
         this.vlog(3, "Not showing spinner for: " + hint);
     }
@@ -2654,7 +2717,7 @@ KansasUI.prototype.showSpinner = function(hint, text) {
 KansasUI.prototype._reallyShowSpinner = function() {
     if (this.spinnerShowQueued) {
         this.vlog(3, "really show spinner");
-        $("#spinner").slideDown();
+        $("#spinner").fadeIn();
         document.title = "Waiting for server..."
         this.spinnerShowQueued = false;
     } else {
@@ -2670,7 +2733,7 @@ KansasUI.prototype.hideSpinner = function() {
     }
     this.spinnerShowQueued = false;
     this.vlog(3, "hiding spinner");
-    $("#spinner").slideUp();
+    $("#spinner").fadeOut();
     if (this.oldtitle) {
         document.title = this.oldtitle;
     }

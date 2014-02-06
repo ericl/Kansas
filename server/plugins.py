@@ -290,12 +290,14 @@ class LocalDBPlugin(DefaultPlugin):
     def __init__(self):
         self.catalog = {}
         self.index = {}
+        self.fullnames = {}
         if not os.path.isdir(self.DB_PATH):
             return
         for f in os.listdir(self.DB_PATH):
             name = f.replace('_', '/').replace('.jpg', '')
             key = sanitize(name).lower()
             self.catalog[key] = urllib2.quote(os.path.join(self.DB_PATH, f))
+            self.fullnames[key] = sanitize(name)
             self.index[key] = name
 
     def Sample(self):
@@ -316,18 +318,18 @@ class LocalDBPlugin(DefaultPlugin):
         if exact:
             if needle in self.catalog:
                 stream.append({
-                    'needle': needle,
+                    'name': name,
                     'img_url': self.catalog[needle],
                     'info_url': self.catalog[needle],
                 })
         else:
             ct = 0
-            for fullname, url in self.catalog.iteritems():
-                if needle in fullname:
+            for key, url in self.catalog.iteritems():
+                if needle in key:
                     stream.append({
-                        'name': fullname,
-                        'img_url': self.catalog[fullname],
-                        'info_url': self.catalog[fullname],
+                        'name': self.fullnames[key],
+                        'img_url': self.catalog[key],
+                        'info_url': self.catalog[key],
                     })
                     ct += 1
                     if ct > 1000:

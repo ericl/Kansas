@@ -1,7 +1,7 @@
 /* Provides instant search service. */
 
 function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id,
-                        preview_cb, validate_cb) {
+                        preview_cb, validate_cb, add_cardbox_callback) {
     this.client = client;
     this.lastGet = 0;
     this.lastTyped = 0;
@@ -11,6 +11,7 @@ function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id,
     this.typeahead = "#" + typeahead_id;
     this.preview_callback = preview_cb;
     this.validate_callback = validate_cb;
+    this.add_cardbox_callback = add_cardbox_callback;
     this.sourceid = client.sourceid;
 }
 
@@ -91,7 +92,6 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             deck.unbind("mouseenter mouseleave")
                 .removeClass("cardboxhover")
                 .addClass("cardboxactive");
-            deck.addClass
             that.validate_callback();
             $("#deckname").val(key);
         });
@@ -127,8 +127,8 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             width = minCardWidth;
             cardGap = (240 - minCardWidth) / count;
         }
-        var prefix = "<a target='_blank' href='" + this['info_url'] + "'>"
-        var suffix = "</a>"
+        var prefix = "";
+        var suffix = "";
         while (j < count) {
             imgs += (
                 prefix
@@ -143,10 +143,11 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             );
             j += 1;
         }
-        $(that.preview_div).append(
+        var cardbox = $(
             '<div class="cardbox">'
             + imgs
-            + '</div>');
+            + '</div>').appendTo(that.preview_div);
+        that.add_cardbox_callback(cardbox, this['name'], term);
     });
     if (meta && meta.has_more) {
         $("#has_more")
@@ -156,7 +157,10 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
         $("#has_more").hide();
     }
     $(this.notfound).hide();
-    $(this.preview_div).show().scrollTop(0);
+    $(this.preview_div).show();
+    if (term) {
+        $(this.preview_div).scrollTop(0);
+    }
 }
 
 })();  /* end namespace searcher */

@@ -47,7 +47,7 @@ html, body {
     margin-top: 1%;
     margin-bottom: 2%;
     width: 98%;
-    height: 47%;
+    height: 55%;
     float: left;
     background-color: #111;
     padding: 1%;
@@ -195,6 +195,44 @@ li.confirm:hover, li.confirm.hover {
     position: absolute;
     left: 0;
     top: 0;
+}
+
+.removebutton {
+  font-weight: bold;
+  padding-left: 5px;
+  padding-right: 5px;
+  background-color: red;
+  text-align: center;
+  cursor: pointer;
+  margin: 5px;
+  border: 1px solid white;
+  border-radius: 5px;
+  color: white;
+  position: absolute;
+  right: 35px;
+  top: 0;
+}
+
+.addbutton {
+  font-weight: bold;
+  padding-left: 5px;
+  padding-right: 5px;
+  background-color: green;
+  text-align: center;
+  cursor: pointer;
+  margin: 5px;
+  border: 1px solid white;
+  border-radius: 5px;
+  float: right;
+  color: white;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.found {
+  cursor: default;
+  background-color: gray;
 }
 
 ol, ul {
