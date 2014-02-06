@@ -76,7 +76,7 @@ KansasSearcher.prototype.handleQueryResponse = function(data) {
 }
 
 KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, decks, suggested) {
-    var ok = this.preview_callback(stream, meta, decks);
+    var ok = this.preview_callback(stream, meta, decks, suggested);
     if (!ok) {
         return;
     }

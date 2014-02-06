@@ -1520,9 +1520,9 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         "search_preview",
         "notfound",
         "kansas_typeahead",
-        function(stream, meta, decks) {
+        function(stream, meta, decks, suggestions) {
             if (deckPanelVisible()) {
-                that._resizePreview(stream, decks);
+                that._resizePreview(stream, decks, suggestions);
                 return true;
             } else {
                 return false;
@@ -2060,7 +2060,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     this._setSizes();
 }
 
-KansasUI.prototype._resizePreview = function(urls, decks) {
+KansasUI.prototype._resizePreview = function(urls, decks, suggestions) {
     if (!decks) {
         decks = {};
     }
@@ -2070,6 +2070,9 @@ KansasUI.prototype._resizePreview = function(urls, decks) {
         this._previewUrls = urls;
     }
     var length = urls.length + Object.keys(decks).length;
+    if (suggestions) {
+        length += 1;
+    }
     var maxw = $("body").outerWidth() * .65 - 50;
     var columns = Math.min(5, length);
     if (length == 1) {
