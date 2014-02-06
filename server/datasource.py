@@ -38,16 +38,16 @@ def SampleDeck(source, term, num_decks):
     return _SOURCES[source].SampleDeck(term, num_decks)
 
 
-def _FindCards(source, name, exact):
+def _FindCards(source, name, exact, limit=None):
     """Same as FindCards but skips caches."""
 
     if source not in _SOURCES:
         raise Exception("Source '%s' not found." % str(source))
 
-    return _SOURCES[source].Fetch(name, exact)
+    return _SOURCES[source].Fetch(name, exact, limit)
 
 
-def Find(source, name, exact=False):
+def Find(source, name, exact=False, limit=None):
     """Returns (stream, meta), where
         stream is a list of
         {
@@ -57,12 +57,12 @@ def Find(source, name, exact=False):
         }
         and meta is a dictionary of extra attributes."""
 
-    key = str((str(source), str(name), bool(exact)))
+    key = str((str(source), str(name), bool(exact), str(limit)))
     result = QueryCache.Get(key)
 
     if result is None:
         logging.info("Cache miss on '%s'", key)
-        result = _FindCards(source, name, exact)
+        result = _FindCards(source, name, exact, limit)
         QueryCache.Put(key, result)
     else:
         logging.info("Cache HIT on '%s'", key)

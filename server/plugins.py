@@ -16,7 +16,7 @@ class DefaultPlugin(object):
     def GetBackUrl(self):
         return '/third_party/cards52/cropped/Blue_Back.png'
 
-    def Fetch(self, name, exact):
+    def Fetch(self, name, exact, limit=None):
         return []
 
     def Sample(self):
@@ -31,7 +31,7 @@ class PokerCardsPlugin(DefaultPlugin):
         cards, _ = self.Fetch("", False)
         return [c['name'] for c in random.sample(cards, 5)]
 
-    def Fetch(self, name, exact):
+    def Fetch(self, name, exact, limit=None):
         stream = []
         for card in glob.glob("../third_party/cards52/cropped/[A-Z0-9][A-Z0-9]*.png"):
             abbrev = card.split("/")[-1].split(".")[0]
@@ -313,7 +313,7 @@ class LocalDBPlugin(DefaultPlugin):
     def GetBackUrl(self):
         return '/third_party/images/mtg_detail.jpg'
 
-    def Fetch(self, name, exact):
+    def Fetch(self, name, exact, limit=None):
         stream, meta = [], {}
         if name == '':
             return stream, meta
@@ -328,16 +328,28 @@ class LocalDBPlugin(DefaultPlugin):
                 })
         else:
             ct = 0
+            ranked = collections.defaultdict(list)
+            parts = set(needle.split())
             for key, url in self.catalog.iteritems():
                 if needle in key:
+                    rank = 10
+                else:
+                    rank = sum([p in key for p in parts])
+                if rank > 0:
+                    ranked[rank].append(key)
+            ranks = sorted(ranked.keys(), reverse=True)
+            for r in ranks:
+                for key in ranked[r]:
                     stream.append({
                         'name': self.fullnames[key],
                         'img_url': self.catalog[key],
                         'info_url': self.catalog[key],
                     })
                     ct += 1
-                    if ct > 1000:
+                    if ct >= limit:
                         break
+                if ct >= limit:
+                    break
         meta = {
             'has_more': False,
             'more_url': "",

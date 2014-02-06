@@ -303,15 +303,15 @@ class KansasHandler(object):
             raise Exception("debugquit")
         elif request['term'] == 'sleepsleepsleep':
             time.sleep(5)
+        lim = request.get('limit')
         if request.get('allow_inexact'):
             logging.info("Trying inexact match")
             stream, meta = datasource.Find(
-                request['datasource'], request['term'], exact=False)
+                request['datasource'], request['term'], exact=False, limit=lim)
         else:
             logging.info("Trying exact match")
             stream, meta = datasource.Find(
                 request['datasource'], request['term'], exact=True)
-        lim = request.get('limit')
         if lim and len(stream) > lim:
             stream = stream[:lim]
             meta['has_more'] = True

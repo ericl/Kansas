@@ -102,7 +102,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             html += decks[key][i] + "<br>";
         }
         var deck = $('<div class="cardbox" style="color: white">' +
-            '<div style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
+            '<div class="deckheader" style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
             '<i>Try <span class="suggesteddeckname">`' + key + '`</span></i><hr>' +
             '<span style="font-size: small;">' + html +
             '</span></div></div>').appendTo(this.preview_div);

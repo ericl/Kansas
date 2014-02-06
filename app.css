@@ -30,6 +30,12 @@ html, body {
   color: orange;
 }
 
+.deckheader {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #add, #validate {
     height: 5%;
     width: 45%;
