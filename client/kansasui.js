@@ -2739,7 +2739,7 @@ KansasUI.prototype.showSpinner = function(hint, text) {
         this.vlog(3, "Showing spinner for: " + hint);
         this.spinnerShowQueued = true;
         var that = this;
-        setTimeout(function() { that._reallyShowSpinner(); }, 3000);
+        setTimeout(function() { that._reallyShowSpinner(); }, 5000);
     } else {
         this.vlog(3, "Not showing spinner for: " + hint);
     }

@@ -88,6 +88,7 @@ html, body {
     padding: 10px;
     height: 95%;
     width: 35%;
+    max-width: 500px;
     position: absolute;
     z-index: 194000000;
     top: 0px;
