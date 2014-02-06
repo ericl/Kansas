@@ -165,7 +165,11 @@ KansasUI.prototype._showDeckPanel = function() {
  * to validate the syntax of card lists.
  * Returns [html, #cards total, #failed].
  */
-function cardsToHtml(cards, validclass, verifiedurls) {
+var lastVerifiedUrls = {};
+function cardsToHtml(cards, validclass, verifiedurls, usingPartialData) {
+    if (verifiedurls) {
+        lastVerifiedUrls = verifiedurls;
+    }
     var replacement = "";
     var count = 0;
     var failed = 0;
@@ -192,8 +196,12 @@ function cardsToHtml(cards, validclass, verifiedurls) {
         } else if (verifiedurls) {
             var myclass = validclass;
             if (!verifiedurls[card[1]]) {
-                myclass = "invalid";
-                failed += card[0];
+                if (usingPartialData) {
+                    myclass = "";
+                } else {
+                    myclass = "invalid";
+                    failed += card[0];
+                }
             } else {
                 count += card[0];
             }
@@ -1547,7 +1555,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                                 cards[i][1] = null;  // remove card on hitting zero
                             }
                         }
-                        that._setDeckInputHtml(cardsToHtml(cards, 'unvalidated'));
+                        that._setDeckInputHtml(cardsToHtml(cards, 'validated', lastVerifiedUrls, true));
                         addButton.removeClass("found");
                         addButton.text("+");
                         return;
@@ -1555,13 +1563,13 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
                     var html = $("#deckinput").html();
                     var cards = extractCards(html)[0];
                     cards.push([1, name, ""]);
-                    that._setDeckInputHtml(cardsToHtml(cards, 'unvalidated'));
+                    that._setDeckInputHtml(cardsToHtml(cards, 'validated', lastVerifiedUrls, true));
                     addButton.addClass("found");
                     addButton.text("✓");
                 });
             } else {
-                var removeButton = $("<div class=removebutton>−</div>").appendTo(cardbox);
                 var addButton = $("<div class=addbutton>+</div>").appendTo(cardbox);
+                var removeButton = $("<div class=removebutton>−</div>").appendTo(cardbox);
                 removeButton.on("click", function(event) {
                     var html = $("#deckinput").html();
                     var cards = extractCards(html)[0];

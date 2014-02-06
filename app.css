@@ -201,16 +201,16 @@ li.confirm:hover, li.confirm.hover {
   font-weight: bold;
   padding-left: 5px;
   padding-right: 5px;
-  background-color: rgba(0,0,0,0.3);
+  background-color: rgba(0,0,0,0.0);
   text-align: center;
   cursor: pointer;
   margin: 5px;
   border: 1px solid rgba(0, 0, 0, 0);
-  border-bottom-left-radius: 5px;
-  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
   color: white;
   position: absolute;
-  right: 25px;
+  right: 0px;
   width: 15px;
   top: 0px;
   text-shadow:
@@ -230,18 +230,18 @@ li.confirm:hover, li.confirm.hover {
   font-weight: bold;
   padding-left: 5px;
   padding-right: 5px;
-  background-color: rgba(0,0,0,0.3);
+  background-color: rgba(0,0,0,0.0);
   text-align: center;
   cursor: pointer;
   margin: 5px;
   width: 15px;
   border: 1px solid rgba(0, 0, 0, 0);
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 5px;
+  border-bottom-left-radius: 5px;
+  border-top-left-radius: 5px;
   float: right;
   color: white;
   position: absolute;
-  right: 0px;
+  right: 25px;
   top: 0px;
   text-shadow:
   -1px -1px 0 #000,
@@ -258,19 +258,20 @@ li.confirm:hover, li.confirm.hover {
 
 .lone {
   border-radius: 5px;
+  right: 0px;
 }
 
 .found {
   cursor: pointer;
   background-color: white;
-  color: black;
+  color: green;
   border: 1px solid rgba(75,75,75,0.7);
   text-shadow: none;
 }
 
 .found:hover {
   background-color: white;
-  color: black;
+  color: green;
 }
 
 

@@ -174,7 +174,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             addition.unbind("mouseenter mouseleave")
                     .removeClass("cardboxhover")
                     .addClass("cardboxactive");
-            that.validate_callback();
+            that.validate_callback(true);
         });
     }
     $(this.notfound).hide();
