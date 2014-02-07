@@ -184,9 +184,9 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             html += remainder[i]['name'];
         }
         if (remainder.length == 100) {
-            var addition = this._appendCardBox("Next 100 cards:", html);
+            var addition = this._appendCardBox("Next 100 results for '" + term + "'", html);
         } else {
-            var addition = this._appendCardBox("Remaining " + remainder.length + " cards:", html);
+            var addition = this._appendCardBox("" + remainder.length + " more results for '" + term + "'", html);
         }
         addition.hover(
             function() { addition.addClass("cardboxhover"); },
