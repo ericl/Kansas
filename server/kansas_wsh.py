@@ -275,6 +275,7 @@ class KansasHandler(object):
     def handle_keepalive(self, req, output):
         logging.debug('keepalive from ' + str(output.stream));
         self.streams[output.stream]['last_keepalive'] = time.time()
+        output.reply('acked')
 
     def handle_sleep(self, request, output):
         time.sleep(5)
