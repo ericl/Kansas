@@ -376,7 +376,7 @@ class LocalDBPlugin(DefaultPlugin):
                 card = Catalog.bySlug.get(key)
                 rank = 0
                 if needle == key:
-                    rank += 13
+                    rank += 20
                 elif needle in key:
                     rank += 12
                 elif card and needle in card.searchtype:
