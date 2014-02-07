@@ -75,6 +75,7 @@ class MagicCard(object):
         self.mana = row[3]
         self.cost = int(row[4]) if row[3] else 0
         self.text = sanitize(row[5])
+        self.searchtext = ' '.join([self.name, self.type, self.text, self.subtype]).lower()
         self.set = row[6]
         self.rarity = row[7]
         self.tokens = (
@@ -111,6 +112,7 @@ class CardCatalog(object):
         self.initialized = True
         self.byType = collections.defaultdict(list)
         self.byName = {}
+        self.bySlug = {}
         self.byColor = collections.defaultdict(list)
         self.byCost = collections.defaultdict(list)
         self.byTokens = collections.defaultdict(list)
@@ -277,6 +279,7 @@ class CardCatalog(object):
 
     def _register(self, card):
         self.byName[card.name] = card
+        self.bySlug[card.name.lower()] = card
         self.byType[card.type].append(card)
         for token in card.tokens:
             self.byTokens[token].append(card)
@@ -333,15 +336,22 @@ class LocalDBPlugin(DefaultPlugin):
             ranked = collections.defaultdict(list)
             parts = set(needle.split())
             for key, url in self.catalog.iteritems():
+                card = Catalog.bySlug.get(key)
                 if needle in key:
                     rank = 10
+                elif card and needle in card.text:
+                    rank = 9
                 else:
-                    rank = sum([p in key for p in parts])
+                    if card:
+                        rank = sum([p in card.searchtext for p in parts])
+                    else:
+                        rank = sum([p in key for p in parts])
                 if rank > 0:
                     ranked[rank].append(key)
             ranks = sorted(ranked.keys(), reverse=True)
             for r in ranks:
                 for key in ranked[r]:
+                    logging.info(str(r) + str(key))
                     stream.append({
                         'name': self.fullnames[key],
                         'img_url': self.catalog[key],
