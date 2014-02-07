@@ -386,11 +386,11 @@ class LocalDBPlugin(DefaultPlugin):
                 elif card and needle in card.searchtext:
                     rank += 6
                 if card:
+                    rank += sum([p in key for p in parts])
+                if card:
                     rank += sum([p in card.searchtype for p in parts])
                 if card:
                     rank += sum([p in card.searchtext for p in parts])
-                else:
-                    rank += sum([p in key for p in parts])
                 if rank > 0:
                     ranked[rank].append(key)
             ranks = sorted(ranked.keys(), reverse=True)
