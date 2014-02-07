@@ -356,6 +356,8 @@ KansasClient.prototype._eventHandlers = function(that) {
         broadcast_message: function(e) {
             that._notify('broadcast', e.data);
         },
+        keepalive_resp: function(e) {
+        },
         broadcast_resp: function(e) {
         },
         connect_resp: function(e) {
