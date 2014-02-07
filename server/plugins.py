@@ -78,19 +78,19 @@ class MagicCard(object):
         self.text = sanitize(row[5])
         colorstring = ""
         numcolors = 0
-        if 'U' in self.mana:
+        if 'U' in self.mana or ('Land' in self.type and '{U}' in self.text):
             colorstring += "blue "
             numcolors += 1
-        if 'B' in self.mana:
+        if 'B' in self.mana or ('Land' in self.type and '{B}' in self.text):
             colorstring += "black "
             numcolors += 1
-        if 'R' in self.mana:
+        if 'R' in self.mana or ('Land' in self.type and '{R}' in self.text):
             colorstring += "red "
             numcolors += 1
-        if 'G' in self.mana:
+        if 'G' in self.mana or ('Land' in self.type and '{G}' in self.text):
             colorstring += "green "
             numcolors += 1
-        if 'W' in self.mana:
+        if 'W' in self.mana or ('Land' in self.type and '{W}' in self.text):
             colorstring += "white "
             numcolors += 1
         if numcolors > 1:
@@ -382,9 +382,11 @@ class LocalDBPlugin(DefaultPlugin):
                 elif card and needle in card.searchtext:
                     rank += 6
                 if card:
-                    rank += min(5, sum([p in card.searchtext for p in parts]))
+                    rank += sum([p in card.searchtype for p in parts])
+                if card:
+                    rank += sum([p in card.searchtext for p in parts])
                 else:
-                    rank += min(5, sum([p in key for p in parts]))
+                    rank += sum([p in key for p in parts])
                 if rank > 0:
                     ranked[rank].append(key)
             ranks = sorted(ranked.keys(), reverse=True)
