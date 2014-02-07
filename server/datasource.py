@@ -13,7 +13,7 @@ Knowledge = namespaces.Namespace(config.kDBPath, 'Knowledge', version=1)
 
 _SOURCES = {
     'localdb': plugins.LocalDBPlugin(),
-    'magiccards.info': plugins.MagicCardsInfoPlugin(),
+#    'magiccards.info': plugins.MagicCardsInfoPlugin(),
     'pokerdb': plugins.PokerCardsPlugin(),
 }
 
