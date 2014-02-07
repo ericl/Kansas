@@ -346,7 +346,6 @@ KansasClient.prototype._eventHandlers = function(that) {
                 that.ui.vlog(0, "Dropped future: " + JSON.stringify(e.future_id));
             }
             that.lastRecv = new Date();
-            that.ui.vlog(1, "Recv at future router");
         },
         _default: function(e) {
             that.lastRecv = new Date();
@@ -365,7 +364,6 @@ KansasClient.prototype._eventHandlers = function(that) {
             that._notify('broadcast', e.data);
         },
         broadcast_resp: function(e) {
-            that.ui.vlog(0, "Broadcast resp.");
             that.lastRecv = new Date();
         },
         connect_resp: function(e) {
