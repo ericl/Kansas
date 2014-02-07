@@ -19,7 +19,8 @@ function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id,
 
 // The time to wait between queries, in milliseconds.
 var kMinWaitPeriod = 500;
-var kMaxPreviewItems = 20;
+var kVisiblePreviewItems = 20;
+var kLoadPreviewItems = 120;
 
 KansasSearcher.prototype.handleQueryStringUpdate = function() {
     var that = this;
@@ -31,7 +32,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
         this.client.callAsync("query", {
             "datasource": that.sourceid,
             "term": query,
-            "limit": kMaxPreviewItems,
+            "limit": kLoadPreviewItems,
             "tags": "immediate",
             "allow_inexact": true
         }).then(function(v) { that.handleQueryResponse(v); });
@@ -50,7 +51,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
             that.client
                 .callAsync("query", {
                     "datasource": that.sourceid,
-                    "limit": kMaxPreviewItems,
+                    "limit": kLoadPreviewItems,
                     "term": query,
                     "allow_inexact": true})
                 .then(function(v) { that.handleQueryResponse(v); });
@@ -101,16 +102,13 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
         for (i in decks[key]) {
             html += decks[key][i] + "<br>";
         }
-        var deck = $('<div class="cardbox" style="color: white">' +
-            '<div class="deckheader" style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
-            '<i>Try <span class="suggesteddeckname">`' + key + '`</span></i><hr>' +
-            '<span style="font-size: small;">' + html +
-            '</span></div></div>').appendTo(this.preview_div);
+        var deck = this._appendCardBox(
+            '<i>Try <span class="suggesteddeckname">`' + key + '`</span></i>', html);
         bind(deck, key, html);
     }
-    $.each(stream, function(i) {
-        that.client.ui.vlog(2, "append: " + $(this)[0]);
-        var url = this['img_url'];
+    function addCard(card, i) {
+        that.client.ui.vlog(2, "append: " + $(card)[0]);
+        var url = card['img_url'];
         var count = (counts || {})[i] || 1;
         if (count > 30) {
             count = 30;
@@ -147,8 +145,12 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             '<div class="cardbox">'
             + imgs
             + '</div>').appendTo(that.preview_div);
-        that.add_cardbox_callback(cardbox, this['name'], term);
+        that.add_cardbox_callback(cardbox, card['name'], term);
+    }
+    $.each(stream.slice(0, kVisiblePreviewItems), function(i) {
+        addCard(this, i);
     });
+    var remainder = stream.slice(kVisiblePreviewItems);
     if (meta && meta.has_more) {
         $("#has_more")
             .prop("href", meta.more_url)
@@ -161,11 +163,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
         for (i in suggested) {
             html += suggested[i] + "<br>";
         }
-        var addition = $('<div class="cardbox" style="color: white">' +
-            '<div style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
-            'Add these cards?<hr>' +
-            '<span style="font-size: small;">' + html +
-            '</span></div></div>').appendTo(this.preview_div);
+        var addition = this._appendCardBox("Add these cards?", html);
         addition.hover(
             function() { addition.addClass("cardboxhover"); },
             function() { addition.removeClass("cardboxhover"); });
@@ -177,11 +175,42 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             that.validate_callback(true);
         });
     }
+    if (remainder.length > 0) {
+        var html = "";
+        for (i in remainder) {
+            if (html != "") {
+                html += " ○ ";
+            }
+            html += remainder[i]['name'];
+        }
+        if (remainder.length == 100) {
+            var addition = this._appendCardBox("Next 100 cards:", html);
+        } else {
+            var addition = this._appendCardBox("Remaining " + remainder.length + " cards:", html);
+        }
+        addition.hover(
+            function() { addition.addClass("cardboxhover"); },
+            function() { addition.removeClass("cardboxhover"); });
+        addition.click(function() {
+            addition.remove();
+            $.each(remainder, function(i) {
+                addCard(this, i);
+            });
+        });
+    }
     $(this.notfound).hide();
     $(this.preview_div).show();
     if (term) {
         $(this.preview_div).scrollTop(0);
     }
+}
+
+KansasSearcher.prototype._appendCardBox = function(title, contents) {
+    return $('<div class="cardbox" style="color: white">' +
+             '<div style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
+             title + '<hr>' + '<div style="line-height: 19px; text-overflow: ellipsis; overflow: hidden; ' +
+             'height: 292px; font-size: 15px;">' + contents +
+             '</div></div></div>').appendTo(this.preview_div);
 }
 
 })();  /* end namespace searcher */
