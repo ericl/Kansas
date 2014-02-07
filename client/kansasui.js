@@ -54,7 +54,7 @@ function KansasUI() {
             return;
         }
         var latency = that.client.queueLatencyMillis();
-        if (latency > 5000) {
+        if (latency > 3000) {
             that.vlog(1, "Server latency is at " + latency + "ms");
             that.showSpinner();
         } else {
