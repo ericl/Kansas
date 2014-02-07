@@ -72,6 +72,7 @@ class MagicCard(object):
         self.name = sanitize(row[0])
         self.type = row[1]
         self.subtype = row[2]
+        self.searchtype = ' '.join([self.type, self.subtype]).lower()
         self.mana = row[3]
         self.cost = int(row[4]) if row[3] else 0
         self.text = sanitize(row[5])
@@ -319,6 +320,7 @@ class LocalDBPlugin(DefaultPlugin):
         return '/third_party/images/mtg_detail.jpg'
 
     def Fetch(self, name, exact, limit=None):
+        start = time.time()
         stream, meta = [], {}
         if name == '':
             return stream, meta
@@ -337,21 +339,26 @@ class LocalDBPlugin(DefaultPlugin):
             parts = set(needle.split())
             for key, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(key)
-                if needle in key:
+                if needle == key:
                     rank = 10
-                elif card and needle in card.text:
+                elif needle in key:
                     rank = 9
+                elif card and needle in card.searchtype:
+                    rank = 8
+                elif card and needle in card.text:
+                    rank = 7
+                elif card and needle in card.searchtext:
+                    rank = 6
                 else:
                     if card:
-                        rank = sum([p in card.searchtext for p in parts])
+                        rank = min(5, sum([p in card.searchtext for p in parts]))
                     else:
-                        rank = sum([p in key for p in parts])
+                        rank = min(5, sum([p in key for p in parts]))
                 if rank > 0:
                     ranked[rank].append(key)
             ranks = sorted(ranked.keys(), reverse=True)
             for r in ranks:
                 for key in ranked[r]:
-                    logging.info(str(r) + str(key))
                     stream.append({
                         'name': self.fullnames[key],
                         'img_url': self.catalog[key],
@@ -366,6 +373,7 @@ class LocalDBPlugin(DefaultPlugin):
             'has_more': False,
             'more_url': "",
         }
+        logging.info("search for %s took %.2f ms", needle, 1000*(time.time() - start))
         return stream, meta
 
 
