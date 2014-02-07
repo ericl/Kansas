@@ -7,6 +7,7 @@ import logging
 import os
 import random
 import re
+import shlex
 import time
 import urllib2
 
@@ -367,7 +368,10 @@ class LocalDBPlugin(DefaultPlugin):
         else:
             ct = 0
             ranked = collections.defaultdict(list)
-            parts = set(needle.split())
+            try:
+                parts = set(shlex.split(needle))
+            except ValueError:
+                parts = set(needle.split())
             for key, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(key)
                 rank = 0
