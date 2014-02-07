@@ -91,8 +91,8 @@ function toId(id) {
 }
 
 KansasClient.prototype.queueLatencyMillis = function() {
-    if (this._ws.lastSent > this._ws.lastRecv) {
-        return new Date() - this._ws.lastRecv;
+    if (this._ws.lastSent > this._ws.lastAction) {
+        return new Date() - this._ws.lastAction;
     }
     return 0;
 }
