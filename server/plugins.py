@@ -96,6 +96,8 @@ class MagicCard(object):
             numcolors += 1
         if numcolors > 1:
             colorstring += "multi "
+        if numcolors != 0:
+            colorstring += "colored "
         if numcolors == 0:
             colorstring += "colorless "
         elif numcolors == 1:
