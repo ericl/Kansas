@@ -278,7 +278,7 @@ class KansasHandler(object):
         output.reply('acked')
 
     def handle_sleep(self, request, output):
-        time.sleep(5)
+        time.sleep(10)
         output.reply("done")
     
     def handle_bulkquery(self, request, output):
