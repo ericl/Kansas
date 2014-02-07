@@ -28,7 +28,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
     if ($.now() - this.lastGet > kMinWaitPeriod) {
         this.lastGet = $.now();
         this.lastSent = query;
-        this.client.ui.vlog(1, "sent immediate query '" + query + "'");
+        this.client.ui.vlog(2, "sent immediate query '" + query + "'");
         this.client.callAsync("query", {
             "datasource": that.sourceid,
             "term": query,
@@ -47,7 +47,7 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
                 return;
             }
             that.lastSent = query;
-            that.client.ui.vlog(1, "sent delayed query '" + query + "'");
+            that.client.ui.vlog(2, "sent delayed query '" + query + "'");
             that.client
                 .callAsync("query", {
                     "datasource": that.sourceid,

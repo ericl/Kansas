@@ -42,13 +42,25 @@ function KansasUI() {
     this.containmentHint = null;
     this.selectedSet = [];
     this.decksAvail = [];
-    this.spinnerShowQueued = false;
     this.nextBoardZIndex = 200;
     this.nextHandZIndex = 4000000;
     this.eventTable = {};
     this.searcher = null;
     this.oldtitle = null;
     this.firstTimeShowingPanel = true;
+    var that = this;
+    setInterval(function() {
+        if (that.client._state != 'connected') {
+            return;
+        }
+        var latency = that.client.queueLatencyMillis();
+        if (latency > 2000) {
+            that.vlog(1, "Server latency is at " + latency + "ms");
+            that.showSpinner();
+        } else {
+            that.hideSpinner();
+        }
+    }, 1000);
 }
 
 (function() {  /* begin namespace kansasui */
@@ -2739,35 +2751,10 @@ KansasUI.prototype.showSpinner = function(hint, text) {
     } else {
         $("#spintext").text("Working...");
     }
-    if (!this.spinnerShowQueued) {
-        this.vlog(3, "Showing spinner for: " + hint);
-        this.spinnerShowQueued = true;
-        var that = this;
-        setTimeout(function() { that._reallyShowSpinner(); }, 5000);
-    } else {
-        this.vlog(3, "Not showing spinner for: " + hint);
-    }
-}
-
-KansasUI.prototype._reallyShowSpinner = function() {
-    if (this.spinnerShowQueued) {
-        this.vlog(3, "really show spinner");
-        $("#spinner").fadeIn();
-        document.title = "Waiting for server..."
-        this.spinnerShowQueued = false;
-    } else {
-        this.vlog(3, "really NOT showing spinner");
-    }
+    $("#spinner").fadeIn();
 }
 
 KansasUI.prototype.hideSpinner = function() {
-    if (this.client && this.client.futuresPending() > 0) {
-        this.vlog(1, "keeping spinner: pending futures: "
-            + this.client.futuresPending());
-        return;
-    }
-    this.spinnerShowQueued = false;
-    this.vlog(3, "hiding spinner");
     $("#spinner").fadeOut();
     if (this.oldtitle) {
         document.title = this.oldtitle;
