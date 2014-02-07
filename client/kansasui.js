@@ -1494,7 +1494,7 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
     function doValidate(inPlace) {
         var html = $("#deckinput").html();
         var cards = extractCards(html)[0];
-        that.vlog(1, "validating cards: " + JSON.stringify(cards));
+        that.vlog(2, "validating cards: " + JSON.stringify(cards));
         that._setDeckInputHtml(cardsToHtml(cards, 'maybe_valid'));
         client.callAsync('bulkquery', {
             'terms': $.map(cards, function(x) {
