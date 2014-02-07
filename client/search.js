@@ -18,7 +18,7 @@ function KansasSearcher(client, preview_div_id, notfound_id, typeahead_id,
 (function() {  /* begin namespace searcher */
 
 // The time to wait between queries, in milliseconds.
-var kMinWaitPeriod = 500;
+var kMinWaitPeriod = 250;
 var kVisiblePreviewItems = 20;
 var kLoadPreviewItems = 120;
 
@@ -62,6 +62,9 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
 KansasSearcher.prototype.handleQueryResponse = function(data) {
     var that = this;
     this.client.ui.vlog(3, JSON.stringify(data));
+    if (data.req.term != $(this.typeahead).val()) {
+        return;  // drop all old data responses
+    }
     this.previewItems(data.stream, data.meta, data.req.term,
                       null, data.deck_suggestions);
     if (data.stream.length == 0) {
