@@ -207,7 +207,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
 
 KansasSearcher.prototype._appendCardBox = function(title, contents) {
     return $('<div class="cardbox" style="color: white">' +
-             '<div style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
+             '<div class="deckheader" style="border: 1px solid white; padding: 5px; height: 96.5%;">' +
              title + '<hr>' + '<div style="line-height: 19px; text-overflow: ellipsis; overflow: hidden; ' +
              'height: 292px; font-size: 15px;">' + contents +
              '</div></div></div>').appendTo(this.preview_div);
