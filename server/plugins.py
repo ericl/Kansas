@@ -76,7 +76,38 @@ class MagicCard(object):
         self.mana = row[3]
         self.cost = int(row[4]) if row[3] else 0
         self.text = sanitize(row[5])
-        self.searchtext = ' '.join([self.name, self.type, self.text, self.subtype]).lower()
+        colorstring = ""
+        numcolors = 0
+        if 'U' in self.mana:
+            colorstring += "blue "
+            numcolors += 1
+        if 'B' in self.mana:
+            colorstring += "black "
+            numcolors += 1
+        if 'R' in self.mana:
+            colorstring += "red "
+            numcolors += 1
+        if 'G' in self.mana:
+            colorstring += "green "
+            numcolors += 1
+        if 'W' in self.mana:
+            colorstring += "white "
+            numcolors += 1
+        if numcolors > 1:
+            colorstring += "multi "
+        if numcolors == 0:
+            colorstring += "colorless "
+        elif numcolors == 1:
+            colorstring += "mono single "
+        elif numcolors == 2:
+            colorstring += "dual two "
+        elif numcolors == 3:
+            colorstring += "tri three "
+        elif numcolors == 4:
+            colorstring += "quad four "
+        elif numcolors == 5:
+            colorstring += "five all rainbow "
+        self.searchtext = ' '.join([self.name, self.type, self.text, self.subtype, colorstring]).lower()
         self.set = row[6]
         self.rarity = row[7]
         self.tokens = (
@@ -339,21 +370,21 @@ class LocalDBPlugin(DefaultPlugin):
             parts = set(needle.split())
             for key, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(key)
+                rank = 0
                 if needle == key:
-                    rank = 10
+                    rank += 13
                 elif needle in key:
-                    rank = 9
+                    rank += 12
                 elif card and needle in card.searchtype:
-                    rank = 8
+                    rank += 11
                 elif card and needle in card.text:
-                    rank = 7
+                    rank += 7
                 elif card and needle in card.searchtext:
-                    rank = 6
+                    rank += 6
+                if card:
+                    rank += min(5, sum([p in card.searchtext for p in parts]))
                 else:
-                    if card:
-                        rank = min(5, sum([p in card.searchtext for p in parts]))
-                    else:
-                        rank = min(5, sum([p in key for p in parts]))
+                    rank += min(5, sum([p in key for p in parts]))
                 if rank > 0:
                     ranked[rank].append(key)
             ranks = sorted(ranked.keys(), reverse=True)
