@@ -51,8 +51,6 @@
  */
 
 function KansasClient(hostname, ip_port, kansas_ui, scope, sourceid) {
-    this.lastSent = new Date();
-    this.lastRecv = new Date();
     this.hostname = hostname;
     this.ip_port = ip_port;
     this.ui = kansas_ui;
@@ -93,8 +91,8 @@ function toId(id) {
 }
 
 KansasClient.prototype.queueLatencyMillis = function() {
-    if (this.lastSent > this.lastRecv) {
-        return new Date() - this.lastRecv;
+    if (this._ws.lastSent > this._ws.lastRecv) {
+        return new Date() - this._ws.lastRecv;
     }
     return 0;
 }
@@ -161,7 +159,6 @@ KansasClient.prototype.bind = function(name, fn) {
 /* Sends message and returns a pending Future for the result.
  * The client will be "Loading..." as long as the Future is pending. */
 KansasClient.prototype.callAsync = function(tag, data) {
-    this.lastSent = new Date();
     var fut = new Future(tag);
     if (this._ws != null) {
         this._ws.send(tag, data, fut.id);
@@ -173,7 +170,6 @@ KansasClient.prototype.callAsync = function(tag, data) {
 /* Sends message without creating a Future.
  * The client will be "Loading..." until any ack is received on the socket. */
 KansasClient.prototype.send = function(tag, data) {
-    this.lastSent = new Date();
     if (this._ws != null) {
         this._ws.send(tag, data);
     }
@@ -184,7 +180,6 @@ KansasClient.prototype.connect = function() {
         throw "must set scope name";
     if (!this.sourceid)
         throw "must set datasource id";
-    this.lastSent = new Date();
     if (this._state != 'offline')
         throw "can only connect from 'offline' state";
     this._state = 'opening';
@@ -345,10 +340,8 @@ KansasClient.prototype._eventHandlers = function(that) {
             } else {
                 that.ui.vlog(0, "Dropped future: " + JSON.stringify(e.future_id));
             }
-            that.lastRecv = new Date();
         },
         _default: function(e) {
-            that.lastRecv = new Date();
             that.ui.vlog(0, "Unhandled response: " + JSON.stringify(e));
         },
         error: function(e) {
@@ -364,7 +357,6 @@ KansasClient.prototype._eventHandlers = function(that) {
             that._notify('broadcast', e.data);
         },
         broadcast_resp: function(e) {
-            that.lastRecv = new Date();
         },
         connect_resp: function(e) {
             that._state = 'connected';
@@ -450,7 +442,6 @@ KansasClient.prototype._reset = function(state) {
 
 KansasClient.prototype._notify = function(hook, arg, keep_spinner) {
     if (!keep_spinner) {
-        this.lastRecv = new Date();
         this.ui.vlog(1, "recv response to: " + hook);
     }
     this.ui.vlog(3, 'invoke hook: ' + hook);

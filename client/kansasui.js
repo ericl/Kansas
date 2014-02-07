@@ -50,7 +50,7 @@ function KansasUI() {
     this.firstTimeShowingPanel = true;
     var that = this;
     setInterval(function() {
-        if (that.client._state != 'connected') {
+        if (!that.client || that.client._state != 'connected') {
             return;
         }
         var latency = that.client.queueLatencyMillis();

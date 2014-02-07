@@ -26,17 +26,19 @@ $.extend({
         };
         ws.sendCount = 0;
         ws.recvCount = 0;
+        ws.lastRecv = new Date();
         ws._settings = $.extend($.websocketSettings, s);
         $(ws)
             .bind('open', $.websocketSettings.open)
             .bind('close', $.websocketSettings.close)
             .bind('message', $.websocketSettings.message)
-            .bind('message', function(e){
+            .bind('message', function(e) {
                 var m = JSON.parse(e.originalEvent.data);
                 var h = $.websocketSettings.events[m.type];
                 var def = $.websocketSettings.events['_default'];
                 var fut = $.websocketSettings.events['_future_router'];
                 ws.recvCount += 1;
+                ws.lastRecv = new Date();
                 if (m.future_id && fut) {
                     fut.call(this, m);
                 } else if (h) {
@@ -48,6 +50,7 @@ $.extend({
         ws._send = ws.send;
         ws.send = function(type, data, future_id) {
             ws.sendCount += 1;
+            ws.lastSent = new Date();
             var m = {type: type};
             m = $.extend(true, m, $.extend(true, {}, $.websocketSettings.options, m));
             if (data) m['data'] = data;
