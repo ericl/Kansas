@@ -246,12 +246,11 @@ class CardCatalog(object):
         else:
             base = ["10 " + land1, "10 " + land2]
         colors = set([self.byLand[l] for l in [land1, land2]])
-        base.append("1 " + self.chooseLand(colors))
-        base.append("1 " + self.chooseLand(colors))
-        base.append("1 " + self.chooseLand(colors))
-        base.append("1 " + self.chooseLand(colors))
+        land3, land4 = self.chooseLand(colors), self.chooseLand(colors)
+        base.append("2 " + land3)
+        base.append("2 " + land4)
         cards = []
-        taken = {land1, land2, land3}
+        taken = {land1, land2, land3, land4}
         cards.extend(self.complement(land1, [land1, land2], taken))
         cards.extend(self.complement(land2, [land1, land2], taken))
         return base + sorted(cards, reverse=True)
