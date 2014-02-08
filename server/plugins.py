@@ -246,8 +246,10 @@ class CardCatalog(object):
         else:
             base = ["10 " + land1, "10 " + land2]
         colors = set([self.byLand[l] for l in [land1, land2]])
-        land3 = self.chooseLand(colors)
-        base.append("4 " + land3)
+        base.append("1 " + self.chooseLand(colors))
+        base.append("1 " + self.chooseLand(colors))
+        base.append("1 " + self.chooseLand(colors))
+        base.append("1 " + self.chooseLand(colors))
         cards = []
         taken = {land1, land2, land3}
         cards.extend(self.complement(land1, [land1, land2], taken))
