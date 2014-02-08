@@ -36,6 +36,14 @@ html, body {
   text-overflow: ellipsis;
 }
 
+.deckcontent {
+  line-height: 19px;
+  text-overflow: ellipsis;
+  overflow-y: scroll;
+  height: 292px;
+  font-size: 15px;"
+}
+
 #add, #validate {
     height: 5%;
     width: 45%;
