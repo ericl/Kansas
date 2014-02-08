@@ -2092,7 +2092,7 @@ KansasUI.prototype._resizePreview = function(urls, decks, suggestions) {
         length += 1;
     }
     var maxw = $("body").outerWidth() * .65 - 50;
-    var columns = Math.min(5, length);
+    var columns = Math.max(2, Math.min(5, length));
     if (length == 1) {
         var width = 250;
     } else {
