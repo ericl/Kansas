@@ -150,6 +150,9 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
             + '</div>').appendTo(that.preview_div);
         that.add_cardbox_callback(cardbox, card['name'], term);
     }
+    if (!term) {
+        kVisiblePreviewItems = 100000;
+    }
     $.each(stream.slice(0, kVisiblePreviewItems), function(i) {
         addCard(this, i);
     });
