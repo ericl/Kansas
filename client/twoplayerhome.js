@@ -190,7 +190,7 @@ $(document).ready(function() {
     });
 
     var scope = localstore.get('scope', 'DEFAULT');
-    var sourceid = localstore.get('sourceid', 'magiccards.info');
+    var sourceid = localstore.get('sourceid', 'localdb');
     var scopeset_URL = false;
     var sourceset_URL = false;
     var scopeset = false;

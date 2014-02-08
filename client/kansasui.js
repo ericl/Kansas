@@ -2098,7 +2098,11 @@ KansasUI.prototype._resizePreview = function(urls, decks, suggestions) {
         var width = 260 * columns;
         while (width > maxw && maxw > 250 && columns > 3) {
             columns -= 1;
-            width = 260 * columns;
+            if (isMobile.any()) {
+                width = 250 * columns;
+            } else {
+                width = 260 * columns;
+            }
         }
     }
     $("#search_preview").width(width + "px");
