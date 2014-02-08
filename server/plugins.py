@@ -182,12 +182,18 @@ class CardCatalog(object):
         color = self.byLand[land]
         colors = set([self.byLand[l] for l in lands])
         return [
-            "4 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
-            "4 " + self.chooseSpell(color, colors, 1, 3, taken, theme),
-            "4 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 3, 7, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 4, 8, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 1, 3, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 1, 3, taken, theme),
+            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 3, 7, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 3, 7, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 4, 8, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 4, 8, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
         ]
 
     def chooseSpell(self, color, colors, minCost, maxCost, taken, theme=None):
@@ -240,10 +246,11 @@ class CardCatalog(object):
         else:
             base = ["10 " + land1, "10 " + land2]
         colors = set([self.byLand[l] for l in [land1, land2]])
-        land3 = self.chooseLand(colors)
-        base.append("4 " + land3)
+        land3, land4 = self.chooseLand(colors), self.chooseLand(colors)
+        base.append("2 " + land3)
+        base.append("2 " + land4)
         cards = []
-        taken = {land1, land2, land3}
+        taken = {land1, land2, land3, land4}
         cards.extend(self.complement(land1, [land1, land2], taken))
         cards.extend(self.complement(land2, [land1, land2], taken))
         return base + sorted(cards, reverse=True)
