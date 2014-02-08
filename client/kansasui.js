@@ -230,7 +230,6 @@ function cardsToHtml(cards, validclass, verifiedurls, usingPartialData) {
                 + card[2] + "</span><br>";
         }
     }
-    placeCaretAtEnd($("#deckname")[0]);
     if (next && next != "<br>") {
         replacement += next;
     }
