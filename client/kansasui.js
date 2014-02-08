@@ -2096,7 +2096,7 @@ KansasUI.prototype._resizePreview = function(urls, decks, suggestions) {
         var width = 250;
     } else {
         var width = 260 * columns;
-        while (width > maxw && maxw > 250 && columns > 2) {
+        while (width > maxw && maxw > 250 && columns > 3) {
             columns -= 1;
             width = 260 * columns;
         }
