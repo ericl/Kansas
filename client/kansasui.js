@@ -1085,7 +1085,7 @@ KansasUI.prototype._unflipCard = function(card) {
 /* No-op that shows card privately in hovermenu. */
 KansasUI.prototype._peekCard = function(card) {
     console.log(card);
-    this.fyi(this.user + " peeked at a card in a stack of " + this.client.stackOf(card).length + ".");
+    this.fyi(this.user + " peeked at one of " + this.pronoun() + " cards.");
     $(".hovermenu img").prop("src", this.client.getFrontUrl(card));
     return "disablethis";
 }
