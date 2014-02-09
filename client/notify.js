@@ -1,7 +1,7 @@
 /* Tab notifications. */
 
 var notifications = {
-    active: true,
+    active: false,
     oldtitle: '',
     currentmsg: '',
     ctr: 0,
