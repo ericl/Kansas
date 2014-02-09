@@ -224,24 +224,6 @@ class KansasHandler(object):
         self.handlers['sleep'] = self.handle_sleep
         self.handlers['clone_scope'] = self.handle_clone_scope
         self.handlers['list_scope'] = self.handle_list_scope
-        self.handlers['setpw'] = self.handle_setpw
-        self.handlers['inject'] = self.handle_inject
-
-    def handle_setpw(self, request, output):
-        if GlobalDB.Get('pw') is None:
-            GlobalDB.Put('pw', str(request))
-            output.reply('ok')
-        else:
-            output.reply('already set')
-
-    def handle_inject(self, request, output):
-        if request.get('pw') != GlobalDB.Get('pw'):
-            output.reply('wrong pw')
-        else:
-            scope = request['scope']
-            sourceid = request['sourceid']
-            clientdb = ClientDB.Subspace(SubspaceKey(scope, sourceid))
-            clientdb.Put('html', request['_RAW']['html'])
 
     def handle_list_scope(self, request, output):
         scope = request['scope']
@@ -374,8 +356,9 @@ class KansasInitHandler(KansasHandler):
             if (scope, sourceid) not in self.spaces:
                 self.spaces[scope, sourceid] = KansasSpaceHandler(scope, sourceid)
 
-        clientdb = ClientDB.Subspace(SubspaceKey(scope, sourceid))
-        output.reply({'style': clientdb.Get('html')})
+        output.reply({
+            'client_version_required': config.kClientVersion
+        })
 
     def transition(self, reqtype, request, output):
         if reqtype == 'set_scope':

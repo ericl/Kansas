@@ -50,6 +50,17 @@
  *          .commit();
  */
 
+var kClientVersion = 2;  // keep in sync with config.py
+
+function checkVersion(required) {
+    console.log("Check version: " + required);
+    if (required && required != kClientVersion) {
+        if (confirm("Server requires client version " + required + ", reload page now?")) {
+            window.location.reload();
+        }
+    }
+}
+
 function KansasClient(hostname, ip_port, kansas_ui, scope, sourceid) {
     this.hostname = hostname;
     this.ip_port = ip_port;
@@ -351,7 +362,7 @@ KansasClient.prototype._eventHandlers = function(that) {
             that._notify('redirect', e);
         },
         set_scope_resp: function(e) {
-            $("#style").html(e.data.style);  // for fun
+            checkVersion(e.data.client_version_required);
         },
         broadcast_message: function(e) {
             that._notify('broadcast', e.data);
