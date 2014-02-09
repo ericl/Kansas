@@ -13,7 +13,6 @@ var uuid = "p_" + Math.random().toString().substring(5);
 
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
-var user = "Anonymous";
 
 // Kansas client.
 var client = null;
@@ -38,32 +37,57 @@ $(window).bind('hashchange', function() {
     }
 });
 
+var signed_on = false;
 function enterGame() {
-    $("#homescreen").fadeOut('slow');
-    $(".home-hidden").fadeIn('slow');
-    var orient;
-    user = $("#username").val();
-    while (user == "Anonymous" || !user) {
-        user = $.trim(prompt("Who are you?"));
-    }
-    if ($("#player1").is(":checked")) {
-        orient = "player1";
-    } else {
-        orient = "player2";
-    }
-    document.title = 'Kansas: ' + orient + '@' + gameid;
-    prev_hash = document.location.hash = user + ';' + orient + ';' + gameid;
-    localstore.put('orient', orient);
-    localstore.put('username', user);
+    function signinCallback(authResult) {
+        console.log(authResult);
+        if (!authResult.status.signed_in) {
+            if (authResult.error != "immediate_failed") {
+                console.log("You are not logged in.");
+                document.location = "/";
+            }
+            return;
+        }
+        if (signed_on) {
+            console.log("Ignoring duplicate sign on.");
+            return;
+        }
+        signed_on = true;
+        function toKansas(user) {
+            $("#homescreen").fadeOut('slow');
+            $(".home-hidden").fadeIn('slow');
+            var orient;
+            if ($("#player1").is(":checked")) {
+                orient = "player1";
+            } else {
+                orient = "player2";
+            }
+            document.title = 'Kansas: ' + orient + '@' + gameid;
+            prev_hash = document.location.hash = user + ';' + orient + ';' + gameid;
+            localstore.put('orient', orient);
 
-    kansas_ui.init(client, uuid, user, $("#player1").is(":checked"));
+            kansas_ui.init(client, uuid, user, $("#player1").is(":checked"));
 
-    client._state = 'opened_pending_connect';
-    client.send("connect", {
-        user: user,
-        gameid: gameid,
-        uuid: uuid,
-    });
+            client._state = 'opened_pending_connect';
+            client.send("connect", {
+                user: user,
+                gameid: gameid,
+                uuid: uuid,
+            });
+        }
+        // This sample assumes a client object has been created.
+        // To learn more about creating a client, check out the starter:
+        //  https://developers.google.com/+/quickstart/javascript
+        gapi.client.load('plus','v1', function(){
+         var request = gapi.client.plus.people.get({
+           'userId': 'me'
+         });
+         request.execute(function(resp) {
+           toKansas(resp.displayName);
+         });
+        });
+    }
+    gapi.auth.signIn({'callback': signinCallback});
 }
 
 function handleRedirect(e) {
@@ -176,10 +200,6 @@ $(document).ready(function() {
     var orient = localstore.get('orient', "player1");
     if (orient == "player2") {
         $("#player2").prop("checked", true);
-    }
-    var username = localstore.get('username');
-    if (username) {
-        $("#username").val(username);
     }
 
     $("#gamename").val(new Date().toJSON());

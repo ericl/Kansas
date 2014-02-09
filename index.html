@@ -16,13 +16,31 @@
         <script type="text/javascript" src="client/twoplayerhome.js"></script>
         <script type="text/javascript" src="client/search.js"></script>
         <script type="text/javascript" src="client/futures.js"></script>
-        <script>
-            $(document).ready(function() {
-                setupTwoPlayerHome(new KansasUI());
-            });
-        </script>
     </head>
+    <!-- Place this asynchronous JavaScript just before your </body> tag -->
+    <script type="text/javascript">
+      (function() {
+       var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+       po.src = 'https://apis.google.com/js/client:plusone.js';
+       var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+     })();
+    </script>
     <body>
+        <meta name="google-signin-clientid" content="8882673983-m7poir3vrdgjqeeavqh2i7jf7geeo2tk.apps.googleusercontent.com" />
+        <meta name="google-signin-scope" content="profile" />
+        <meta name="google-signin-cookiepolicy" content="single_host_origin" />
+        <script type="text/javascript">
+         (function() {
+           var po = document.createElement('script');
+           po.type = 'text/javascript'; po.async = true;
+           po.src = 'https://apis.google.com/js/client:plusone.js?onload=render';
+           var s = document.getElementsByTagName('script')[0];
+           s.parentNode.insertBefore(po, s);
+         })();
+         function render() {
+            setupTwoPlayerHome(new KansasUI());
+         }
+        </script>
         <div id="style"></div>
         <div id="scopechooser">
             <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
@@ -42,18 +60,19 @@
         </div>
         <div id="homescreen">
             <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 55pt; text-align: center; font-family: Arial">Kansas</h1>
-            <h3>Player Settings</h3>
-            <input id="username" type=textbox value="Anonymous" name="name">
+            <h3>Choose Game</h3>
             <input id="player1" type="radio" name="users" checked>Player 1
             <input id="player2" type="radio" name="users">Player 2
-            <h3>Choose Game</h3>
-            <div id="gamelist"><span id="gamelist_loading">Loading...</span></div>
+            <br>
+            <br>
+            <div id="gamelist"><span id="gamelist_loading">...</span></div>
             <div class="gamechoice">
                 <input id="gamename" type=textbox>
                 <button id="newgame">New Game</button>
             </div>
             <hr>
-            <div style="text-align: center; font-size: small;"><b>Logged in to server <span id="scopetxt"></span></b> | <a id="logout" href="/">Log out.</a><br>This server is using <span id="sourceidtxt"></span> for data.</div>
+            <div style="text-align: center; font-size: small;"><b>On server <span id="scopetxt"></span></b> | <a id="logout" href="/">Change server.</a><br>This server is using <span id="sourceidtxt"></span> for data.</div>
+            </div>
         </div>
         <textarea id="console" rows=15 cols=60></textarea><br>
         <div id="deckpanel">
