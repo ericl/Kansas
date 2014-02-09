@@ -681,3 +681,17 @@ div.hovernote {
     width: 100%;
     position: fixed;
 }
+
+.warnuser {
+  font-size: 20px;
+  font-weight: bold;
+  position: absolute;
+  margin-left: -8px;
+  top: 35px;
+  color: yellow;
+  text-shadow:
+  -1px -1px 0 #000,
+  1px -1px 0 #000,
+  -1px 1px 0 #000,
+  1px 1px 0 #000;
+}

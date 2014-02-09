@@ -2806,12 +2806,17 @@ KansasUI.prototype.handlePresence = function(data) {
                 title = d.name + " can see your hand.";
             }
             if (d.uuid != myuuid) {
-                return "<a target=_blank style='border-bottom: 2px solid " +
+                var res = "<a target=_blank style='border-bottom: 2px solid " +
                     color + "; padding: 0;' href='" +
                     d.profile_url + "'>" +
                     "<img title='" + title +
                     "' style='margin-bottom: -2px; border-radius: 2px; padding: 0;' src='" +
-                    d.profile_pic + "'></a>";
+                    d.profile_pic + "'>";
+                if (color == "yellow") {
+                    res += "<span class=warnuser>!</span>";
+                }
+                res += "</a>";
+                return res;
             }
         }).join(" "));
 
