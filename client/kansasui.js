@@ -1658,7 +1658,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         doValidate,
         function(cardbox, name, search_term) {
             if (search_term == true) {
-                var moveButton = $("<div title='Move to hand' class='movebutton'>✋</div>").appendTo(cardbox);
+                var moveButton = $("<div title='Move to hand' class='movebutton'>↴</div>").appendTo(cardbox);
                 moveButton.on("click", function(event) {
                     event.preventDefault();
                     var stack = that.client.stackOf(that.browsingCard);
