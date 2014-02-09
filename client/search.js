@@ -80,9 +80,11 @@ KansasSearcher.prototype.handleQueryResponse = function(data) {
 }
 
 KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, decks, suggested) {
-    var ok = this.preview_callback(stream, meta, decks, suggested);
-    if (!ok) {
-        return;
+    if (term !== true) {
+        var ok = this.preview_callback(stream, meta, decks, suggested);
+        if (!ok) {
+            return;
+        }
     }
     var that = this;
     $(this.preview_div).children().remove();
@@ -139,7 +141,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
                 + parseInt(5 + j * cardGap / 0.7011)
                 + "px; width: "
                 + width
-                + "px' class=kansas_preview src='" + url + "'>"
+                + "px' class=kansas_preview src=\"" + url + "\">"
                 + suffix
             );
             j += 1;
@@ -151,7 +153,7 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
         that.add_cardbox_callback(cardbox, card['name'], term);
     }
     var numToShow = kVisiblePreviewItems;
-    if (!term) {
+    if (!term || term === true) {
         numToShow = 100000;
     }
     $.each(stream.slice(0, numToShow), function(i) {

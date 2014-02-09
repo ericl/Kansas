@@ -43,6 +43,7 @@ function KansasUI() {
     this.hasDraggedOffStart = false;
     this.hoverCardId = null;
     this.oldSnapCard = null;
+    this.browsingCard = null;
     this.containmentHint = null;
     this.selectedSet = [];
     this.decksAvail = [];
@@ -51,6 +52,7 @@ function KansasUI() {
     this.eventTable = {};
     this.searcher = null;
     this.oldtitle = null;
+    this.deepenSelectionTimeoutId = null;
     this.firstTimeShowingPanel = true;
     var that = this;
     setInterval(function() {
@@ -128,7 +130,7 @@ function extractCards(html) {
 
 function hideDeckPanel() {
     $('#deckpanel').animate({left:'-45%'}, 300);
-    $("#search_preview").hide();
+    $("#search_preview").fadeOut();
 }
 
 function placeCaretAtEnd(el) {
@@ -153,10 +155,10 @@ function deckPanelVisible() {
     return $('#deckpanel').offset().left >= 0;
 }
 
-KansasUI.prototype._showDeckPanel = function() {
+KansasUI.prototype._showDeckPanel = function(cb) {
     this._refreshDeckList();
     function load() {
-        $('#deckpanel').animate({left:'0%'}, 300);
+        $('#deckpanel').animate({left:'0%'}, cb ? 0 : 300, cb);
         if (!isMobile.any()) {
             placeCaretAtEnd($("#deckinput")[0]);
         }
@@ -415,32 +417,38 @@ KansasUI.prototype._computeContainmentHint = function(selectedSet, bb) {
 
 /* Draws selection box about items. */
 KansasUI.prototype._createSelection = function(items, popupMenu) {
-    selectedSet = items;
-    if (selectedSet.length < 2) {
-        this._updateFocus(selectedSet);
+    items.addClass("highlight").addClass("selecting");
+    this.selectedSet = items;
+    this.activeCard = null;
+    if (this.selectedSet.length < 2) {
+        this._updateFocus(this.selectedSet);
         $(".selecting").removeClass("selecting");
         hideSelectionBox();
-        if (selectedSet.length == 1) {
-            this.activeCard = selectedSet;
+        if (this.selectedSet.length == 1) {
+            this.activeCard = this.selectedSet;
         }
         return;
     }
-    var bb = computeBoundingBox(selectedSet);
+    var bb = computeBoundingBox(this.selectedSet);
     var minX = bb[0], minY = bb[1], maxX = bb[2], maxY = bb[3];
-    if (this.client.inHand(selectedSet)) {
+    if (this.client.inHand(this.selectedSet)) {
         this.containmentHint = null;
     } else {
-        this.containmentHint = this._computeContainmentHint(selectedSet, bb);
+        this.containmentHint = this._computeContainmentHint(this.selectedSet, bb);
     }
     var boxAndArea = $("#selectionbox, #selectionarea");
     boxAndArea.css("left", minX - kSelectionBoxPadding);
     boxAndArea.css("top", minY - kSelectionBoxPadding);
     boxAndArea.css("width", maxX - minX + kSelectionBoxPadding * 2);
-    boxAndArea.css("height", maxY - minY + kSelectionBoxPadding * 2);
+    var height = maxY - minY + kSelectionBoxPadding * 2;
+    boxAndArea.css("height", height);
     boxAndArea.show();
     $("#selectionbox span")
-        .text(selectedSet.length + " cards")
+        .text(this.selectedSet.length + " cards")
         .css("opacity", 1);
+    if (isMobile.any()) {
+        $("#selectionbox span").css("bottom", (height + 5) + "px").css("left", 0);
+    }
     this._updateFocus($("#selectionbox"), true);
 }
 
@@ -479,9 +487,13 @@ KansasUI.prototype._removeFocus = function(doAnimation) {
     this._removeHoverMenu(doAnimation);
     this._setSnapPoint(null);
     $("#chatbox").blur();
+    $("#kansas_typeahead").blur();
+    $("#deckname").blur();
+    $("#deckinput").blur();
     hideSelectionBox();
     $(".card").removeClass("highlight");
     $(".card").css("box-shadow", "none");
+    this.selectedSet = [];
     this.client.send("broadcast",
         {
             "subtype": "frameupdate",
@@ -934,7 +946,13 @@ KansasUI.prototype._handleSelectionClicked = function(selectedSet, event) {
         }
     } else if (this.hoverCardId != "#selectionbox") {
         this.disableArenaEvents = true;
-        this._showHoverMenu(selectedSet);
+        if (this.deepenSelectionTimeoutId == null) {
+            this._showHoverMenu(selectedSet);
+        } else {
+            this.vlog(0, "not showing menu due to deepened selection");
+            clearTimeout(this.deepenSelectionTimeoutId);
+            this.deepenSelectionTimeoutId = null;
+        }
     } else {
         this._removeFocus();
     }
@@ -993,12 +1011,26 @@ KansasUI.prototype._changeOrient = function(card, orient) {
 
 /* Remove selected cards. */
 KansasUI.prototype._removeCard = function() {
-    // extra card ID, (substr(5) == length of _card)
-    var cards = $.map(selectedSet, function(x) {
-        return parseInt(x.id.substr(5));
-    });
-
-    this.client.callAsync("remove", cards).done();
+    var num = 0;
+    if (this.selectedSet.length > 0) {
+        // extra card ID, (substr(5) == length of _card)
+        var cards = $.map(this.selectedSet, function(x) {
+            return parseInt(x.id.substr(5));
+        });
+        this.client.callAsync("remove", cards).done();
+        num = cards.length;
+    } else {
+        this.client.callAsync("remove", [parseInt(this.activeCard.attr("id").substr(5))]).done();
+        num = 1;
+    }
+    this.client.send("broadcast",
+        {
+            subtype: "message",
+            uuid: 0,
+            name: '',
+            msg: this.user + " has removed " + num + " cards.",
+            include_self: true,
+        });
 }
 
 
@@ -1077,8 +1109,61 @@ KansasUI.prototype._reverseStack = function(memberCard) {
     txn.commit();
 }
 
+KansasUI.prototype._browseStack = function(memberCard) {
+    this.browsingCard = memberCard;
+    var stack = this.client.stackOf(memberCard);
+    var that = this;
+    var c = this.client;
+    var s = this.searcher;
+    var cards = [];
+    var counts = {};
+    for (i in stack) {
+        var url = c.getFrontUrl(stack[i]);
+        if (counts[url]) {
+            counts[url] += 1;
+        } else {
+            counts[url] = 1;
+            cards.push({
+                // XXX name should be gotten in another way
+                'name': url.split("/").slice(-1)[0].split(".jpg")[0],
+                'img_url': url,
+            });
+        }
+    }
+    var i_counts = [];
+    for (i in cards) {
+        i_counts.push(counts[cards[i]['img_url']]);
+    }
+    console.log(counts);
+
+    this._showDeckPanel(function() {
+        s.previewItems(cards, null, true, i_counts);
+        that._resizePreview(cards);
+        $("#deckpanel").css('left', '-' + $("#deckpanel").outerWidth() + "px");
+        $("#search_preview").show();
+    });
+    this.client.send("broadcast",
+        {
+            subtype: "message",
+            uuid: 0,
+            name: '',
+            msg: this.user + " is browsing a stack of " + stack.length + " cards.",
+            include_self: true,
+        });
+}
+
+KansasUI.prototype._draw7 = function(memberCard) {
+    var stack = this.client.stackOf(memberCard);
+    var slice = stack.slice(-7);
+    var txn = this.view.startBulkMove();
+    for (i in slice) {
+        txn.moveToHand(slice[i], this.hand_user);
+    }
+    txn.commit();
+}
+
 KansasUI.prototype._shuffleSelectionConfirm = function() {
-    if (selectedSet.length < 5) {
+    if (this.selectedSet.length < 5) {
         return this._shuffleSelection();
     }
     var node = $(".shufselconfirm");
@@ -1145,7 +1230,7 @@ function shuffle(array) {
 /* Shuffles majority if there is one, and puts leftover cards on top. */
 KansasUI.prototype._shuffleSelection = function() {
     var that = this;
-    var majorityKey = majority(selectedSet, function(x) {
+    var majorityKey = majority(that.selectedSet, function(x) {
         return that.client.getPos($(x))[1];
     });
     var exemplar = this.client.getStackTop('board', majorityKey);
@@ -1154,7 +1239,7 @@ KansasUI.prototype._shuffleSelection = function() {
 
     // First, flip cards upside down.
     var randomized = [];
-    $.each(selectedSet, function() {
+    $.each(that.selectedSet, function() {
         var card = $(this);
         txn.setOrient(card, orient);
         randomized.push(this);
@@ -1174,13 +1259,13 @@ KansasUI.prototype._shuffleSelection = function() {
 
 /* Goes from a single card to selecting the entire stack. */
 KansasUI.prototype._cardToSelection = function(card) {
-    this._createSelection(this._stackOf(card).addClass("highlight"), true);
+    this._createSelection(this._stackOf(card), true);
     return "refreshselection";
 }
 
 KansasUI.prototype._flipSelected = function() {
     var txn = this.view.startBulkMove();
-    $.each(zSorted(selectedSet), function() {
+    $.each(zSorted(this.selectedSet), function() {
         txn.flip($(this));
     });
     txn.commit();
@@ -1188,7 +1273,7 @@ KansasUI.prototype._flipSelected = function() {
 
 KansasUI.prototype._unflipSelected = function() {
     var txn = this.view.startBulkMove();
-    $.each(zSorted(selectedSet), function() {
+    $.each(zSorted(this.selectedSet), function() {
         txn.unflip($(this));
     });
     txn.commit();
@@ -1196,7 +1281,7 @@ KansasUI.prototype._unflipSelected = function() {
 
 KansasUI.prototype._rotateSelected = function() {
     var txn = this.view.startBulkMove();
-    $.each(zSorted(selectedSet), function() {
+    $.each(zSorted(this.selectedSet), function() {
         txn.rotate($(this));
     });
     txn.commit();
@@ -1204,7 +1289,7 @@ KansasUI.prototype._rotateSelected = function() {
 
 KansasUI.prototype._unrotateSelected = function() {
     var txn = this.view.startBulkMove();
-    $.each(zSorted(selectedSet), function() {
+    $.each(zSorted(this.selectedSet), function() {
         txn.unrotate($(this));
     });
     txn.commit();
@@ -1392,14 +1477,23 @@ KansasUI.prototype._menuForCard = function(card) {
         + height + 'px; width: ' + width + 'px;"'
         + ' src="' + src + '"></img>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
-        + '<span class="header" style="margin-left: -130px">&nbsp;STACK</span>"'
-        + '<li style="margin-left: -130px"'
-        + ' class="top boardonly bulk"'
-        + ' data-key="reversestack">Invert</li>'
-        + '<li style="margin-left: -130px"'
-        + ' class="bottom bulk boardonly"'
-        + ' data-key="toselection"><i>More...</i></li>'
-        + '<span class="header" style="margin-left: -130px">&nbsp;CARD</span>"'
+        + '<span class="header" style="margin-left: -130px">&nbsp;STACK</span>"');
+    if (numCards > 1 && !this.client.inHand(card)) {
+        html += ('<li style="margin-left: -130px"'
+            + ' class="top boardonly bulk"'
+            + ' data-key="browsestack">Browse</li>'
+            + '<li style="margin-left: -130px"'
+            + ' class="boardonly bulk"'
+            + ' data-key="reversestack">Invert</li>'
+            + '<li style="margin-left: -130px"'
+            + ' class="bottom bulk boardonly"'
+            + ' data-key="toselection"><i>More...</i></li>');
+    } else {
+        html += ('<li style="margin-left: -130px"'
+            + ' class="top bottom"'
+            + ' data-key="remove">Remove</li>');
+    }
+    html += ('<span class="header" style="margin-left: -130px">&nbsp;CARD</span>"'
         + cardContextMenu
         + '</ul>'
         + '<div class="hovernote">'
@@ -1563,7 +1657,32 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         },
         doValidate,
         function(cardbox, name, search_term) {
-            if (search_term) {
+            if (search_term == true) {
+                var moveButton = $("<div title='Move to hand' class='movebutton'>✋</div>").appendTo(cardbox);
+                moveButton.on("click", function(event) {
+                    event.preventDefault();
+                    var stack = that.client.stackOf(that.browsingCard);
+                    for (i in stack) {
+                        var url = that.client.getFrontUrl(stack[i]);
+                        var cname = url.split("/").slice(-1)[0].split(".jpg")[0];
+                        if (cname == name) {
+                            that.view.startBulkMove()
+                                .moveToHand(stack[i], that.hand_user)
+                                .commit();
+                            break;
+                        }
+                    }
+                    that.client.send("broadcast",
+                        {
+                            subtype: "message",
+                            uuid: 0,
+                            name: '',
+                            msg: that.user + " has moved a card to " + that.pronoun() + " hand.",
+                            include_self: true,
+                        });
+                    hideDeckPanel();
+                });
+            } else if (search_term) {
                 var found = false;
                 var html = $("#deckinput").html();
                 var cards = extractCards(html)[0];
@@ -1588,7 +1707,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                         'requestor': that.uuid,
                     }).done();
                 });
-                var addButton = $("<div title='Add to deck in progress' class='addbutton lone'>+</div>").appendTo(cardbox);
+                var addButton = $("<div title='Add to deck list' class='addbutton lone'>+</div>").appendTo(cardbox);
                 if (found) {
                     addButton.addClass("found");
                     addButton.text("✓");
@@ -1746,6 +1865,8 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         'rotateall': this._rotateSelected,
         'unrotateall': this._unrotateSelected,
         'reversestack': this._reverseStack,
+        'browsestack': this._browseStack,
+        'draw7': this._draw7,
         'shufsel': this._shuffleSelection,
         'remove': this._removeCard,
         'removeconfirm': this._removeConfirm,
@@ -1999,7 +2120,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                 that._removeHoverMenu(true);
                 break;
             case "refreshselection":
-                that._showHoverMenu(selectedSet);
+                that._showHoverMenu(that.selectedSet);
                 break;
             default:
                 oldButtons.addClass("disabled");
@@ -2045,27 +2166,27 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         that._updateFocus(box);
         if ($("#opposinghand").hasClass("active")) {
             deferDeactivateHand();
-            that._handleSelectionMovedToOpposingHand(selectedSet);
+            that._handleSelectionMovedToOpposingHand(that.selectedSet);
         } else if ($("#hand").hasClass("active")) {
             deferDeactivateHand();
-            that._handleSelectionMovedToHand(selectedSet);
+            that._handleSelectionMovedToHand(that.selectedSet);
         } else {
             var delta = selectionBoxOffset();
             var x = delta[0];
             var y = delta[1];
             var dx = delta[2];
             var dy = delta[3];
-            if (that.client.inHand(selectedSet)) {
+            if (that.client.inHand(that.selectedSet)) {
                 if (that.dragging) {
-                    that._handleSelectionMovedFromHand(selectedSet, x, y);
+                    that._handleSelectionMovedFromHand(that.selectedSet, x, y);
                 } else {
-                    that._handleSelectionClicked(selectedSet, event);
+                    that._handleSelectionClicked(that.selectedSet, event);
                 }
             } else {
                 if (dx == 0 && dy == 0) {
-                    that._handleSelectionClicked(selectedSet, event);
+                    that._handleSelectionClicked(that.selectedSet, event);
                 } else {
-                    that._handleSelectionMoved(selectedSet, dx, dy);
+                    that._handleSelectionMoved(that.selectedSet, dx, dy);
                 }
             }
         }
@@ -2075,7 +2196,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         that._removeHoverMenu();
         $("#selectionbox span").css("opacity", 1);
         var box = $("#selectionbox");
-        if (that.client.inHand(selectedSet)) {
+        if (that.client.inHand(that.selectedSet)) {
             $("#selectionarea").hide();
             var oldoffset = box.offset();
             box.width(kCardWidth + kSelectionBoxPadding * 2);
@@ -2113,6 +2234,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
     });
 
     $("#arena").mouseup(function(event) {
+        hideDeckPanel();
         if (that.disableArenaEvents) {
             that.disableArenaEvents = false;
         } else {
@@ -2522,6 +2644,12 @@ KansasUI.prototype._initCards = function(sel) {
     });
 
     sel.bind("dragstart", function(event, ui) {
+        if (that.selectedSet.length > 1) {
+            that.vlog(0, "not dragging deepened selection");
+            return false;
+        }
+        clearTimeout(that.deepenSelectionTimeoutId);
+        that.deepenSelectionTimeoutId = null;
         that.vlog(3, "dragstart");
         var card = $(event.currentTarget);
         that.dragging = true;
@@ -2537,6 +2665,12 @@ KansasUI.prototype._initCards = function(sel) {
     });
 
     sel.bind("drag", function(event, ui) {
+        if (that.selectedSet.length > 1) {
+            that.vlog(0, "not dragging deepened selection");
+            return false;
+        }
+        clearTimeout(that.deepenSelectionTimeoutId);
+        that.deepenSelectionTimeoutId = null;
         var card = $(event.currentTarget);
         that.dragging = true;
         card.stop();
@@ -2576,6 +2710,21 @@ KansasUI.prototype._initCards = function(sel) {
         that.dragStartKey = null;
     });
 
+    function deepenSelection() {
+        if (that.activeCard) {
+            var stack = that._stackOf(that.activeCard);
+            that._createSelection(stack.slice(-2), false);
+        } else {
+            var len = that.selectedSet.length + 1;
+            var stack = that._stackOf(that.selectedSet);
+            if (len > stack.length) {
+                return;
+            }
+            that._createSelection(stack.slice(-len), false);
+        }
+        that.deepenSelectionTimeoutId = setTimeout(deepenSelection, 500);
+    }
+
     sel.mousedown(function(event) {
         that.vlog(3, "----------");
         var card = $(event.currentTarget);
@@ -2588,6 +2737,7 @@ KansasUI.prototype._initCards = function(sel) {
             that.activeCard = card;
             that._updateFocus(card, true);
         }
+        that.deepenSelectionTimeoutId = setTimeout(deepenSelection, 500);
     });
 
     sel.mouseup(function(event) {
@@ -2626,6 +2776,8 @@ KansasUI.prototype._initCards = function(sel) {
         }
         that.disableArenaEvents = true;
         dragging = false;
+        clearTimeout(that.deepenSelectionTimeoutId);
+        that.deepenSelectionTimeoutId = null;
     });
 }
 

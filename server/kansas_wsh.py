@@ -319,10 +319,11 @@ class KansasHandler(object):
     def transition(self, reqtype, request, output):
         """Returns the handler instance that should serve future requests."""
 
-        if reqtype not in self.handlers:
-            raise Exception("Unexpected request type '%s'" % reqtype)
-        logging.debug("serving %s", reqtype)
-        self.handlers[reqtype](request, output)
+        if reqtype in self.handlers:
+            logging.debug("serving %s", reqtype)
+            self.handlers[reqtype](request, output)
+        else:
+            logging.warning("Unexpected request type '%s'" % reqtype)
         
         # Transitions to the current state by default.
         return self

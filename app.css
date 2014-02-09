@@ -269,6 +269,28 @@ li.confirm:hover, li.confirm.hover {
   text-shadow: none;
 }
 
+.movebutton {
+  padding-left: 5px;
+  padding-right: 5px;
+  background-color: rgba(0,0,0,0.0);
+  border-radius: 5px;
+  text-align: center;
+  cursor: pointer;
+  margin: 5px;
+  width: 15px;
+  border: 1px solid rgba(0, 0, 0, 0);
+  float: right;
+  color: white;
+  position: absolute;
+  right: 0px;
+  top: 0px;
+  text-shadow:
+  -1px -1px 0 #000,
+  1px -1px 0 #000,
+  -1px 1px 0 #000,
+  1px 1px 0 #000;
+}
+
 .getbutton {
   padding-left: 5px;
   padding-right: 5px;
@@ -291,6 +313,12 @@ li.confirm:hover, li.confirm.hover {
   1px 1px 0 #000;
 }
 
+.movebutton:hover {
+  background-color: red;
+  border: 1px solid rgba(75,75,75,0.7);
+  text-shadow: none;
+}
+
 .getbutton:hover {
   background-color: green;
   border: 1px solid rgba(75,75,75,0.7);
@@ -306,6 +334,13 @@ li.confirm:hover, li.confirm.hover {
 .lone {
   border-radius: 5px;
   right: 0px;
+}
+
+.movebutton:active {
+  background-color: white;
+  color: red;
+  border: 1px solid rgba(75,75,75,0.7);
+  text-shadow: none;
 }
 
 .getbutton:active {
