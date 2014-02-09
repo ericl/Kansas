@@ -1023,14 +1023,7 @@ KansasUI.prototype._removeCard = function() {
         this.client.callAsync("remove", [parseInt(this.activeCard.attr("id").substr(5))]).done();
         num = 1;
     }
-    this.client.send("broadcast",
-        {
-            subtype: "message",
-            uuid: 0,
-            name: '',
-            msg: this.user + " has removed " + num + " cards.",
-            include_self: true,
-        });
+    this.fyi(this.user + " has removed " + num + " cards.");
 }
 
 
@@ -1142,14 +1135,7 @@ KansasUI.prototype._browseStack = function(memberCard) {
         $("#deckpanel").css('left', '-' + $("#deckpanel").outerWidth() + "px");
         $("#search_preview").show();
     });
-    this.client.send("broadcast",
-        {
-            subtype: "message",
-            uuid: 0,
-            name: '',
-            msg: this.user + " is browsing a stack of " + stack.length + " cards.",
-            include_self: true,
-        });
+    this.fyi(this.user + " is browsing a stack of " + stack.length + " cards.");
 }
 
 KansasUI.prototype._draw7 = function(memberCard) {
@@ -1672,14 +1658,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                             break;
                         }
                     }
-                    that.client.send("broadcast",
-                        {
-                            subtype: "message",
-                            uuid: 0,
-                            name: '',
-                            msg: that.user + " has moved a card to " + that.pronoun() + " hand.",
-                            include_self: true,
-                        });
+                    that.fyi(that.user + " has moved a card to " + that.pronoun() + " hand.");
                     hideDeckPanel();
                 });
             } else if (search_term) {
@@ -1694,14 +1673,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                 var getButton = $("<div title='Add to hand' class='getbutton'>↴</div>").appendTo(cardbox);
                 getButton.on("click", function(event) {
                     event.preventDefault();
-                    that.client.send("broadcast",
-                        {
-                            subtype: "message",
-                            uuid: 0,
-                            name: '',
-                            msg: that.user + " has added a card to " + that.pronoun() + " hand.",
-                            include_self: true,
-                        });
+                    that.fyi(that.user + " has added a card to " + that.pronoun() + " hand.");
                     client.callAsync('add', {
                         'cards': [{tohand: true, loc: that.hand_user, name: name}],
                         'requestor': that.uuid,
@@ -1923,6 +1895,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         if (confirm("Remove all cards from the board?")) {
             that.client.send("remove", that.client.listAll());
         }
+        that.fyi(that.user + " has cleared all cards from the board.");
     });
 
     $("#deck").mouseup(function(e) {
@@ -2030,14 +2003,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         if (oldStack) {
             client.callAsync('remove', oldStack).done();
         }
-        client.send("broadcast",
-            {
-                subtype: "message",
-                uuid: 0,
-                name: '',
-                msg: that.user + " has added " + that.pronoun() + " new deck to the board.",
-                include_self: true,
-            });
+        that.fyi(that.user + " has added " + that.pronoun() + " new deck to the board.");
         client
             .callAsync('add', {'cards': toAdd, 'requestor': uuid})
             .done();
@@ -2905,6 +2871,17 @@ function htmlForTextWithEmbeddedNewlines(text) {
         htmls.push(html);
     }
     return htmls.join("<br>");
+}
+
+KansasUI.prototype.fyi = function(msg) {
+    this.client.send("broadcast",
+        {
+            subtype: "message",
+            uuid: 0,
+            name: '',
+            msg: msg,
+            include_self: true,
+        });
 }
 
 KansasUI.prototype.handleBroadcast = function(data) {
