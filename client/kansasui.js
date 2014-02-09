@@ -2770,7 +2770,11 @@ KansasUI.prototype.handleBroadcast = function(data) {
                 name = "me";
                 selfmsg = true;
             } else {
-                notifications.notify(name + ' says...');
+                if (name) {
+                    notifications.notify(name + ' says...');
+                } else {
+                    notifications.notify('Message...');
+                }
             }
             var newtext = name + ': ' + data.msg;
             if (!name) {
