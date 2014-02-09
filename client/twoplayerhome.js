@@ -65,7 +65,7 @@ function enterGame() {
                 orient = "player2";
             }
             document.title = 'Kansas: ' + orient + '@' + gameid;
-            prev_hash = document.location.hash = user + ';' + orient + ';' + gameid;
+            prev_hash = document.location.hash = orient + ';' + gameid;
             localstore.put('orient', orient);
 
             kansas_ui.init(client, uuid, user, orient);
@@ -102,10 +102,10 @@ function handleSocketOpen() {
     kansas_ui.clear();
     if (document.location.hash) {
         var arr = document.location.hash.split(';');
-        gameid = arr[2];
-        if (arr[1] == "player1")
+        gameid = arr[1] || "0";
+        if (arr[0] == "player1")
             $("#player1").prop("checked", true);
-        else if (arr[1] == "player2")
+        else if (arr[0] == "player2")
             $("#player2").prop("checked", true);
         enterGame();
     } else {
