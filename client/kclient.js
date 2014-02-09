@@ -53,7 +53,6 @@
 var kClientVersion = 2;  // keep in sync with config.py
 
 function checkVersion(required) {
-    console.log("Check version: " + required);
     if (required && required != kClientVersion) {
         if (confirm("Server requires client version " + required + ", reload page now?")) {
             window.location.reload();

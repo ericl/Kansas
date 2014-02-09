@@ -101,7 +101,7 @@ function handleError(msg) {
 function handleSocketOpen() {
     kansas_ui.clear();
     if (document.location.hash) {
-        var arr = document.location.hash.split(';');
+        var arr = document.location.hash.substr(1).split(';');
         gameid = arr[1] || "0";
         if (arr[0] == "player1")
             $("#player1").prop("checked", true);
