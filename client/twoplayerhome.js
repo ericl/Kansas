@@ -132,6 +132,7 @@ function handleSocketClose(client) {
     setTimeout(function() { client.connect(); }, 1000);
 }
 
+var firstRun = true;
 function handleListGames(data) {
     $("#gamelist_loading").hide();
 
@@ -149,7 +150,8 @@ function handleListGames(data) {
         needsRefresh = true;
     }
 
-    if (needsRefresh) {
+    if (needsRefresh || firstRun) {
+        firstRun = false;
         $("#gamelist").empty();
         for (g in data) {
             var nodeid = "gnode_" + btoa(data[g].gameid).split("=")[0];
@@ -191,6 +193,11 @@ function handleListGames(data) {
                 + button2
                 + "</div>"
             ).appendTo("#gamelist");
+        }
+        if ($(".entergame").size() > 0) {
+            $(".entergame").first().focus();
+        } else {
+            $("#newgame").focus();
         }
     }
     var kMaxGames = 5;

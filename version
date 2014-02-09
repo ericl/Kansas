@@ -11,6 +11,3 @@ SERVER_VERSION=`grep kClientVersion server/config.py | awk '{print $3}'`
 CLIENT_VERSION=`grep "var kClientVersion" client/kclient.js | awk '{print $4}' | tr -d \;`
 echo server: $SERVER_VERSION
 echo client: $CLIENT_VERSION
-
-git add .
-git commit -m "bumped client version to $NEXT"
