@@ -453,8 +453,8 @@ class KansasSpaceHandler(KansasHandler):
             presence = {
                 'uuid': request['uuid'],
                 'name': request['user'],
-                'profile_pic': request['profile']['image']['url'],
-                'profile_url': request['profile']['url'],
+                'profile_pic': request['profile'].get('image', {}).get('url'),
+                'profile_url': request['profile'].get('url'),
                 'orient': request['orient'],
                 'addr': output
                     .stream._request
