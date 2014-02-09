@@ -68,7 +68,7 @@ function enterGame() {
             prev_hash = document.location.hash = orient + ';' + gameid;
             localstore.put('orient', orient);
 
-            kansas_ui.init(client, uuid, user, orient);
+            kansas_ui.init(client, uuid, user, orient, gameid);
 
             client._state = 'opened_pending_connect';
             client.send("connect", {

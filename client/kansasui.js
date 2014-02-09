@@ -26,6 +26,7 @@ function KansasUI() {
     this.user = null;
     this.orient = null;
     this.uuid = null;
+    this.gameid = null;
     this.hand_user = null;
     this.chatHistory = [];
     this.lastFrameLocation = 0;
@@ -1485,9 +1486,10 @@ function touchHandler(event) {
     first.target.dispatchEvent(simulatedEvent);
 }
 
-KansasUI.prototype.init = function(client, uuid, user, orient) {
+KansasUI.prototype.init = function(client, uuid, user, orient, gameid) {
     var that = this;
     this.client = client;
+    this.gameid = gameid;
     this.uuid = uuid;
     this.user = user;
     this.oldtitle = document.title;
@@ -1784,6 +1786,18 @@ KansasUI.prototype.init = function(client, uuid, user, orient) {
             'value': cards,
         }).then(function() { that._refreshDeckList(); });
         $('#savedeck').prop("disabled", true);
+    });
+
+    $("#switchside").live('mouseup', function(e) {
+        var orient = that.orient;
+        if (orient == "player1") {
+            orient = "player2";
+        } else {
+            orient = "player1";
+        }
+
+        document.location.hash = orient + ";" + that.gameid;
+        document.location.reload();
     });
 
     $(".deletedeck").live('mouseup', function(e) {
@@ -2736,13 +2750,23 @@ KansasUI.prototype.handlePresence = function(data) {
 
     var myuuid = this.uuid;
     var myorient = this.orient;
-    $("#presence").html("" +
+    var has_conflict = false;
+    $.map(data, function(d) {
+        if (d.orient == myorient && d.uuid != myuuid) {
+            has_conflict = true;
+        }
+    });
+    var base = "";
+    if (has_conflict) {
+        base = "<button style='height: 50px; margin-right: 10px; position: relative; top: -17px; ' id=switchside>Switch Side</button>";
+    }
+    $("#presence").html(base +
         $.map(data, function(d) {
             var color = "green";
-            var title = "This player is playing against you.";
+            var title = d.name;
             if (d.orient == myorient) {
                 color = "yellow";
-                title = "This player can see your hand.";
+                title = d.name + " can see your hand.";
             }
             if (d.uuid != myuuid) {
                 return "<a target=_blank style='border-bottom: 2px solid " +
