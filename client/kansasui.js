@@ -1754,6 +1754,12 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid) {
         document.location.reload();
     });
 
+    $("#cleardeck").mouseup(function(e) {
+        if (confirm("Remove all cards from the board?")) {
+            that.client.send("remove", that.client.listAll());
+        }
+    });
+
     $("#deck").mouseup(function(e) {
         that._showDeckPanel();
         e.stopPropagation();
