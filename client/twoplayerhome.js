@@ -86,7 +86,12 @@ function enterGame() {
          request.execute(toKansas);
         });
     }
-    gapi.auth.signIn({'callback': signinCallback});
+    console.log("HI");
+    gapi.auth.authorize({
+        client_id: "8882673983-m7poir3vrdgjqeeavqh2i7jf7geeo2tk.apps.googleusercontent.com",
+        immediate: true,
+        scope: "profile",
+    }, signinCallback);
 }
 
 function handleRedirect(e) {
