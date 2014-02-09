@@ -1140,13 +1140,9 @@ KansasUI.prototype._browseStack = function(memberCard) {
     this.fyi(this.user + " is browsing a stack of " + stack.length + " cards.");
 }
 
-KansasUI.prototype._draw7 = function(memberCard) {
-    var stack = this.client.stackOf(memberCard);
-    var slice = stack.slice(-7);
+KansasUI.prototype._draw = function(memberCard) {
     var txn = this.view.startBulkMove();
-    for (i in slice) {
-        txn.moveToHand(slice[i], this.hand_user);
-    }
+    txn.moveToHand(parseInt(memberCard.prop("id").substr(5)), this.hand_user)
     txn.commit();
 }
 
@@ -1448,14 +1444,17 @@ KansasUI.prototype._menuForCard = function(card) {
     }
 
     if (this.client.getOrient(card) > 0) {
-        var flipFn = '<li class="top" style="margin-left: -130px"'
+        var flipFn = '<li style="margin-left: -130px"'
             + ' data-key=flip>Hide</li>';
     } else {
-        var flipFn = '<li class="top" style="margin-left: -130px"'
+        var flipFn = '<li style="margin-left: -130px"'
             + ' data-key=unflip>Reveal</li>';
     }
+    var drawFn = ('<li style="margin-left: -130px"'
+        + ' class="boardonly top"'
+        + ' data-key="draw">Draw</li>');
 
-    var cardContextMenu = (flipFn + tapFn
+    var cardContextMenu = (drawFn + flipFn + tapFn
         + '<li style="margin-left: -130px"'
         + ' class="bottom peek boardonly" data-key="peek">Peek'
         + '</li>');
@@ -1470,9 +1469,6 @@ KansasUI.prototype._menuForCard = function(card) {
         html += ('<li style="margin-left: -130px"'
             + ' class="top boardonly bulk"'
             + ' data-key="browsestack">Browse</li>'
-            + '<li style="margin-left: -130px"'
-            + ' class="boardonly bulk"'
-            + ' data-key="reversestack">Invert</li>'
             + '<li style="margin-left: -130px"'
             + ' class="bottom bulk boardonly"'
             + ' data-key="toselection"><i>More...</i></li>');
@@ -1839,7 +1835,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         'unrotateall': this._unrotateSelected,
         'reversestack': this._reverseStack,
         'browsestack': this._browseStack,
-        'draw7': this._draw7,
+        'draw': this._draw,
         'shufsel': this._shuffleSelection,
         'remove': this._removeCard,
         'removeconfirm': this._removeConfirm,
