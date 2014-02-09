@@ -1,0 +1,16 @@
+#!/bin/bash
+
+SERVER_VERSION=`grep kClientVersion server/config.py | awk '{print $3}'`
+CLIENT_VERSION=`grep "var kClientVersion" client/kclient.js | awk '{print $4}' | tr -d \;`
+echo server: $SERVER_VERSION
+echo client: $CLIENT_VERSION
+NEXT=$(($SERVER_VERSION+1))
+sed -i "s/kClientVersion = $SERVER_VERSION/kClientVersion = $NEXT/" server/config.py
+sed -i "s/kClientVersion = $CLIENT_VERSION/kClientVersion = $NEXT/" client/kclient.js
+SERVER_VERSION=`grep kClientVersion server/config.py | awk '{print $3}'`
+CLIENT_VERSION=`grep "var kClientVersion" client/kclient.js | awk '{print $4}' | tr -d \;`
+echo server: $SERVER_VERSION
+echo client: $CLIENT_VERSION
+
+git add .
+git commit -m "bumped client version to $NEXT"
