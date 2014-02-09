@@ -297,8 +297,8 @@ $(document).ready(function() {
     });
 
     $("#logout").click(function() {
-        localstore.put('scope', undefined);
-        localstore.put('sourceid', undefined);
+        localstore.put('scope', null);
+        localstore.put('sourceid', null);
     });
 
     $(".entergame").live('click', function(event) {

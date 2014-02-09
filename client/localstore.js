@@ -8,7 +8,7 @@ localstore.put = function(key, value) {
 
 localstore.get = function(key, defaultValue) {
     var result = $.cookie(key);
-    if (result === undefined) {
+    if (result === undefined || result === null) {
         return defaultValue;
     }
     return result;
