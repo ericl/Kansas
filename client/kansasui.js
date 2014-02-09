@@ -1084,6 +1084,8 @@ KansasUI.prototype._unflipCard = function(card) {
 
 /* No-op that shows card privately in hovermenu. */
 KansasUI.prototype._peekCard = function(card) {
+    console.log(card);
+    this.fyi(this.user + " peeked at a card in a stack of " + this.client.stackOf(card).length + ".");
     $(".hovermenu img").prop("src", this.client.getFrontUrl(card));
     return "disablethis";
 }
@@ -1455,7 +1457,7 @@ KansasUI.prototype._menuForCard = function(card) {
 
     var cardContextMenu = (flipFn + tapFn
         + '<li style="margin-left: -130px"'
-        + ' class="bottom nobulk peek boardonly" data-key="peek">Peek'
+        + ' class="bottom peek boardonly" data-key="peek">Peek'
         + '</li>');
 
     var html = ('<div class="hovermenu">'
@@ -1497,7 +1499,6 @@ KansasUI.prototype._menuForCard = function(card) {
     } else if (numCards > 1) {
         $(".hovernote").show();
         $(".boardonly").removeClass("disabled");
-        $(".nobulk").addClass("disabled");
         if (i == 1) {
             $(".stackprev").addClass("disabled");
         } else if (i == numCards) {
