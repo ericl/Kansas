@@ -1572,7 +1572,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                         found = true;
                     }
                 }
-                var getButton = $("<div class='getbutton'>☝</div>").appendTo(cardbox);
+                var getButton = $("<div class='getbutton'>↴</div>").appendTo(cardbox);
                 getButton.on("click", function(event) {
                     event.preventDefault();
                     that.client.send("broadcast",
