@@ -24,6 +24,8 @@ $("#clearerror").mouseup(function(e) {
     kansas_ui.hideSpinner();
 });
 
+var signed_on = false;
+
 $(window).bind('hashchange', function() {
     var next = document.location.hash.substr(1);
     console.log("prev hash: " + prev_hash);
@@ -33,11 +35,11 @@ $(window).bind('hashchange', function() {
     } else {
         prev_hash = document.location.hash;
         console.log("acting on hashchange");
+        signed_on = false;
         client && client._ws && client._ws.close();
     }
 });
 
-var signed_on = false;
 function enterGame() {
     function signinCallback(authResult) {
         console.log(authResult);
@@ -66,7 +68,7 @@ function enterGame() {
             prev_hash = document.location.hash = user + ';' + orient + ';' + gameid;
             localstore.put('orient', orient);
 
-            kansas_ui.init(client, uuid, user, $("#player1").is(":checked"));
+            kansas_ui.init(client, uuid, user, orient);
 
             client._state = 'opened_pending_connect';
             client.send("connect", {
@@ -74,6 +76,7 @@ function enterGame() {
                 gameid: gameid,
                 uuid: uuid,
                 profile: resp,
+                orient: orient,
             });
         }
         gapi.client.load('plus','v1', function(){

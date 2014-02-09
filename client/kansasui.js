@@ -3,7 +3,8 @@
  * Defined methods for 'KansasUI' module:
  *
  *      var kansas_ui = new KansasUI();
- *      kansas_ui.init(client: KansasClient, uuid: str, isPlayer1: bool)
+ *      kansas_ui.init(client: KansasClient, uuid: str,
+ *                     orient: "player1"|"player2")
  *          Called when the client has been connected to a game.
  *          No new methods should be bound to the client by kansasui.
  *
@@ -23,6 +24,7 @@ function KansasUI() {
     this.view = null;
     this.client = null;
     this.user = null;
+    this.orient = null;
     this.uuid = null;
     this.hand_user = null;
     this.chatHistory = [];
@@ -1483,7 +1485,7 @@ function touchHandler(event) {
     first.target.dispatchEvent(simulatedEvent);
 }
 
-KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
+KansasUI.prototype.init = function(client, uuid, user, orient) {
     var that = this;
     this.client = client;
     this.uuid = uuid;
@@ -1675,7 +1677,8 @@ KansasUI.prototype.init = function(client, uuid, user, isPlayer1) {
         return false;
     });
 
-    if (isPlayer1) {
+    this.orient = orient;
+    if (orient == "player1") {
         this.hand_user = "Player 1";
         this.opposing_hand_user = "Player 2";
         this.view = new KansasView(client, 0, [0, 0], getBBox());
@@ -2691,10 +2694,10 @@ KansasUI.prototype.handleBroadcast = function(data) {
             this._handleFrameUpdateBroadcast(data);
             break;
         case "message":
-            var name = data.name;
+            var name = data.name.split(" ")[0];
             var selfmsg = false;
             if (this.uuid == data.uuid) {
-                name += " (self)";
+                name = "me";
                 selfmsg = true;
             } else {
                 notifications.notify(name + ' says...');
@@ -2732,15 +2735,24 @@ KansasUI.prototype.handlePresence = function(data) {
     }
 
     var myuuid = this.uuid;
-    $("#presence").html("Online: " +
+    var myorient = this.orient;
+    $("#presence").html("" +
         $.map(data, function(d) {
-            if (d.uuid == myuuid)
-                return HTMLEscape(d.name) + " (self)";
-            else
-                return "<a class=geoip href='http://freegeoip.net/?q=" +
-                       d.addr + "&map=1' target=_blank>" + HTMLEscape(d.name) +
-                       "</a>";
-        }).join(", "));
+            var color = "green";
+            var title = "This player is playing against you.";
+            if (d.orient == myorient) {
+                color = "yellow";
+                title = "This player can see your hand.";
+            }
+            if (d.uuid != myuuid) {
+                return "<a target=_blank style='border-bottom: 2px solid " +
+                    color + "; padding: 0;' href='" +
+                    d.profile_url + "'>" +
+                    "<img title='" + title +
+                    "' style='margin-bottom: -2px; border-radius: 2px; padding: 0;' src='" +
+                    d.profile_pic + "'></a>";
+            }
+        }).join(" "));
 
     /* Removes frames of clients no longer present. */
     $.each($(".uuid_frame"), function(i) {
