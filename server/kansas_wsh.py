@@ -348,9 +348,9 @@ class KansasInitHandler(KansasHandler):
         sourceid = request['datasource']
 
         if not datasource.IsValid(sourceid):
-            raise KansasRedirect("invalid datasource: " + sourceid, "/");
+            sourceid = datasource.AllSources()[0]
         elif not scope:
-            raise KansasRedirect("scope not valid", "/")
+            scope = "DEFAULT"
 
         with self._lock:
             if (scope, sourceid) not in self.spaces:
