@@ -24,6 +24,7 @@ function KansasUI() {
     this.view = null;
     this.client = null;
     this.user = null;
+    this.gender = null;
     this.orient = null;
     this.uuid = null;
     this.gameid = null;
@@ -1486,12 +1487,23 @@ function touchHandler(event) {
     first.target.dispatchEvent(simulatedEvent);
 }
 
-KansasUI.prototype.init = function(client, uuid, user, orient, gameid) {
+KansasUI.prototype.pronoun = function() {
+    if (this.gender == "male") {
+        return "his";
+    } else if (this.gender == "female") {
+        return "her";
+    } else {
+        return "his or her";
+    }
+}
+
+KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
     var that = this;
     this.client = client;
     this.gameid = gameid;
     this.uuid = uuid;
     this.user = user;
+    this.gender = gender;
     this.oldtitle = document.title;
 
     function doValidate(inPlace) {
@@ -1568,7 +1580,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid) {
                             subtype: "message",
                             uuid: 0,
                             name: '',
-                            msg: that.user + " has added a card to his hand.",
+                            msg: that.user + " has added a card to " + that.pronoun() + " hand.",
                             include_self: true,
                         });
                     client.callAsync('add', {
