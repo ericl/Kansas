@@ -1560,6 +1560,22 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid) {
                         found = true;
                     }
                 }
+                var getButton = $("<div class='getbutton'>☝</div>").appendTo(cardbox);
+                getButton.on("click", function(event) {
+                    event.preventDefault();
+                    that.client.send("broadcast",
+                        {
+                            subtype: "message",
+                            uuid: 0,
+                            name: '',
+                            msg: that.user + " has added a card to his hand.",
+                            include_self: true,
+                        });
+                    client.callAsync('add', {
+                        'cards': [{tohand: true, loc: that.hand_user, name: name}],
+                        'requestor': that.uuid,
+                    }).done();
+                });
                 var addButton = $("<div class='addbutton lone'>+</div>").appendTo(cardbox);
                 if (found) {
                     addButton.addClass("found");
@@ -2723,6 +2739,9 @@ KansasUI.prototype.handleBroadcast = function(data) {
                 notifications.notify(name + ' says...');
             }
             var newtext = name + ': ' + data.msg;
+            if (!name) {
+                newtext = data.msg;
+            }
             this.chatHistory.push(newtext);
             var lim = 5;
             if (this.chatHistory.length > lim) {

@@ -194,6 +194,7 @@ class KansasGameState(object):
             del self.data[loc_type][loc]
         
     def add_card(self, card):
+        tohand = card.get('tohand')
         loc = card['loc']
         name = card['name']
         stream, _ = datasource.Find(self.sourceid, name, exact=True)
@@ -202,11 +203,17 @@ class KansasGameState(object):
         else:
             raise Exception("Cannot find '%s'" % name);
         card_id = self.data.new_card(url)
-        if loc in self.data['board']:
-            self.data['board'][loc].append(card_id)
+        if tohand:
+            key = 'hands'
         else:
-            self.data['board'][loc] = [card_id]
-        self.index[card_id] = ('board', loc)
+            key = 'board'
+        if loc in self.data[key]:
+            self.data[key][loc].append(card_id)
+        else:
+            self.data[key][loc] = [card_id]
+        self.index[card_id] = (key, loc)
+        if tohand:
+            self.data['orientations'][card_id] = 1
         return card_id
     
 
