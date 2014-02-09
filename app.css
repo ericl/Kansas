@@ -272,7 +272,6 @@ li.confirm:hover, li.confirm.hover {
 .getbutton {
   padding-left: 5px;
   padding-right: 5px;
-  font-weight: bold;
   background-color: rgba(0,0,0,0.0);
   border-radius: 5px;
   text-align: center;

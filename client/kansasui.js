@@ -1572,7 +1572,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                         found = true;
                     }
                 }
-                var getButton = $("<div class='getbutton'>↴</div>").appendTo(cardbox);
+                var getButton = $("<div title='Add to hand' class='getbutton'>↴</div>").appendTo(cardbox);
                 getButton.on("click", function(event) {
                     event.preventDefault();
                     that.client.send("broadcast",
@@ -1588,7 +1588,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                         'requestor': that.uuid,
                     }).done();
                 });
-                var addButton = $("<div class='addbutton lone'>+</div>").appendTo(cardbox);
+                var addButton = $("<div title='Add to deck in progress' class='addbutton lone'>+</div>").appendTo(cardbox);
                 if (found) {
                     addButton.addClass("found");
                     addButton.text("✓");
@@ -1617,8 +1617,8 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                     addButton.text("✓");
                 });
             } else {
-                var addButton = $("<div class=addbutton>+</div>").appendTo(cardbox);
-                var removeButton = $("<div class=removebutton>−</div>").appendTo(cardbox);
+                var addButton = $("<div title='Add 1' class=addbutton>+</div>").appendTo(cardbox);
+                var removeButton = $("<div title='Remove 1' class=removebutton>−</div>").appendTo(cardbox);
                 removeButton.on("click", function(event) {
                     var html = $("#deckinput").html();
                     var cards = extractCards(html)[0];
