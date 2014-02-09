@@ -1593,6 +1593,22 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                     addButton.addClass("found");
                     addButton.text("✓");
                 }
+                if (!isMobile.any()) {
+                    getButton.hide();
+                    if (!addButton.hasClass("found")) {
+                        addButton.hide();
+                    }
+                    cardbox.on('mousemove', function() {
+                        getButton.fadeIn();
+                        addButton.fadeIn();
+                    });
+                    cardbox.on('mouseleave', function() {
+                        getButton.fadeOut();
+                        if (!addButton.hasClass("found")) {
+                            addButton.fadeOut();
+                        }
+                    });
+                }
                 addButton.on("click", function(event) {
                     event.preventDefault();
                     if (addButton.hasClass("found")) {
