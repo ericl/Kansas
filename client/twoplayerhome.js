@@ -40,8 +40,21 @@ $(window).bind('hashchange', function() {
     }
 });
 
+function doLogin(immediate, cb) {
+    gapi.auth.authorize({
+        client_id: "8882673983-m7poir3vrdgjqeeavqh2i7jf7geeo2tk.apps.googleusercontent.com",
+        immediate: immediate,
+        scope: "profile",
+    }, cb);
+}
+
 function enterGame() {
     function signinCallback(authResult) {
+        if (authResult == null) {
+            console.log("Not already logged in.");
+            doLogin(false, signinCallback);
+            return;
+        }
         console.log(authResult);
         if (!authResult.status.signed_in) {
             if (authResult.error != "immediate_failed") {
@@ -79,19 +92,14 @@ function enterGame() {
                 orient: orient,
             });
         }
-        gapi.client.load('plus','v1', function(){
-         var request = gapi.client.plus.people.get({
-           'userId': 'me'
-         });
-         request.execute(toKansas);
+        gapi.client.load('plus','v1', function() {
+            var request = gapi.client.plus.people.get({
+                'userId': 'me'
+            });
+            request.execute(toKansas);
         });
     }
-    console.log("HI");
-    gapi.auth.authorize({
-        client_id: "8882673983-m7poir3vrdgjqeeavqh2i7jf7geeo2tk.apps.googleusercontent.com",
-        immediate: true,
-        scope: "profile",
-    }, signinCallback);
+    doLogin(true, signinCallback);
 }
 
 function handleRedirect(e) {
