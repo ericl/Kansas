@@ -457,7 +457,7 @@ class KansasSpaceHandler(KansasHandler):
                 'name': request['user'],
                 'profile_pic': request['profile'].get('image', {}).get('url'),
                 'profile_url': request['profile'].get(
-                    'url', 'http://freegeoip.net/?q=%s' % ipv4addr),
+                    'url', 'http://freegeoip.net/?q=%s&map=1' % ipv4addr),
                 'orient': request['orient'],
                 'addr': ipv4addr,
             }
