@@ -53,7 +53,8 @@ function enterGame() {
             return;
         }
         signed_on = true;
-        function toKansas(user) {
+        function toKansas(resp) {
+            var user = resp.displayName;
             $("#homescreen").fadeOut('slow');
             $(".home-hidden").fadeIn('slow');
             var orient;
@@ -73,6 +74,7 @@ function enterGame() {
                 user: user,
                 gameid: gameid,
                 uuid: uuid,
+                profile: resp,
             });
         }
         // This sample assumes a client object has been created.
@@ -82,9 +84,7 @@ function enterGame() {
          var request = gapi.client.plus.people.get({
            'userId': 'me'
          });
-         request.execute(function(resp) {
-           toKansas(resp.displayName);
-         });
+         request.execute(toKansas);
         });
     }
     gapi.auth.signIn({'callback': signinCallback});
