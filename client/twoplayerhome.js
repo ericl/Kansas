@@ -49,7 +49,6 @@ function enterGame() {
             return;
         }
         if (signed_on) {
-            console.log("Ignoring duplicate sign on.");
             return;
         }
         signed_on = true;
@@ -77,9 +76,6 @@ function enterGame() {
                 profile: resp,
             });
         }
-        // This sample assumes a client object has been created.
-        // To learn more about creating a client, check out the starter:
-        //  https://developers.google.com/+/quickstart/javascript
         gapi.client.load('plus','v1', function(){
          var request = gapi.client.plus.people.get({
            'userId': 'me'
