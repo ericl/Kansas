@@ -1907,10 +1907,16 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         shuffle(toAdd);
         var oldStack = client.getStack('board', pos);
         if (oldStack) {
-            /* Use callasync here to force Loading message until
-             * this call completes. */
             client.callAsync('remove', oldStack).done();
         }
+        client.send("broadcast",
+            {
+                subtype: "message",
+                uuid: 0,
+                name: '',
+                msg: that.user + " has added " + that.pronoun() + " new deck to the board.",
+                include_self: true,
+            });
         client
             .callAsync('add', {'cards': toAdd, 'requestor': uuid})
             .done();
