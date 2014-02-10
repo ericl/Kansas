@@ -606,6 +606,20 @@ div.hovernote {
 
 .blueglow {
     box-shadow: inset 0px 0px 0px 10px #33b5e5;
+    display: inline-block;
+}
+
+.blueglowtext {
+  text-align: center;
+  position: absolute;
+  left: 85px;
+  top: 250px;
+  font-size: large;
+  color: white;
+}
+
+.blueglow:hover {
+    background-color: #257491;
 }
 
 #homescreen, #scopechooser {

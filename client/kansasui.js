@@ -1104,9 +1104,20 @@ KansasUI.prototype._reverseStack = function(memberCard) {
     txn.commit();
 }
 
-KansasUI.prototype._browseStack = function(memberCard) {
+KansasUI.prototype._browseStack = function(memberCard, useSelection) {
     this.browsingCard = memberCard;
-    var stack = this.client.stackOf(memberCard);
+    if (useSelection) {
+        var stack = [];
+        this.selectedSet.map(function(i) {
+            var card = $(this);
+            var ans = parseInt(card.prop("id").substr(5));
+            if (!isNaN(ans)) {
+                stack.push(ans);
+            }
+        });
+    } else {
+        var stack = this.client.stackOf(memberCard);
+    }
     var that = this;
     var c = this.client;
     var s = this.searcher;
@@ -1384,9 +1395,9 @@ KansasUI.prototype._menuForSelection = function(selectedSet) {
     });
 
     var html = ('<div class="hovermenu">'
-        + '<img class="blueglow" style="height: '
+        + '<div class="blueglow" style="height: '
         + height + 'px; width: ' + width + 'px;"'
-        + '></img>'
+        + '><span class=blueglowtext>Click to browse selection.</span></div>'
         + '<ul class="hovermenu" style="float: right; width: 50px;">'
         + '<span class="header" style="margin-left: -130px">'
         + '&nbsp;SELECTION</span>"'
@@ -1398,6 +1409,11 @@ KansasUI.prototype._menuForSelection = function(selectedSet) {
         + '</div>');
 
     var newNode = $(html).appendTo("body");
+    $(".blueglow").on('mouseup', function( ){
+        that._browseStack(selectedSet, true);
+        that._removeHoverMenu();
+        that.fyi(that.user + " is browsing a selection of " + selectedSet.length + " cards.");
+    });
     if (allTapped) {
         $(".tapall").addClass("disabled");
     }
@@ -1656,6 +1672,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                         }
                     }
                     that.fyi(that.user + " has moved a card to " + that.pronoun() + " hand.");
+                    that._removeFocus();
                     hideDeckPanel();
                 });
             } else if (search_term) {
