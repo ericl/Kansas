@@ -17,6 +17,9 @@ kThemeBlacklist = {
     'them',
     'while',
     'bad',
+    'exactly',
+    'deck',
+    'exchange',
     'away',
     'been',
     'twice',
@@ -351,8 +354,8 @@ class CardCatalog(object):
 
         cand = None
 
-        if theme and random.random() < 0.66:
-            tries = 20
+        if theme:
+            tries = 10
             pool = Catalog.byTokens[random.choice(theme)]
             while not valid(cand) and tries > 0:
                 tries -= 1
@@ -419,6 +422,8 @@ class CardCatalog(object):
                     word = Catalog.randomTheme()
                 theme = [word]
                 theme.insert(0, Catalog.randomTheme())
+                if random.random() > 0.5:
+                    theme.insert(0, Catalog.randomTheme())
                 return theme
             if i == 0 and len(parts) > 1:
                 if all([p in Catalog.byTokens for p in parts]):
