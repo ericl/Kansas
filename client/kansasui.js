@@ -160,7 +160,7 @@ KansasUI.prototype._showDeckPanel = function(cb, imm) {
     function load() {
         $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);
         if (!isMobile.any()) {
-            placeCaretAtEnd($("#deckinput")[0]);
+            $("#kansas_typeahead").select();
         }
     }
     if (this.firstTimeShowingPanel) {
@@ -1826,9 +1826,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
     // Rebinds ctrl-f.
     $(window).keydown(function(e){
         if ((e.ctrlKey || e.metaKey) && e.keyCode === 70) {
-            that._showDeckPanel(function() {
-                $("#kansas_typeahead").select();
-            });
+            that._showDeckPanel();
             e.preventDefault();
         }
     });
