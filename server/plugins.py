@@ -416,7 +416,7 @@ class CardCatalog(object):
         # TODO(ekl) dynamically chose the number of decks based on number of search
         # results and number of available combinations based on the input term.
         for i in range(num_decks):
-            parts = [p for p in term.split()]
+            parts = [p for p in term.split() if p not in kThemeBlacklist]
             def gen():
                 word = ''
                 avail = list(set(parts))
