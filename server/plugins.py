@@ -12,6 +12,152 @@ import time
 import urllib2
 
 
+kThemeBlacklist = {
+    'of',
+    'them',
+    'while',
+    'bad',
+    'away',
+    'been',
+    'twice',
+    'returned',
+    'opening',
+    'text',
+    'once',
+    'leaves',
+    'leave',
+    'choice',
+    'stays',
+    'still',
+    'spent',
+    'returned',
+    'colorless',
+    'also',
+    'a',
+    'types',
+    'fewer',
+    'will',
+    'reveals',
+    'single',
+    'died',
+    'exchange'
+    'effect',
+    'nonbasic',
+    'word',
+    'sources',
+    'casts',
+    'the',
+    'in',
+    'remain',
+    'false',
+    'spend',
+    'total',
+    'move',
+    'played',
+    'entered',
+    'activated',
+    'greatest',
+    'affinity',
+    'instead',
+    'declare',
+    'which',
+    'attached',
+    'instead',
+    'play',
+    'increasing',
+    'does',
+    'assign',
+    'noncreature',
+    'unblocked',
+    'costs',
+    'kind',
+    'named',
+    'maximum',
+    'greatest',
+    'owner',
+    'take',
+    'remains',
+    'colors',
+    'common',
+    'rather',
+    'empty',
+    'there',
+    'untapped',
+    'form',
+    'source',
+    'flip',
+    'removed',
+    'both',
+    'nontoken',
+    'for',
+    'soon',
+    'much',
+    'nonwhite',
+    'nonblack',
+    'nonred',
+    'nonblue',
+    'nongreen',
+    'loss',
+    'after',
+    'before',
+    'same',
+    'could',
+    'begin',
+    'being',
+    'bottom',
+    'and',
+    'or',
+    'either',
+    'draws',
+    'lasts',
+    'comes',
+    'plays',
+    'change',
+    'instances',
+    'third',
+    'five',
+    'adds',
+    'since',
+    'targets',
+    'least',
+    'unattach',
+    'amount',
+    'game',
+    'they',
+    'one',
+    'pair',
+    'discarding',
+    'causes',
+    'convoke',
+    'cause',
+    'effects',
+    'back',
+    'most',
+    'enough',
+    'repeat',
+    'attackers',
+    'keeps',
+    'down',
+    'wins',
+    'blocks',
+    'regular',
+    'untaps',
+    'forces',
+    'chooses',
+    'many',
+    'enter',
+    'says',
+    'treated',
+    'name',
+    'call',
+    'every',
+    'must',
+    'though',
+    'cause',
+    'give',
+}
+
+
 class DefaultPlugin(object):
 
     def GetBackUrl(self):
@@ -155,8 +301,6 @@ class CardCatalog(object):
         try:
             for c in csv.reader(open(catalogFile), escapechar='\\'):
                 try:
-                    if len(c[0]) > 35:
-                        raise Exception("the name is way too long")
                     self._register(MagicCard(c))
                 except Exception, e:
                     logging.warning("Failed to parse %s: %s", c, e)
@@ -166,8 +310,11 @@ class CardCatalog(object):
         logging.info("Done building card catalog.")
         self.topTokens = []
         for k, v in self.byTokens.iteritems():
-            if len(v) >= 10:
-                self.topTokens.append(k)
+            if len(v) >= 10 and len(v) < 170 and re.match('^[a-z]+$', k):
+                if k not in kThemeBlacklist:
+                    self.topTokens.append(k)
+        logging.info("%d possible themes", len(self.topTokens))
+        print self.topTokens
 
         self.byLand = {
             'Plains': 'W',
@@ -182,18 +329,13 @@ class CardCatalog(object):
         color = self.byLand[land]
         colors = set([self.byLand[l] for l in lands])
         return [
-            "2 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 1, 3, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 0, 2, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 1, 3, taken, theme),
-            "2 " + self.chooseSpell(color, colors, 2, 5, taken, theme),
-            "1 " + self.chooseSpell(color, colors, 3, 7, taken, theme),
-            "1 " + self.chooseSpell(color, colors, 3, 7, taken, theme),
-            "1 " + self.chooseSpell(color, colors, 4, 8, taken, theme),
-            "1 " + self.chooseSpell(color, colors, 4, 8, taken, theme),
-            "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
-            "1 " + self.chooseSpell(color, colors, 5, 99, taken, theme),
+            "4 " + self.chooseSpell(color, colors, 1, 2, taken, theme),
+            "3 " + self.chooseSpell(color, colors, 1, 3, taken, theme),
+            "3 " + self.chooseSpell(color, colors, 2, 4, taken, theme),
+            "3 " + self.chooseSpell(color, colors, 3, 4, taken, theme),
+            "3 " + self.chooseSpell(color, colors, 5, 7, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 6, 99, taken, theme),
+            "1 " + self.chooseSpell(color, colors, 6, 99, taken, theme),
         ]
 
     def chooseSpell(self, color, colors, minCost, maxCost, taken, theme=None):
@@ -244,13 +386,9 @@ class CardCatalog(object):
         if land1 == land2:
             base = ["20 " + land1]
         else:
-            base = ["10 " + land1, "10 " + land2]
-        colors = set([self.byLand[l] for l in [land1, land2]])
-        land3, land4 = self.chooseLand(colors), self.chooseLand(colors)
-        base.append("2 " + land3)
-        base.append("2 " + land4)
+            base = ["12 " + land1, "12 " + land2]
         cards = []
-        taken = {land1, land2, land3, land4}
+        taken = {land1, land2}
         cards.extend(self.complement(land1, [land1, land2], taken))
         cards.extend(self.complement(land2, [land1, land2], taken))
         return base + sorted(cards, reverse=True)
@@ -260,26 +398,47 @@ class CardCatalog(object):
             return {}
         start = time.time()
         output = {}
+        random.seed(hash(term))
         # TODO(ekl) dynamically chose the number of decks based on number of search
         # results and number of available combinations based on the input term.
         for i in range(num_decks):
-            theme = []
-            for word in term.split():
-                if word in ['of', 'a', 'the', 'in']:
-                    continue
-                if word in Catalog.byTokens:
-                    theme.append(word)
-                else:
+            parts = [p for p in term.split() if p not in kThemeBlacklist]
+            def gen():
+                word = ''
+                avail = list(set(parts))
+                if avail:
+                    word = random.choice(avail)
+                if word not in Catalog.byTokens:
                     tokens = list(Catalog.byTokens)
-                    random.seed(hash(tuple(theme)) + i)
                     random.shuffle(tokens)
                     for key in tokens:
                         if word in key:
-                            theme.append(key)
+                            word = key
                             break
-            while len(theme) < 2:
-                random.seed(hash(tuple(theme)) + i)
+                if word not in Catalog.byTokens:
+                    word = Catalog.randomTheme()
+                theme = [word]
                 theme.insert(0, Catalog.randomTheme())
+                return theme
+            if i == 0 and len(parts) > 1:
+                if all([p in Catalog.byTokens for p in parts]):
+                    theme = parts
+                else:
+                    theme = []
+                    for word in parts:
+                        if word not in Catalog.byTokens:
+                            tokens = list(Catalog.byTokens)
+                            random.shuffle(tokens)
+                            for key in tokens:
+                                if word in key:
+                                    word = key
+                                    break
+                        if word in Catalog.byTokens:
+                            theme.append(word)
+                    if len(theme) < 2:
+                        theme = gen()
+            else:
+                theme = gen()
             key = ' '.join([w[0].upper() + w[1:] for w in theme])
             theme = tuple(theme)
             random.seed(hash(theme) + i)
@@ -310,9 +469,8 @@ class CardCatalog(object):
         if land1 == land2:
             base = ["20 " + land1]
         else:
-            base = ["10 " + land1, "10 " + land2]
+            base = ["12 " + land1, "12 " + land2]
         colors = set([self.byLand[l] for l in [land1, land2]])
-        base.append("4 " + self.chooseLand(colors))
         cards = []
         taken = set()
         cards.extend(self.complement(land1, [land1, land2], taken, theme))

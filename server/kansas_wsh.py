@@ -283,7 +283,7 @@ class KansasHandler(object):
                 resp[term] = None
         suggested = []
         if total < 60:
-            suggested = datasource.Sample(self.sourceid)
+            suggested = ["1 " + s.split(' ', 1)[1] for s in datasource.Sample(self.sourceid)]
             random.shuffle(suggested)
             suggested = suggested[:60 - total]
         output.reply({
@@ -310,11 +310,15 @@ class KansasHandler(object):
         if lim and len(stream) > lim:
             stream = stream[:lim]
             meta['has_more'] = True
+        if len(stream) == 0:
+            num = 8
+        else:
+            num = 2
         output.reply({
             'stream': stream,
             'meta': meta,
             'deck_suggestions': datasource.SampleDeck(
-                request['datasource'], request['term'], 3),
+                request['datasource'], request['term'], num),
             'req': request})
 
     def notify_closed(self, stream):
