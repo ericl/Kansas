@@ -1108,10 +1108,14 @@ KansasUI.prototype._reverseStack = function(memberCard) {
 
 KansasUI.prototype._browseStack = function(memberCard, useSelection) {
     this.browsingCard = memberCard;
+    var mine = true;
     if (useSelection) {
         var stack = [];
         this.selectedSet.map(function(i) {
             var card = $(this);
+            if (card.hasClass("flipped")) {
+                mine = false;
+            }
             var ans = parseInt(card.prop("id").substr(5));
             if (!isNaN(ans)) {
                 stack.push(ans);
@@ -1119,6 +1123,9 @@ KansasUI.prototype._browseStack = function(memberCard, useSelection) {
         });
     } else {
         var stack = this.client.stackOf(memberCard);
+        if (memberCard.hasClass("flipped")) {
+            mine = false;
+        }
     }
     shuffle(stack, 1);
     var that = this;
@@ -1151,7 +1158,11 @@ KansasUI.prototype._browseStack = function(memberCard, useSelection) {
         $("#deckpanel").css('left', '-' + $("#deckpanel").outerWidth() + "px");
         $("#search_preview").show();
     }, true);
-    this.fyi(this.user + " is browsing a stack of " + stack.length + " cards.");
+    if (mine) {
+        this.fyi(this.user + " is browsing a stack of " + this.pronoun() + " cards.");
+    } else {
+        this.fyi(this.user + " is browsing a stack of " + this.pronoun() + " opponent's cards.");
+    }
 }
 
 KansasUI.prototype._draw = function(memberCard) {
@@ -1424,10 +1435,15 @@ KansasUI.prototype._menuForSelection = function(selectedSet) {
         + '</div>');
 
     var newNode = $(html).appendTo("body");
+    var mine = !selectedSet.hasClass("flipped");
     $(".blueglow").on('mouseup', function( ){
         that._browseStack(selectedSet, true);
         that._removeHoverMenu();
-        that.fyi(that.user + " is browsing a selection of " + selectedSet.length + " cards.");
+        if (mine) {
+            that.fyi(that.user + " is browsing a selection of " + that.pronoun() + " cards.");
+        } else {
+            that.fyi(that.user + " is browsing a selection of " + that.pronoun() + " opponent's cards.");
+        }
     });
     if (allTapped) {
         $(".tapall").addClass("disabled");
