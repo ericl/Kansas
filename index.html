@@ -72,11 +72,11 @@
               <span id="notfound" style="display: none">no matching cards</span>
               <a href="" id="has_more" target="_blank" style="display: none">full results...</a>
             </form>
-            <button id="closepanel" style="font-size: 20px; float: right; margin-right: -3px; margin-top: -3px;">&#x2716;</button>
+            <button class="actionbutton" id="closepanel" style="font-size: 20px; float: right; margin-right: -3px; margin-top: -3px;">&#x2716;</button>
             <br>
             <br>
             <div id="deckinput" contentEditable=true>
-                === Welcome to the card browser ===<br><br>Use the search bar above to find cards and add them to your deck list. Then hit 'Preview' below to further edit your deck and add it to the board.<br><br>Tip: use Ctrl-F to jump to card search.<br></div>
+                === Welcome to the card browser ===<br><br>Use the search bar above to find cards and add them to your deck list. Then hit 'Preview' below to further edit your deck and add it to the board.<br><br>Tip: use Ctrl-F to jump to card search.<br><span id=samplecards></span><br></div>
 
                 <br>
                 <button id="validate">Preview</button>
@@ -93,9 +93,9 @@
         </div>
         <div id="arena">
             <div style="float: left;" class="connected home-hidden">
-                <button id="leave">Leave</button>
-                <button id="cleardeck">Clear</button>
-                <button id="deck">Card Browser</button>
+                <button id="actionbutton leave">Leave</button>
+                <button id="actionbutton cleardeck">Clear</button>
+                <button id="actionbutton deck">Card Browser</button>
             </div>
             <div id="stats" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 0; padding: 12px; color: white; background-color: green; font-size: 25pt;">Error.</div>
             <div id="presence"></div>

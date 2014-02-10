@@ -155,10 +155,10 @@ function deckPanelVisible() {
     return $('#deckpanel').offset().left >= 0;
 }
 
-KansasUI.prototype._showDeckPanel = function(cb) {
+KansasUI.prototype._showDeckPanel = function(cb, imm) {
     this._refreshDeckList();
     function load() {
-        $('#deckpanel').animate({left:'0%'}, cb ? 0 : 300, cb);
+        $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);
         if (!isMobile.any()) {
             placeCaretAtEnd($("#deckinput")[0]);
         }
@@ -172,11 +172,9 @@ KansasUI.prototype._showDeckPanel = function(cb) {
             }
             $("#samplecards").html(html);
             load();
-            $("#kansas_typeahead").select();
         });
     } else {
         load();
-        $("#kansas_typeahead").select();
     }
 }
 
@@ -1147,7 +1145,7 @@ KansasUI.prototype._browseStack = function(memberCard, useSelection) {
         that._resizePreview(cards);
         $("#deckpanel").css('left', '-' + $("#deckpanel").outerWidth() + "px");
         $("#search_preview").show();
-    });
+    }, true);
     this.fyi(this.user + " is browsing a stack of " + stack.length + " cards.");
 }
 
@@ -1467,32 +1465,35 @@ KansasUI.prototype._menuForCard = function(card) {
             + ' data-key=unflip>Reveal</li>';
     }
     var drawFn = ('<li style="margin-left: -130px"'
-        + ' class="boardonly top"'
+        + ' class="boardonly"'
         + ' data-key="draw">Draw</li>');
-
-    var cardContextMenu = (drawFn + flipFn + tapFn
-        + '<li style="margin-left: -130px"'
-        + ' class="bottom peek boardonly" data-key="peek">Peek'
-        + '</li>');
+    var removeFn = ('<li style="margin-left: -130px"'
+        + ' class="boardonly removeconfirm top"'
+        + ' data-key="removeconfirm">Remove</li>');
 
     var html = ('<div class="hovermenu">'
         + '<img class="' + imgCls + '" style="height: '
         + height + 'px; width: ' + width + 'px;"'
         + ' src="' + src + '"></img>'
-        + '<ul class="hovermenu" style="float: right; width: 50px;">'
-        + '<span class="header" style="margin-left: -130px">&nbsp;STACK</span>"');
+        + '<ul class="hovermenu" style="float: right; width: 50px;">');
     if (numCards > 1 && !this.client.inHand(card)) {
+        html += '<span class="header" style="margin-left: -130px">&nbsp;STACK</span>"';
         html += ('<li style="margin-left: -130px"'
             + ' class="top boardonly bulk"'
             + ' data-key="browsestack">Browse</li>'
             + '<li style="margin-left: -130px"'
             + ' class="bottom bulk boardonly"'
-            + ' data-key="toselection"><i>More...</i></li>');
-    } else {
-        html += ('<li style="margin-left: -130px"'
-            + ' class="top bottom"'
-            + ' data-key="remove">Remove</li>');
+            + ' data-key="toselection"><i>Select...</i></li>');
+        removeFn = "";
+        drawFn = ('<li style="margin-left: -130px"'
+            + ' class="boardonly top"'
+            + ' data-key="draw">Draw</li>');
     }
+
+    var cardContextMenu = (removeFn + drawFn + flipFn + tapFn
+        + '<li style="margin-left: -130px"'
+        + ' class="bottom peek boardonly" data-key="peek">Peek'
+        + '</li>');
     html += ('<span class="header" style="margin-left: -130px">&nbsp;CARD</span>"'
         + cardContextMenu
         + '</ul>'
@@ -1599,6 +1600,10 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
     this.gender = gender;
     this.oldtitle = document.title;
 
+    if (isMobile.any()) {
+        $(".actionbutton").addClass("largebutton");
+    }
+
     function doValidate(inPlace) {
         var html = $("#deckinput").html();
         var cards = extractCards(html)[0];
@@ -1657,10 +1662,21 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         doValidate,
         function(cardbox, name, search_term) {
             if (search_term == true) {
-                var moveButton = $("<div title='Move to hand' class='movebutton'>↴</div>").appendTo(cardbox);
+                var moveButton = $("<div title='Move to hand' class='cardbutton movebutton'>↴</div>").appendTo(cardbox);
                 moveButton.on("click", function(event) {
                     event.preventDefault();
-                    var stack = that.client.stackOf(that.browsingCard);
+                    if (that.selectedSet.length > 0) {
+                        var stack = [];
+                        that.selectedSet.map(function(i) {
+                            var card = $(this);
+                            var ans = parseInt(card.prop("id").substr(5));
+                            if (!isNaN(ans)) {
+                                stack.push(ans);
+                            }
+                        });
+                    } else {
+                        var stack = that.client.stackOf(that.browsingCard);
+                    }
                     for (i in stack) {
                         var url = that.client.getFrontUrl(stack[i]);
                         var cname = url.split("/").slice(-1)[0].split(".jpg")[0];
@@ -1684,7 +1700,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                         found = true;
                     }
                 }
-                var getButton = $("<div title='Add to hand' class='getbutton'>↴</div>").appendTo(cardbox);
+                var getButton = $("<div title='Add to hand' class='button2 cardbutton getbutton'>↴</div>").appendTo(cardbox);
                 getButton.on("click", function(event) {
                     event.preventDefault();
                     that.fyi(that.user + " has added a card to " + that.pronoun() + " hand.");
@@ -1693,7 +1709,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                         'requestor': that.uuid,
                     }).done();
                 });
-                var addButton = $("<div title='Add to deck list' class='addbutton lone'>+</div>").appendTo(cardbox);
+                var addButton = $("<div title='Add to deck list' class='cardbutton addbutton lone'>+</div>").appendTo(cardbox);
                 if (found) {
                     addButton.addClass("found");
                     addButton.text("✓");
@@ -1738,8 +1754,8 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                     addButton.text("✓");
                 });
             } else {
-                var addButton = $("<div title='Add 1' class=addbutton>+</div>").appendTo(cardbox);
-                var removeButton = $("<div title='Remove 1' class=removebutton>−</div>").appendTo(cardbox);
+                var addButton = $("<div title='Add 1' class='cardbutton button2 addbutton'>+</div>").appendTo(cardbox);
+                var removeButton = $("<div title='Remove 1' class='cardbutton removebutton'>−</div>").appendTo(cardbox);
                 removeButton.on("click", function(event) {
                     var html = $("#deckinput").html();
                     var cards = extractCards(html)[0];
@@ -1768,13 +1784,18 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
                     event.preventDefault();
                 });
             }
+            if (isMobile.any()) {
+                $(".cardbutton").addClass("largebutton");
+            }
         }
     );
 
     // Rebinds ctrl-f.
     $(window).keydown(function(e){
         if ((e.ctrlKey || e.metaKey) && e.keyCode === 70) {
-            that._showDeckPanel();
+            that._showDeckPanel(function() {
+                $("#kansas_typeahead").select();
+            });
             e.preventDefault();
         }
     });
@@ -2352,10 +2373,10 @@ KansasUI.prototype._raiseCard = function(card) {
     this.nextBoardZIndex += 1;
 }
 
-/* Returns all cards in the same stack as memberCard or optKey. */
-KansasUI.prototype._stackOf = function(memberCard, optKey) {
+/* Returns all cards in the same stack as memberCard. */
+KansasUI.prototype._stackOf = function(memberCard) {
     var client = this.client;
-    var key = (optKey === undefined) ? this.client.getPos(memberCard)[1] : optKey;
+    var key = client.getPos(memberCard)[1];
     return $(".card").filter(function() {
         return client.getPos($(this))[1] == key;
     });
@@ -2692,14 +2713,18 @@ KansasUI.prototype._initCards = function(sel) {
 
     function deepenSelection() {
         if (that.activeCard) {
-            var stack = that._stackOf(that.activeCard);
+            var stack = zSorted(that._stackOf(that.activeCard));
             that._createSelection(stack.slice(-2), false);
         } else {
             var len = that.selectedSet.length + 1;
-            var stack = that._stackOf(that.selectedSet);
+            var stack = zSorted(that._stackOf(that.selectedSet));
             if (len > stack.length) {
                 return;
             }
+            console.log("Deepen Selection:");
+            console.log(stack);
+            console.log("stack len " + stack.length);
+            console.log("slice last " + len);
             that._createSelection(stack.slice(-len), false);
         }
         that.deepenSelectionTimeoutId = setTimeout(deepenSelection, 500);
