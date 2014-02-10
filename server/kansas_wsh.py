@@ -281,11 +281,15 @@ class KansasHandler(object):
                 resp[term] = stream[0]
             else:
                 resp[term] = None
+        suggested = []
+        if total < 60:
+            suggested = datasource.Sample(self.sourceid)
+            random.shuffle(suggested)
+            suggested = suggested[:60 - total]
         output.reply({
             'req': request,
             'resp': resp,
-            # TODO(ekl) move suggestion generation into datasource plugins
-            'suggested': ["%d Relentless Rats" % (60 - total)] if total < 60 else [],
+            'suggested': suggested,
         })
 
     def handle_query(self, request, output):
