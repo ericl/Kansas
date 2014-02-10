@@ -1116,6 +1116,7 @@ KansasUI.prototype._browseStack = function(memberCard, useSelection) {
     } else {
         var stack = this.client.stackOf(memberCard);
     }
+    shuffle(stack, 1);
     var that = this;
     var c = this.client;
     var s = this.searcher;
@@ -1202,14 +1203,26 @@ function majority(stream, keyFn) {
     return majority;
 }
 
+
+var seed = 0;
+function srandom() {
+    var x = Math.sin(seed++) * 10000;
+    return x - Math.floor(x);
+}
+
 // Standard Fisher-Yates shuffle
-function shuffle(array) {
+function shuffle(array, set_seed) {
+    if (set_seed) {
+        seed = 0;
+    } else {
+        seed = Math.random() * 100000;
+    }
     var counter = array.length, temp, index;
 
     // While there are elements in the array
     while (counter > 0) {
         // Pick a random index
-        index = (Math.random() * counter--) | 0;
+        index = (srandom() * counter--) | 0;
 
         // And swap the last element with it
         temp = array[counter];
@@ -1601,7 +1614,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
     this.oldtitle = document.title;
 
     if (isMobile.any()) {
-        $(".actionbutton").addClass("largebutton");
+        $(".actionbutton").addClass("largeactionbutton");
     }
 
     function doValidate(inPlace) {
@@ -2721,10 +2734,6 @@ KansasUI.prototype._initCards = function(sel) {
             if (len > stack.length) {
                 return;
             }
-            console.log("Deepen Selection:");
-            console.log(stack);
-            console.log("stack len " + stack.length);
-            console.log("slice last " + len);
             that._createSelection(stack.slice(-len), false);
         }
         that.deepenSelectionTimeoutId = setTimeout(deepenSelection, 500);

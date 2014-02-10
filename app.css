@@ -753,3 +753,8 @@ div.hovernote {
   -1px 1px 0 #000,
   1px 1px 0 #000;
 }
+
+.largeactionbutton {
+  height: 50px;
+  min-width: 50px;
+}

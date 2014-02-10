@@ -50,7 +50,7 @@
  *          .commit();
  */
 
-var kClientVersion = 28;  // keep in sync with config.py
+var kClientVersion = 29;  // keep in sync with config.py
 
 function checkVersion(required) {
     if (required && required != kClientVersion) {
