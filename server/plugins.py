@@ -55,6 +55,10 @@ kThemeBlacklist = {
     'effect',
     'nonbasic',
     'word',
+    'words',
+    'kit',
+    'paid',
+    'random',
     'sources',
     'casts',
     'the',
@@ -325,7 +329,6 @@ class CardCatalog(object):
                 if k not in kThemeBlacklist:
                     self.topTokens.append(k)
         logging.info("%d possible themes", len(self.topTokens))
-        print self.topTokens
 
         self.byLand = {
             'Plains': 'W',
@@ -413,7 +416,7 @@ class CardCatalog(object):
         # TODO(ekl) dynamically chose the number of decks based on number of search
         # results and number of available combinations based on the input term.
         for i in range(num_decks):
-            parts = [p for p in term.split() if p not in kThemeBlacklist]
+            parts = [p for p in term.split()]
             def gen():
                 word = ''
                 avail = list(set(parts))
