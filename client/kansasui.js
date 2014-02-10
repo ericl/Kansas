@@ -1082,8 +1082,12 @@ KansasUI.prototype._unflipCard = function(card) {
 
 /* No-op that shows card privately in hovermenu. */
 KansasUI.prototype._peekCard = function(card) {
-    console.log(card);
-    this.fyi(this.user + " peeked at one of " + this.pronoun() + " cards.");
+    var mycard = !card.hasClass("flipped");
+    if (mycard) {
+        this.fyi(this.user + " peeked at one of " + this.pronoun() + " cards.");
+    } else {
+        this.fyi(this.user + " peeked at one of " + this.pronoun() + " opponent's cards.");
+    }
     $(".hovermenu img").prop("src", this.client.getFrontUrl(card));
     return "disablethis";
 }
@@ -1535,7 +1539,7 @@ KansasUI.prototype._menuForCard = function(card) {
         $(".boardonly").removeClass("disabled");
         $(".bulk").addClass("disabled");
     }
-    if (this.client.getOrient(card) > 0 || card.hasClass("flipped")) {
+    if (this.client.getOrient(card) > 0) {
         $(".peek").addClass("disabled");
     }
     return newNode;
