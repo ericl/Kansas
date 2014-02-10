@@ -398,7 +398,7 @@ class CardCatalog(object):
         land1 = random.choice(self.basicLands)
         land2 = random.choice(self.basicLands)
         if land1 == land2:
-            base = ["20 " + land1]
+            base = ["24 " + land1]
         else:
             base = ["12 " + land1, "12 " + land2]
         cards = []
@@ -479,11 +479,16 @@ class CardCatalog(object):
         else:
             land1 = random.choice(self.basicLands)
         if len(rankedColors) > 1:
-            land2 = landsByColor[rankedColors[1][1]]
+            ratio = rankedColors[1][0] / rankedColors[0][0]
+            logging.info("%s ratio: %s/%s %f", ' '.join(theme), rankedColors[1][1], rankedColors[0][1], ratio)
+            if ratio < 0.5:
+                land2 = land1
+            else:
+                land2 = landsByColor[rankedColors[1][1]]
         else:
             land2 = random.choice(self.basicLands)
         if land1 == land2:
-            base = ["20 " + land1]
+            base = ["24 " + land1]
         else:
             base = ["12 " + land1, "12 " + land2]
         colors = set([self.byLand[l] for l in [land1, land2]])
