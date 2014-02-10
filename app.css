@@ -611,6 +611,7 @@ div.hovernote {
 
 .blueglowtext {
   text-align: center;
+  font-family: sans-serif;
   position: absolute;
   left: 85px;
   top: 250px;
