@@ -41,7 +41,7 @@ function KansasView(kclient, rotation, translation, bbox) {
     this.translation = translation;
     this.width = bbox[0];
     this.height = bbox[1];
-    this.maxGridIndex = 0x7ff;
+    this.maxGridIndex = 0xff;
     this.warning = this.client.ui.warning;
 }
 
