@@ -30,7 +30,7 @@ class DefaultPlugin(object):
 class PokerCardsPlugin(DefaultPlugin):
     def Sample(self):
         cards, _ = self.Fetch("", False)
-        return [c['name'] for c in random.sample(cards, 5)]
+        return ["1 " + c['name'] for c in random.sample(cards, 5)]
 
     def Fetch(self, name, exact, limit=None):
         stream = []

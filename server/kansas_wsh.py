@@ -284,6 +284,7 @@ class KansasHandler(object):
         output.reply({
             'req': request,
             'resp': resp,
+            # TODO(ekl) move suggestion generation into datasource plugins
             'suggested': ["%d Relentless Rats" % (60 - total)] if total < 60 else [],
         })
 
