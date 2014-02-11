@@ -590,37 +590,30 @@ class LocalDBPlugin(DefaultPlugin):
                 parts = set(needle.split())
             parts = expand(parts)
             logging.info("expanded query " + str(parts))
-            for key, url in self.catalog.iteritems():
-                keytokens = set(key.split())
-                card = Catalog.bySlug.get(key)
+            for title, url in self.catalog.iteritems():
+                card = Catalog.bySlug.get(title)
                 rank = 0
-                if needle == key:
+                if needle == title:
                     rank += 20
-                elif needle in key:
-                    rank += 12
-                elif card and needle in card.searchtype:
-                    rank += 11
-                elif card and needle in card.text:
-                    rank += 7
-                elif card and needle in card.searchtext:
-                    rank += 6
+                elif needle in title:
+                    rank += 10
                 if card:
-                    rank += sum([p in key or p in card.searchtype for p in parts])
-                if card:
-                    rank += sum([p in card.searchtext for p in parts])
-                if card:
-                    rank += sum([p in keytokens or p in card.searchtokens for p in parts])
-                if card:
-                    rank += sum([p in card.searchtokens for p in parts])
+                    for p in parts:
+                        if p in title or p in card.searchtype:
+                            rank += 1
+                        if p in card.searchtokens:
+                            rank += 1
+                        if p in card.searchtext:
+                            rank += 1
                 if rank > 0:
-                    ranked[rank].append(key)
+                    ranked[rank].append(title)
             ranks = sorted(ranked.keys(), reverse=True)
             for r in ranks:
-                for key in ranked[r]:
+                for title in ranked[r]:
                     stream.append({
-                        'name': self.fullnames[key],
-                        'img_url': self.catalog[key],
-                        'info_url': self.catalog[key],
+                        'name': self.fullnames[title],
+                        'img_url': self.catalog[title],
+                        'info_url': self.catalog[title],
                     })
                     ct += 1
                     if ct >= limit:
