@@ -1501,7 +1501,7 @@ KansasUI.prototype._menuForCard = function(card) {
         + ' class="boardonly"'
         + ' data-key="draw">Draw</li>');
     var removeFn = ('<li style="margin-left: -130px"'
-        + ' class="boardonly removeconfirm top"'
+        + ' class="removeconfirm top"'
         + ' data-key="removeconfirm">Remove</li>');
 
     var html = ('<div class="hovermenu">'
