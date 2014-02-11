@@ -256,22 +256,23 @@ class MagicCard(object):
         self.mana = row[3]
         self.cost = int(row[4]) if row[3] else 0
         self.text = sanitize(row[5])
+        coststring = "mana=%d" % self.cost
         colorstring = ""
         numcolors = 0
         if 'U' in self.mana or ('Land' in self.type and '{U}' in self.text):
-            colorstring += "blue "
+            colorstring += "mana=blue "
             numcolors += 1
         if 'B' in self.mana or ('Land' in self.type and '{B}' in self.text):
-            colorstring += "black "
+            colorstring += "mana=black "
             numcolors += 1
         if 'R' in self.mana or ('Land' in self.type and '{R}' in self.text):
-            colorstring += "red "
+            colorstring += "mana=red "
             numcolors += 1
         if 'G' in self.mana or ('Land' in self.type and '{G}' in self.text):
-            colorstring += "green "
+            colorstring += "mana=green "
             numcolors += 1
         if 'W' in self.mana or ('Land' in self.type and '{W}' in self.text):
-            colorstring += "white "
+            colorstring += "mana=white "
             numcolors += 1
         if numcolors > 1:
             colorstring += "multi "
@@ -289,7 +290,8 @@ class MagicCard(object):
             colorstring += "quad four "
         elif numcolors == 5:
             colorstring += "five all rainbow "
-        self.searchtext = ' '.join([self.name, self.type, self.text, self.subtype, colorstring]).lower()
+        self.searchtext = ' '.join([self.name, self.type, self.text, self.subtype, coststring, colorstring]).lower()
+        self.searchtokens = set(self.searchtext.split())
         self.set = row[6]
         self.rarity = row[7]
         self.tokens = (
@@ -572,13 +574,24 @@ class LocalDBPlugin(DefaultPlugin):
                     'info_url': self.catalog[needle],
                 })
         else:
+            mana = {'red', 'blue', 'white', 'black', 'green'}
+            def expand(parts):
+                out = []
+                for p in parts:
+                    if p in mana:
+                        out.append('mana=' + p)
+                    out.append(p)
+                return out
             ct = 0
             ranked = collections.defaultdict(list)
             try:
                 parts = set(shlex.split(needle))
             except ValueError:
                 parts = set(needle.split())
+            parts = expand(parts)
+            logging.info("expanded query " + str(parts))
             for key, url in self.catalog.iteritems():
+                keytokens = set(key.split())
                 card = Catalog.bySlug.get(key)
                 rank = 0
                 if needle == key:
@@ -595,6 +608,10 @@ class LocalDBPlugin(DefaultPlugin):
                     rank += sum([p in key or p in card.searchtype for p in parts])
                 if card:
                     rank += sum([p in card.searchtext for p in parts])
+                if card:
+                    rank += sum([p in keytokens or p in card.searchtokens for p in parts])
+                if card:
+                    rank += sum([p in card.searchtokens for p in parts])
                 if rank > 0:
                     ranked[rank].append(key)
             ranks = sorted(ranked.keys(), reverse=True)
