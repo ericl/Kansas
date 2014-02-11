@@ -577,17 +577,23 @@ class LocalDBPlugin(DefaultPlugin):
             mana = {'red', 'blue', 'white', 'black', 'green'}
             def expand(parts):
                 out = []
+                num_mana = 0
                 for p in parts:
                     if p in mana:
+                        num_mana += 1
                         out.append('mana=' + p)
                     out.append(p)
+                if num_mana == 1 and 'dual' not in out:
+                    out.append('mono')
+                elif num_mana == 2 and 'mono' not in out:
+                    out.append('dual')
                 return out
             ct = 0
             ranked = collections.defaultdict(list)
             try:
-                parts = set(shlex.split(needle))
+                parts = shlex.split(needle)
             except ValueError:
-                parts = set(needle.split())
+                parts = needle.split()
             parts = expand(parts)
             logging.info("expanded query " + str(parts))
             for title, url in self.catalog.iteritems():
