@@ -24,6 +24,7 @@ function KansasUI() {
     this.view = null;
     this.client = null;
     this.user = null;
+    this.user_id = null;
     this.gender = null;
     this.orient = null;
     this.uuid = null;
@@ -1624,12 +1625,13 @@ KansasUI.prototype.pronoun = function() {
     }
 }
 
-KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
+KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, user_id) {
     var that = this;
     this.client = client;
     this.gameid = gameid;
     this.uuid = uuid;
     this.user = user;
+    this.user_id = user_id;
     this.gender = gender;
     this.oldtitle = document.title;
 
@@ -1990,7 +1992,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         }
         var cards = JSON.stringify(res[0]);
         client.callAsync('kvop', {
-            'namespace': 'Decks',
+            'namespace': 'Decks#' + that.user_id,
             'op': 'Put',
             'key': name,
             'value': cards,
@@ -2014,7 +2016,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
         var name = $(e.currentTarget).data("name");
         if (confirm("Are you sure you want to delete '" + name + "'?")) {
             client.callAsync('kvop', {
-                'namespace': 'Decks',
+                'namespace': 'Decks#' + that.user_id,
                 'op': 'Delete',
                 'key': name,
             }).then(function() { that._refreshDeckList(); });
@@ -2027,7 +2029,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender) {
             return;
         }
         client.callAsync('kvop', {
-            'namespace': 'Decks',
+            'namespace': 'Decks#' + that.user_id,
             'op': 'Get',
             'key': name,
         }).then(function(data) {
@@ -2900,11 +2902,11 @@ KansasUI.prototype._refreshDeckList = function() {
     var that = this;
     this.vlog(1, 'send refresh deck');
     this.client.callAsync('kvop', {
-        'namespace': 'Decks',
+        'namespace': 'Decks#' + that.user_id,
         'op': 'List',
     }).then(function(data) {
         that.vlog(1, 'showing deck data');
-        var html = "<br>Saved Decks:";
+        var html = "<br>Your saved decks:";
         that.decksAvail = data['resp'];
         data['resp'].forEach(function(name) {
             html += "<br> &bull; " + "<span> " + name + "</span>"
