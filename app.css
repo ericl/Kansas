@@ -212,154 +212,84 @@ li.confirm:hover, li.confirm.hover {
     top: 0;
 }
 
-.removebutton {
+.cardbutton {
   font-weight: bold;
   padding-left: 5px;
   padding-right: 5px;
   background-color: rgba(0,0,0,0.0);
+  border-radius: 5px;
   text-align: center;
   cursor: pointer;
   margin: 5px;
+  width: 15px;
   border: 1px solid rgba(0, 0, 0, 0);
-  border-radius: 5px;
+  float: right;
   color: white;
   position: absolute;
   right: 0px;
-  width: 15px;
   top: 0px;
   text-shadow:
   -1px -1px 0 #000,
   1px -1px 0 #000,
   -1px 1px 0 #000,
   1px 1px 0 #000;
+}
+
+.button2 {
+  right: 25px;
 }
 
 .removebutton:hover {
   background-color: red;
-  border: 1px solid rgba(75,75,75,0.7);
-  text-shadow: none;
-}
-
-.addbutton {
-  font-weight: bold;
-  padding-left: 5px;
-  padding-right: 5px;
-  background-color: rgba(0,0,0,0.0);
-  text-align: center;
-  cursor: pointer;
-  margin: 5px;
-  width: 15px;
-  border: 1px solid rgba(0, 0, 0, 0);
-  border-radius: 5px;
-  float: right;
-  color: white;
-  position: absolute;
-  right: 25px;
-  top: 0px;
-  text-shadow:
-  -1px -1px 0 #000,
-  1px -1px 0 #000,
-  -1px 1px 0 #000,
-  1px 1px 0 #000;
 }
 
 .addbutton:hover {
   background-color: green;
-  border: 1px solid rgba(75,75,75,0.7);
-  text-shadow: none;
-}
-
-.movebutton {
-  padding-left: 5px;
-  padding-right: 5px;
-  background-color: rgba(0,0,0,0.0);
-  border-radius: 5px;
-  text-align: center;
-  cursor: pointer;
-  margin: 5px;
-  width: 15px;
-  border: 1px solid rgba(0, 0, 0, 0);
-  float: right;
-  color: white;
-  position: absolute;
-  right: 0px;
-  top: 0px;
-  text-shadow:
-  -1px -1px 0 #000,
-  1px -1px 0 #000,
-  -1px 1px 0 #000,
-  1px 1px 0 #000;
-}
-
-.getbutton {
-  padding-left: 5px;
-  padding-right: 5px;
-  background-color: rgba(0,0,0,0.0);
-  border-radius: 5px;
-  text-align: center;
-  cursor: pointer;
-  margin: 5px;
-  width: 15px;
-  border: 1px solid rgba(0, 0, 0, 0);
-  float: right;
-  color: white;
-  position: absolute;
-  right: 25px;
-  top: 0px;
-  text-shadow:
-  -1px -1px 0 #000,
-  1px -1px 0 #000,
-  -1px 1px 0 #000,
-  1px 1px 0 #000;
 }
 
 .movebutton:hover {
   background-color: red;
-  border: 1px solid rgba(75,75,75,0.7);
-  text-shadow: none;
 }
 
 .getbutton:hover {
   background-color: green;
-  border: 1px solid rgba(75,75,75,0.7);
-  text-shadow: none;
 }
 
 .addbutton:hover {
   background-color: green;
-  border: 1px solid rgba(75,75,75,0.7);
-  text-shadow: none;
 }
 
-.lone {
-  border-radius: 5px;
-  right: 0px;
+.cardbutton:hover {
+  border: 1px solid rgba(75,75,75,0.7);
+  text-shadow: none;
 }
 
 .movebutton:active {
-  background-color: white;
   color: red;
-  border: 1px solid rgba(75,75,75,0.7);
-  text-shadow: none;
 }
 
 .getbutton:active {
-  background-color: white;
   color: green;
-  border: 1px solid rgba(75,75,75,0.7);
-  text-shadow: none;
 }
 
 .removebutton:active {
-  background-color: white;
   color: red;
-  border: 1px solid rgba(75,75,75,0.7);
-  text-shadow: none;
 }
 
 .addbutton:active {
-  background-color: white;
   color: green;
+}
+
+.topbutton:hover {
+  background-color: dodgerblue;
+}
+
+.topbutton:active {
+  color: blue;
+}
+
+.cardbutton:active {
+  background-color: white;
   border: 1px solid rgba(75,75,75,0.7);
   text-shadow: none;
 }

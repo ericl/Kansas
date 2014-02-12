@@ -1726,6 +1726,35 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                     that._removeFocus();
                     hideDeckPanel();
                 });
+                var topButton = $("<div title='Move to top of deck' class='cardbutton button2 topbutton'>⇑</div>").appendTo(cardbox);
+                topButton.on("click", function(event) {
+                    event.preventDefault();
+                    if (that.selectedSet.length > 0) {
+                        var stack = [];
+                        that.selectedSet.map(function(i) {
+                            var card = $(this);
+                            var ans = parseInt(card.prop("id").substr(5));
+                            if (!isNaN(ans)) {
+                                stack.push(ans);
+                            }
+                        });
+                    } else {
+                        var stack = that.client.stackOf(that.browsingCard);
+                    }
+                    for (i in stack) {
+                        var url = that.client.getFrontUrl(stack[i]);
+                        var cname = url.split("/").slice(-1)[0].split(".jpg")[0];
+                        if (cname == name) {
+                            that.view.startBulkMove()
+                                .moveOnto(stack[i], that.browsingCard)
+                                .commit();
+                            break;
+                        }
+                    }
+                    that.fyi(that.user + " has moved a card to the top of its deck.");
+                    that._removeFocus();
+                    hideDeckPanel();
+                });
             } else if (search_term) {
                 var found = false;
                 var html = $("#deckinput").html();
@@ -1744,7 +1773,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                         'requestor': that.uuid,
                     }).done();
                 });
-                var addButton = $("<div title='Add to deck list' class='cardbutton addbutton lone'>+</div>").appendTo(cardbox);
+                var addButton = $("<div title='Add to deck list' class='cardbutton addbutton'>+</div>").appendTo(cardbox);
                 if (found) {
                     addButton.addClass("found");
                     addButton.text("✓");
