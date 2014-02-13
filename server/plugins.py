@@ -484,8 +484,6 @@ class LocalDBPlugin(DefaultPlugin):
                 rank = 0
                 if needle == title:
                     rank += 20
-                elif needle in title:
-                    rank += 10
                 if card:
                     for p in parts:
                         if p in title or p in card.searchtype:
