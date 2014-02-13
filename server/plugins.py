@@ -76,6 +76,7 @@ def sanitize(s):
 class MagicCard(object):
 
     def __init__(self, row):
+        self.isNew = None  # if image is new style
         self.name = sanitize(row[0])
         self.type = row[1]
         self.subtype = row[2]
@@ -152,6 +153,7 @@ class MagicCard(object):
 
 class CardCatalog(object):
     def __init__(self, catalogFile):
+        logging.info("Building card catalog.")
         self.initialized = True
         self.byType = collections.defaultdict(list)
         self.byName = {}
@@ -159,11 +161,19 @@ class CardCatalog(object):
         self.byColor = collections.defaultdict(list)
         self.byCost = collections.defaultdict(list)
         self.byTokens = collections.defaultdict(list)
-        logging.info("Building card catalog.")
+        try:
+            self.newCards = set([x[2:-5] for x in
+                open("../classification.txt").readlines() if x[0] == "0"])
+        except Exception, e:
+            logging.warning("Failed to load classification: %s", e)
+            self.newCards = set()
         try:
             for c in csv.reader(open(catalogFile), escapechar='\\'):
                 try:
-                    self._register(MagicCard(c))
+                    card = MagicCard(c)
+                    if card.name in self.newCards:
+                        card.isNew = True
+                    self._register(card)
                 except Exception, e:
                     logging.warning("Failed to parse %s: %s", c, e)
         except Exception, e:
@@ -203,6 +213,7 @@ class CardCatalog(object):
 
         def valid(cand):
             if cand is None: return False
+            if not cand.isNew: return False
             if cand.type == 'land': return False
             if cand.name in taken: return False
             if cand.cost < minCost: return False
@@ -481,10 +492,12 @@ class LocalDBPlugin(DefaultPlugin):
             logging.info("expanded query " + str(parts))
             for title, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(title)
-                rank = 0
+                rank = 0.0
                 if needle == title:
                     rank += 20
                 if card:
+                    if card.isNew:
+                        rank += 0.5
                     for p in parts:
                         if p in title or p in card.searchtype:
                             rank += 1
@@ -492,7 +505,7 @@ class LocalDBPlugin(DefaultPlugin):
                             rank += 1
                         if p in card.searchtext:
                             rank += 1
-                if rank > 0:
+                if rank >= 1:
                     ranked[rank].append(title)
             ranks = sorted(ranked.keys(), reverse=True)
             for r in ranks:
