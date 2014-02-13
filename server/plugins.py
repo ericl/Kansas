@@ -76,7 +76,7 @@ def sanitize(s):
 class MagicCard(object):
 
     def __init__(self, row):
-        self.isNew = None  # if image is new style
+        self.goodQuality = None  # if image is modern and not unhinged / unglued
         self.name = sanitize(row[0])
         self.type = row[1]
         self.subtype = row[2]
@@ -84,6 +84,10 @@ class MagicCard(object):
         self.mana = row[3]
         self.cost = int(row[4]) if row[3] else 0
         self.text = sanitize(row[5])
+        self.set = row[6]
+        self.rarity = row[7]
+        if self.set in ['Unhinged', 'Unglued']:
+            self.goodQuality = False
         coststring = "mana=%d" % self.cost
         colorstring = ""
         numcolors = 0
@@ -118,10 +122,8 @@ class MagicCard(object):
             colorstring += "quad four "
         elif numcolors == 5:
             colorstring += "five all rainbow "
-        self.searchtext = ' '.join([self.name, self.type, self.text, self.subtype, coststring, colorstring]).lower()
+        self.searchtext = ' '.join([self.name, self.type, self.text, self.subtype, coststring, colorstring, 'mana=' + self.mana]).lower()
         self.searchtokens = set(self.searchtext.split())
-        self.set = row[6]
-        self.rarity = row[7]
         self.tokens = (
             [x.lower() for x in set(self.name.split()) if len(x) > 2] +
             [x.lower() for x in set(self.type.split()) if len(x) > 2] +
@@ -162,7 +164,7 @@ class CardCatalog(object):
         self.byCost = collections.defaultdict(list)
         self.byTokens = collections.defaultdict(list)
         try:
-            self.newCards = set([x[2:-5] for x in
+            self.newCards = set([sanitize(x[2:-1]) for x in
                 open("../classification.txt").readlines() if x[0] == "0"])
         except Exception, e:
             logging.warning("Failed to load classification: %s", e)
@@ -172,7 +174,7 @@ class CardCatalog(object):
                 try:
                     card = MagicCard(c)
                     if card.name in self.newCards:
-                        card.isNew = True
+                        card.goodQuality = True
                     self._register(card)
                 except Exception, e:
                     logging.warning("Failed to parse %s: %s", c, e)
@@ -213,7 +215,7 @@ class CardCatalog(object):
 
         def valid(cand):
             if cand is None: return False
-            if not cand.isNew: return False
+            if not cand.goodQuality: return False
             if cand.type == 'land': return False
             if cand.name in taken: return False
             if cand.cost < minCost: return False
@@ -468,18 +470,35 @@ class LocalDBPlugin(DefaultPlugin):
                     'info_url': self.catalog[needle],
                 })
         else:
-            mana_expr = "(mana|cost|cmc)\s*(>|<|>=|<=|=|==)\s*(\d+)"
-            match = re.search(mana_expr, needle)
-            if match:
+            mana_expr = "(mana|cost|cmc)\s*(>|<|>=|<=|=|==|)\s*(\d+)"
+            predicates = []
+            def add_pred(op, val):
+                if op == '==':
+                    predicates.append(lambda c: c.cost == val)
+                elif op == '>':
+                    predicates.append(lambda c: c.cost > val)
+                elif op == '>=':
+                    predicates.append(lambda c: c.cost >= val)
+                elif op == '<':
+                    predicates.append(lambda c: c.cost < val)
+                elif op == '<=':
+                    predicates.append(lambda c: c.cost <= val)
+                else:
+                    assert False, op
+            for match in re.finditer(mana_expr, needle):
                 needle = re.sub(mana_expr, '', needle)
-                logging.info("SUB " + needle)
-            else:
-                logging.info("NOSUB " + needle)
+                op, val = match.group(2), int(match.group(3))
+                if op == '=' or op == '':
+                    op = '=='
+                logging.info("Using predicate: cost %s %d" % (op, val))
+                add_pred(op, val)
             mana = {'red', 'blue', 'white', 'black', 'green'}
             def expand(parts):
                 out = []
                 num_mana = 0
                 for p in parts:
+                    if p == 'x':
+                        out.append('mana=X')
                     if p in mana:
                         num_mana += 1
                         out.append('mana=' + p)
@@ -497,26 +516,18 @@ class LocalDBPlugin(DefaultPlugin):
             except ValueError:
                 parts = needle.split()
             parts = expand(parts)
-            predicate = None
-            if match:
-                op, val = match.group(2), int(match.group(3))
-                if op == '=':
-                    op = '=='
-                suffix = " %s %d" % (op, val)
-                logging.info("Using predicate: cost" + suffix)
-                predicate = lambda card: eval(str(card.cost) + suffix)
             for title, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(title)
                 rank = 0.0
-                if predicate and card:
-                    if predicate(card):
+                if card and predicates:
+                    if all([ok(card) for ok in predicates]):
                         rank += 1
                     else:
                         continue
                 if needle == title:
                     rank += 20
                 if card:
-                    if card.isNew:
+                    if card.goodQuality:
                         rank += 0.5
                     for p in parts:
                         if p in title or p in card.searchtype:
