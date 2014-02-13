@@ -274,18 +274,16 @@ class KansasHandler(object):
         resp = {}
         logging.info('bulkquery: ' + str(request));
         total = 0
+        cards = {}
         for count, term in request['terms']:
             total += count
             stream, _ = datasource.Find(self.sourceid, term, True)
             if stream:
                 resp[term] = stream[0]
+                cards[stream[0]['name']] = count
             else:
                 resp[term] = None
-        suggested = []
-        if total < 60:
-            suggested = ["1 " + s.split(' ', 1)[1] for s in datasource.Sample(self.sourceid)]
-            random.shuffle(suggested)
-            suggested = suggested[:60 - total]
+        suggested = datasource.Complete(self.sourceid, cards)
         output.reply({
             'req': request,
             'resp': resp,

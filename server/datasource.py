@@ -49,6 +49,13 @@ def _FindCards(source, name, exact, limit=None):
     return _SOURCES[source].Fetch(name, exact, limit)
 
 
+def Complete(source, cards):
+    if source not in _SOURCES:
+        raise Exception("Source '%s' not found." % str(source))
+
+    return _SOURCES[source].Complete(cards)
+
+
 def Find(source, name, exact=False, limit=None):
     """Returns (stream, meta), where
         stream is a list of

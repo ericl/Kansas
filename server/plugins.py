@@ -12,189 +12,16 @@ import time
 import urllib2
 
 
-kThemeBlacklist = {
-    'of',
-    'them',
-    'while',
-    'bad',
-    'size',
-    'share',
-    'combination',
-    'exactly',
-    'opponents',
-    'shuffles',
-    'attach',
-    'turned',
-    'lost',
-    'step',
-    'become',
-    'attacked',
-    'produces',
-    'shares',
-    'putting',
-    'second',
-    'storage',
-    'abilities',
-    'blockers',
-    'upkeep',
-    'evoke',
-    'rebound',
-    'players',
-    'already',
-    'tied',
-    'unpaired',
-    'unattached',
-    'deck',
-    'exchange',
-    'away',
-    'been',
-    'twice',
-    'returned',
-    'opening',
-    'text',
-    'once',
-    'leaves',
-    'leave',
-    'choice',
-    'stays',
-    'still',
-    'spent',
-    'returned',
-    'colorless',
-    'also',
-    'a',
-    'types',
-    'fewer',
-    'will',
-    'reveals',
-    'single',
-    'died',
-    'exchange'
-    'effect',
-    'nonbasic',
-    'word',
-    'words',
-    'kit',
-    'paid',
-    'random',
-    'sources',
-    'casts',
-    'the',
-    'in',
-    'remain',
-    'false',
-    'spend',
-    'total',
-    'move',
-    'played',
-    'entered',
-    'activated',
-    'greatest',
-    'affinity',
-    'instead',
-    'declare',
-    'which',
-    'attached',
-    'instead',
-    'play',
-    'increasing',
-    'does',
-    'assign',
-    'noncreature',
-    'unblocked',
-    'costs',
-    'kind',
-    'named',
-    'maximum',
-    'greatest',
-    'owner',
-    'take',
-    'remains',
-    'colors',
-    'common',
-    'rather',
-    'empty',
-    'there',
-    'untapped',
-    'form',
-    'source',
-    'flip',
-    'removed',
-    'both',
-    'nontoken',
-    'for',
-    'soon',
-    'much',
-    'nonwhite',
-    'nonblack',
-    'nonred',
-    'nonblue',
-    'nongreen',
-    'loss',
-    'after',
-    'before',
-    'same',
-    'could',
-    'begin',
-    'being',
-    'bottom',
-    'and',
-    'or',
-    'either',
-    'draws',
-    'lasts',
-    'comes',
-    'plays',
-    'change',
-    'instances',
-    'third',
-    'five',
-    'adds',
-    'since',
-    'targets',
-    'least',
-    'unattach',
-    'amount',
-    'game',
-    'they',
-    'one',
-    'pair',
-    'discarding',
-    'causes',
-    'convoke',
-    'cause',
-    'effects',
-    'back',
-    'most',
-    'enough',
-    'repeat',
-    'attackers',
-    'keeps',
-    'down',
-    'wins',
-    'blocks',
-    'regular',
-    'untaps',
-    'forces',
-    'chooses',
-    'many',
-    'enter',
-    'says',
-    'treated',
-    'name',
-    'call',
-    'every',
-    'must',
-    'though',
-    'cause',
-    'give',
-}
+kThemeBlacklist = { 'of', 'them', 'while', 'bad', 'size', 'share', 'combination', 'exactly', 'opponents', 'shuffles', 'attach', 'turned', 'lost', 'step', 'become', 'attacked', 'produces', 'shares', 'putting', 'second', 'storage', 'abilities', 'blockers', 'upkeep', 'evoke', 'rebound', 'players', 'already', 'tied', 'unpaired', 'unattached', 'deck', 'exchange', 'away', 'been', 'twice', 'returned', 'opening', 'text', 'once', 'leaves', 'leave', 'choice', 'stays', 'still', 'spent', 'returned', 'colorless', 'also', 'a', 'types', 'fewer', 'will', 'reveals', 'single', 'died', 'exchange' 'effect', 'nonbasic', 'word', 'words', 'kit', 'paid', 'random', 'sources', 'casts', 'the', 'in', 'remain', 'false', 'spend', 'total', 'move', 'played', 'entered', 'activated', 'greatest', 'affinity', 'instead', 'declare', 'which', 'attached', 'instead', 'play', 'increasing', 'does', 'assign', 'noncreature', 'unblocked', 'costs', 'kind', 'named', 'maximum', 'greatest', 'owner', 'take', 'remains', 'colors', 'common', 'rather', 'empty', 'there', 'untapped', 'form', 'source', 'flip', 'removed', 'both', 'nontoken', 'for', 'soon', 'much', 'nonwhite', 'nonblack', 'nonred', 'nonblue', 'nongreen', 'loss', 'after', 'before', 'same', 'could', 'begin', 'being', 'bottom', 'and', 'or', 'either', 'draws', 'lasts', 'comes', 'plays', 'change', 'instances', 'third', 'five', 'adds', 'since', 'targets', 'least', 'unattach', 'amount', 'game', 'they', 'one', 'pair', 'discarding', 'causes', 'convoke', 'cause', 'effects', 'back', 'most', 'enough', 'repeat', 'attackers', 'keeps', 'down', 'wins', 'blocks', 'regular', 'untaps', 'forces', 'chooses', 'many', 'enter', 'says', 'treated', 'name', 'call', 'every', 'must', 'though', 'cause', 'give', }
 
 
 class DefaultPlugin(object):
 
     def GetBackUrl(self):
         return '/third_party/cards52/cropped/Blue_Back.png'
+
+    def Complete(self, cards):
+        return []
 
     def Fetch(self, name, exact, limit=None):
         return []
@@ -412,6 +239,59 @@ class CardCatalog(object):
                 break
         return cand.name
 
+    def complete(self, cards):
+        deck = {}
+        total = 0
+        for k, v in cards.iteritems():
+            total += v
+            try:
+                deck[k] = self.byName[k]
+            except:
+                pass
+        logging.info("FOUND " + str(total))
+        colorVotes = collections.defaultdict(float)
+        for card in deck.values():
+            colors = card.colors()
+            for color in colors:
+                colorVotes[color] += 1
+        rankedColors = sorted([(v, k) for (k, v) in colorVotes.items()], reverse=True)
+        if len(rankedColors) == 0:
+            land1 = random.choice(self.basicLands)
+            if random.random() > .5:
+                land2 = random.choice(self.basicLands)
+            else:
+                land2 = land1
+        else:
+            land1 = landsByColor[rankedColors[0][1]]
+            if len(rankedColors) > 1:
+                land2 = landsByColor[rankedColors[1][1]]
+            else:
+                land2 = land1
+        out = []
+        if land1 == land2:
+            if land1 not in cards:
+                out.append("20 " + land1)
+                total += 20
+        else:
+            if land1 not in cards:
+                out.append("10 " + land1)
+                total += 10
+            if land2 not in cards:
+                out.append("10 " + land2)
+                total += 10
+        colors = set([self.byLand[l] for l in [land1, land2]])
+        taken = set(deck.keys())
+        while total < 45:
+            out.append("4 " + self.chooseSpell(random.choice(list(colors)), colors, 1, 4, taken))
+            total += 4
+        while total < 59:
+            out.append("2 " + self.chooseSpell(random.choice(list(colors)), colors, 0, 99, taken))
+            total += 2
+        while total < 60:
+            out.append("1 " + self.chooseSpell(random.choice(list(colors)), colors, 0, 99, taken))
+            total += 1
+        return out
+
     def makeDeck(self):
         if not self.initialized:
             return []
@@ -549,6 +429,9 @@ class LocalDBPlugin(DefaultPlugin):
             self.catalog[key] = urllib2.quote(os.path.join(self.DB_PATH, f))
             self.fullnames[key] = sanitize(name)
             self.index[key] = name
+
+    def Complete(self, cards):
+        return Catalog.complete(cards)
 
     def Sample(self):
         return Catalog.makeDeck()
