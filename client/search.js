@@ -62,7 +62,9 @@ KansasSearcher.prototype.handleQueryStringUpdate = function() {
 KansasSearcher.prototype.handleQueryResponse = function(data) {
     var that = this;
     this.client.ui.vlog(3, JSON.stringify(data));
+    console.log(data.req.term);
     if (data.req.term.replace(/\W/g, '') != $(this.typeahead).val().replace(/\W/g, '')) {
+        console.log("dropped");
         return;  // drop all old data responses
     }
     this.previewItems(data.stream, data.meta, data.req.term,

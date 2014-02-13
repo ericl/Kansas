@@ -300,11 +300,12 @@ class KansasHandler(object):
         if request.get('allow_inexact'):
             logging.info("Trying inexact match")
             stream, meta = datasource.Find(
-                request['datasource'], request['term'], exact=False, limit=lim)
+                request['datasource'], request['_RAW']['term'], exact=False,
+                limit=lim)
         else:
             logging.info("Trying exact match")
             stream, meta = datasource.Find(
-                request['datasource'], request['term'], exact=True)
+                request['datasource'], request['_RAW']['term'], exact=True)
         if lim and len(stream) > lim:
             stream = stream[:lim]
             meta['has_more'] = True
@@ -316,8 +317,8 @@ class KansasHandler(object):
             'stream': stream,
             'meta': meta,
             'deck_suggestions': datasource.SampleDeck(
-                request['datasource'], request['term'], num),
-            'req': request})
+                request['datasource'], request['_RAW']['term'], num),
+            'req': request['_RAW']})
 
     def notify_closed(self, stream):
         """Callback for when a stream has been closed."""

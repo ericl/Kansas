@@ -468,6 +468,13 @@ class LocalDBPlugin(DefaultPlugin):
                     'info_url': self.catalog[needle],
                 })
         else:
+            mana_expr = "(mana|cost|cmc)\s*(>|<|>=|<=|=|==)\s*(\d+)"
+            match = re.search(mana_expr, needle)
+            if match:
+                needle = re.sub(mana_expr, '', needle)
+                logging.info("SUB " + needle)
+            else:
+                logging.info("NOSUB " + needle)
             mana = {'red', 'blue', 'white', 'black', 'green'}
             def expand(parts):
                 out = []
@@ -481,6 +488,7 @@ class LocalDBPlugin(DefaultPlugin):
                     out.append('mono')
                 elif num_mana == 2 and 'mono' not in out:
                     out.append('dual')
+                logging.info("Expanded query: " + str(out))
                 return out
             ct = 0
             ranked = collections.defaultdict(list)
@@ -489,10 +497,22 @@ class LocalDBPlugin(DefaultPlugin):
             except ValueError:
                 parts = needle.split()
             parts = expand(parts)
-            logging.info("expanded query " + str(parts))
+            predicate = None
+            if match:
+                op, val = match.group(2), int(match.group(3))
+                if op == '=':
+                    op = '=='
+                suffix = " %s %d" % (op, val)
+                logging.info("Using predicate: cost" + suffix)
+                predicate = lambda card: eval(str(card.cost) + suffix)
             for title, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(title)
                 rank = 0.0
+                if predicate and card:
+                    if predicate(card):
+                        rank += 1
+                    else:
+                        continue
                 if needle == title:
                     rank += 20
                 if card:
@@ -524,7 +544,8 @@ class LocalDBPlugin(DefaultPlugin):
             'has_more': False,
             'more_url': "",
         }
-        logging.info("search for %s took %.2f ms", needle, 1000*(time.time() - start))
+        logging.info("search for '%s' took %.2f ms", needle,
+                     1000*(time.time() - start))
         return stream, meta
 
 
