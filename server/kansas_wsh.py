@@ -331,7 +331,7 @@ class KansasHandler(object):
             logging.debug("serving %s", reqtype)
             self.handlers[reqtype](request, output)
         else:
-            logging.warning("Unexpected request type '%s'" % reqtype)
+            logging.warning("%s: Unexpected request type '%s'" % (self, reqtype))
         
         # Transitions to the current state by default.
         return self

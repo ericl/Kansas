@@ -3080,7 +3080,7 @@ KansasUI.prototype.handlePresence = function(data) {
     });
 }
 
-KansasUI.prototype.showSpinner = function(hint, text) {
+KansasUI.prototype.showSpinner = function(text) {
     if (text) {
         $("#spintext").text(text);
     } else {

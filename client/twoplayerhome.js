@@ -13,6 +13,7 @@ var uuid = "p_" + Math.random().toString().substring(5);
 
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
+var connect_info = {};
 
 // Kansas client.
 var client = null;
@@ -82,17 +83,19 @@ function enterGame() {
             localstore.put('orient', orient);
 
             kansas_ui.init(client, uuid, user, orient, gameid, resp.gender, resp.id);
-
-            client._state = 'opened_pending_connect';
-            client.send("connect", {
+            connect_info = {
                 user: user,
                 gameid: gameid,
                 uuid: uuid,
                 profile: resp,
                 orient: orient,
-            });
+            }
+
+            client._state = 'opened_pending_connect';
+            client.send("connect", connect_info);
         }
         gapi.client.load('plus','v1', function() {
+            kansas_ui.showSpinner("Logging in...");
             var request = gapi.client.plus.people.get({
                 'userId': 'me'
             });
@@ -128,8 +131,11 @@ function handleSocketOpen() {
 }
 
 function handleSocketClose(client) {
-    kansas_ui.showSpinner(null, "Connecting...");
-    setTimeout(function() { client.connect(); }, 1000);
+    kansas_ui.showSpinner("Connecting...");
+    function connect_to_game() {
+        client.send("connect", connect_info);
+    }
+    setTimeout(function() { client.connect(connect_to_game); }, 1000);
 }
 
 var firstRun = true;

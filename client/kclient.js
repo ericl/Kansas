@@ -17,7 +17,7 @@
  *      kclient.send(msg_type, args);
  *
  *  to reconnect:
- *      kclient.connect();
+ *      kclient.connect(callback);
  *
  *  to check latency:
  *      kclient.queueLatencyMillis();
@@ -50,7 +50,7 @@
  *          .commit();
  */
 
-var kClientVersion = 66;  // keep in sync with config.py
+var kClientVersion = 67;  // keep in sync with config.py
 
 function checkVersion(required) {
     if (required && required != kClientVersion) {
@@ -185,7 +185,7 @@ KansasClient.prototype.send = function(tag, data) {
     }
 }
 
-KansasClient.prototype.connect = function() {
+KansasClient.prototype.connect = function(callback) {
     if (!this.scope)
         throw "must set scope name";
     if (!this.sourceid)
@@ -203,6 +203,9 @@ KansasClient.prototype.connect = function() {
                 "datasource": that.sourceid,
             });
             that._onOpen.call(that);
+            if (callback) {
+                callback();
+            }
           },
           close: function() { that._onClose.call(that); },
           events: this._eventHandlers(that) });
