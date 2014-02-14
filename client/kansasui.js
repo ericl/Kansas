@@ -2322,14 +2322,10 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
 
     $(window).resize(function() {
         that.view.resize(getBBox());
-        if (isMobile.any()) {
-            that._setSizes();
-        } else {
-            that._redrawHand();
-            that._redrawOtherHands();
-            that._redrawBoard();
-            that._resizePreview(that._previewUrls);
-        }
+        that._redrawHand();
+        that._redrawOtherHands();
+        that._redrawBoard();
+        that._resizePreview(that._previewUrls);
     });
 
     this._setSizes();
