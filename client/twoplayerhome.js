@@ -6,6 +6,14 @@ var c0 = null;
 
 function setupTwoPlayerHome(kansas_ui) {  /* begin setupTwoPlayerHome */
 
+// Rebinds ctrl-f.
+$(window).keydown(function(e){
+    if ((e.ctrlKey || e.metaKey) && e.keyCode === 70) {
+        e.preventDefault();
+        kansas_ui._showDeckPanel();
+    }
+});
+
 // Default settings for websocket connection.
 var kWSPort = 8080
 var hostname = window.location.hostname || "localhost"

@@ -1854,14 +1854,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         }
     );
 
-    // Rebinds ctrl-f.
-    $(window).keydown(function(e){
-        if ((e.ctrlKey || e.metaKey) && e.keyCode === 70) {
-            that._showDeckPanel();
-            e.preventDefault();
-        }
-    });
-
     $(window).keypress(function(e) {
         var key = e.which;
         if (deckPanelVisible() || $("#chatbox").is(":focus")) {
