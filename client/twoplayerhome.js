@@ -21,7 +21,7 @@ var uuid = "p_" + Math.random().toString().substring(5);
 
 // Global vars set by home screen, then used by init().
 var gameid = "Unnamed Game";
-var connect_info = {};
+var connect_info = null;
 
 // Kansas client.
 var client = null;
@@ -141,7 +141,9 @@ function handleSocketOpen() {
 function handleSocketClose(client) {
     kansas_ui.showSpinner("Connecting...");
     function connect_to_game() {
-        client.send("connect", connect_info);
+        if (connect_info != null) {
+            client.send("connect", connect_info);
+        }
     }
     setTimeout(function() { client.connect(connect_to_game); }, 1000);
 }
