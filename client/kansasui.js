@@ -2018,7 +2018,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
             'key': name,
             'value': cards,
         }).then(function() { that._refreshDeckList(); });
-        $('#savedeck').prop("disabled", true);
     });
 
     $("#switchside").live('mouseup', function(e) {
@@ -2058,7 +2057,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
             $("#deckname").val(data.req.key);
             that._setDeckInputHtml(cardsToHtml(cards));
             $('.requiresvalidation').prop("disabled", false);
-            $('#savedeck').prop("disabled", true);
             doValidate();
         });
     });
