@@ -535,7 +535,10 @@ class LocalDBPlugin(DefaultPlugin):
                         if p in card.searchtokens:
                             rank += 1
                         if p in card.searchtext:
-                            rank += 1
+                            if ' ' in p:
+                                rank += len(p.split())
+                            else:
+                                rank += 1
                 if rank >= 1:
                     ranked[rank].append(title)
             ranks = sorted(ranked.keys(), reverse=True)
