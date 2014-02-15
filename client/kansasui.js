@@ -1818,8 +1818,8 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                     addButton.text("✓");
                 });
             } else {
-                var addButton = $("<div title='Add 1' class='cardbutton button2 addbutton'>+</div>").appendTo(cardbox);
-                var removeButton = $("<div title='Remove 1' class='cardbutton removebutton'>−</div>").appendTo(cardbox);
+                var addButton = $("<div title='Add 1' class='cardbutton addbutton'>+</div>").appendTo(cardbox);
+                var removeButton = $("<div title='Remove 1' class='cardbutton button2 removebutton'>−</div>").appendTo(cardbox);
                 removeButton.on("click", function(event) {
                     var html = $("#deckinput").html();
                     var cards = extractCards(html)[0];
