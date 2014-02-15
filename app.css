@@ -297,6 +297,7 @@ li.confirm:hover, li.confirm.hover {
 .largebutton, .largebutton:hover, .largebutton:active {
   font-size: 50px;
   width: 50px;
+  opacity: 0.5;
 }
 
 .button2.largebutton {
