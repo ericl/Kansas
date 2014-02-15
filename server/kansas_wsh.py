@@ -291,6 +291,7 @@ class KansasHandler(object):
         })
 
     def handle_query(self, request, output):
+        start = time.time()
         # Hidden commands for debugging.
         if request['term'] == 'quitquitquit':
             raise Exception("debugquit")
@@ -313,6 +314,7 @@ class KansasHandler(object):
             num = 8
         else:
             num = 2
+        meta['server_latency'] = time.time() - start
         output.reply({
             'stream': stream,
             'meta': meta,

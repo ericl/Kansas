@@ -160,6 +160,9 @@ KansasSearcher.prototype.previewItems = function(stream, meta, term, counts, dec
         addCard(this, i);
     });
     var remainder = stream.slice(numToShow);
+    if (meta && meta.server_latency) {
+        this.client.ui.vlog(0, "Search latency at server: " + meta.server_latency);
+    }
     if (meta && meta.has_more) {
         $("#has_more")
             .prop("href", meta.more_url)

@@ -1726,7 +1726,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                     that._removeFocus();
                     hideDeckPanel();
                 });
-                var topButton = $("<div title='Move to top of deck' class='cardbutton button2 topbutton'>⇑</div>").appendTo(cardbox);
+                var topButton = $("<div title='Move to top of deck' class='cardbutton button2 topbutton'>↻</div>").appendTo(cardbox);
                 topButton.on("click", function(event) {
                     event.preventDefault();
                     if (that.selectedSet.length > 0) {

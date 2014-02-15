@@ -77,6 +77,7 @@ function enterGame() {
         }
         signed_on = true;
         function toKansas(resp) {
+            kansas_ui.hideSpinner();
             var user = resp.displayName;
             $("#homescreen").fadeOut('slow');
             $(".home-hidden").fadeIn('slow');
@@ -103,13 +104,14 @@ function enterGame() {
             client.send("connect", connect_info);
         }
         gapi.client.load('plus','v1', function() {
-            kansas_ui.showSpinner("Logging in...");
+            kansas_ui.showSpinner();
             var request = gapi.client.plus.people.get({
                 'userId': 'me'
             });
             request.execute(toKansas);
         });
     }
+    kansas_ui.showSpinner("Logging in...");
     doLogin(true, signinCallback);
 }
 
