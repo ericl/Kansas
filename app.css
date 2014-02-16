@@ -596,7 +596,7 @@ div.hovernote {
     background-color: white;
     position: absolute;
     font-size: small;
-    z-index: 5555555555;
+    z-index: 5555555;
     bottom: -2px;
     right: 0;
     width: 200px;
