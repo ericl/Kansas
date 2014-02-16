@@ -27,7 +27,7 @@ html, body {
 }
 
 .lastmsg {
-  color: orange;
+    color: orange;
 }
 
 .deckheader {
@@ -584,7 +584,7 @@ div.hovernote {
     padding-bottom: 10px;
 }
 
-#presence, #chat {
+#presence {
     float: right;
     color: lightgray;
     font-size: small;
@@ -592,25 +592,50 @@ div.hovernote {
     clear: right;
 }
 
+#chat {
+    background-color: white;
+    position: absolute;
+    font-size: small;
+    z-index: 5555555555;
+    bottom: 0;
+    right: 0;
+    width: 200px;
+    color: #999;
+}
+
 .geoip {
   color: lightgray;
 }
 
-#chat {
-    color: #999;
-    padding-top: 0;
-    max-width: 270px;
-    min-width: 270px;
+#chatbanner {
+    padding: 0.5em;
+    background-color: #404040;
+    cursor: pointer;
+}
+
+#chattext {
+    padding: 0.5em;
+    position: relative;
+    bottom: 0;
+    height: 200px;
+    overflow-y: scroll;
 }
 
 #chatbox {
-    background-color: #474747;
     border: none;
-    padding-left: 13px;
-    width: 200px;
     outline: 0;
     color: gray;
+    margin-left: 5px;
+    margin-bottom: 10px;
 }
+
+#chatcaret {
+    margin-left: 5px;
+    float: left;
+    color: gray;
+    margin-bottom: 10px;
+}
+
 
 ::-webkit-input-placeholder { /* WebKit browsers */
     color:    gray;
@@ -620,11 +645,6 @@ div.hovernote {
 }
 ::-moz-placeholder { /* Mozilla Firefox 19+ */
     color:    gray;
-}
-
-#chatcaret {
-    margin-left: -213px;
-    color: gray;
 }
 
 #notfound {

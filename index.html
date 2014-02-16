@@ -76,8 +76,8 @@
             <br>
             <br>
             <div id="deckinput" contentEditable=true>
-                === Welcome to the card browser ===<br><br>Use the search bar above to find cards and add them to your deck list. Then hit 'Preview' below to further edit your deck and add it to the board.<br><br>Tip: use Ctrl-F to jump to card search.<br><span id=samplecards></span><br></div>
-
+                === Welcome to the card browser ===<br><br>Use the search bar above to find cards and add them to your deck list. Then hit 'Preview' below to further edit your deck and add it to the board.<br><br>Tip: use Ctrl-F to jump to card search.<br><span id='samplecards'></span><br>
+            </div>
                 <br>
                 <button id="validate">Preview</button>
                 <button id="add" class="requiresvalidation" disabled=true>Add to Board</button>
@@ -99,7 +99,14 @@
             </div>
             <div id="stats" style="display: none; font-family: sans-serif; float: right; border-bottom-left-radius: 15px; padding-right: 10px; z-index: 0; padding: 12px; color: white; background-color: green; font-size: 25pt;">Error.</div>
             <div id="presence"></div>
-            <div id="chat" class="home-hidden"><span id="chattext">You haven't received any messages yet.</span><br><input id="chatbox" maxlength=200 placeholder="Tip: type 'm' to start message"><span id="chatcaret">&gt;</div>
+            <div id="chat" class='home-hidden'>
+                <div id='chatbanner'>Chat</div>
+                <div id='chat-wrapper' style='display:none'>
+                    <div id="chattext">You haven't received any messages yet.</div>
+                    <input id="chatbox" maxlength=200 placeholder="Tip: type 'm' to start message">
+                    <span id="chatcaret">&gt;</span>
+                </div>
+            </div>
             <div id="selectionbox"><span></span></div>
             <div id="selectionarea"></div>
             <div id="hand" class="collapsed home-hidden"></div>

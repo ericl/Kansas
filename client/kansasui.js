@@ -1826,7 +1826,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                     for (i in cards) {
                         if (cards[i][1] == name) {
                             cards[i][0] -= 1;
-                            if (cards[i][0] == 0) { 
+                            if (cards[i][0] == 0) {
                                 cards[i][1] = null;  // remove card on hitting zero
                             }
                         }
@@ -1861,6 +1861,8 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         }
         if (key == 109 /* 'm' */) {
             $("#chatbox").select().prop("placeholder", "");
+            $("#chat-wrapper").slideDown();
+            $('#chatbox').focus();
             return false;
         }
     });
@@ -1879,6 +1881,15 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                     });
             }
             $("#chatbox").val("");
+        }
+    });
+
+    $("#chatbanner").on('click', function (e) {
+        if ($('#chat-wrapper').is(':visible')) {
+            $('#chat-wrapper').slideUp();
+        } else {
+            $('#chat-wrapper').slideDown();
+            $('#chatbox').focus();
         }
     });
 
@@ -2207,6 +2218,17 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
             var elem = $(ui.unselecting);
             elem.removeClass("selecting");
         },
+    });
+
+    $("#chat").draggable({
+        handle: "#chatbanner",
+        containment: $("#arena"),
+    });
+
+    $("#chat").bind("dragstart", function(event, ui) {
+        $("#chat").css("bottom", "auto");
+        $("#chat").css("right", "auto");
+        $("#chatbanner").off();
     });
 
     $("#selectionbox").draggable({
@@ -2949,7 +2971,7 @@ function htmlForTextWithEmbeddedNewlines(text) {
     for (var i = 0 ; i < lines.length ; i++) {
         var html = tmpDiv.text(lines[i]).html()
         if (i == lines.length - 1) {
-            html = '<span class=lastmsg>' + html + '</span>';
+            html = '<span class="lastmsg">' + html + '</span>';
         }
         htmls.push(html);
     }
@@ -2993,16 +3015,15 @@ KansasUI.prototype.handleBroadcast = function(data) {
                 newtext = data.msg;
             }
             this.chatHistory.push(newtext);
-            var lim = 5;
-            if (this.chatHistory.length > lim) {
-                this.chatHistory = this.chatHistory.slice(
-                    this.chatHistory.length - lim);
-            }
             $("#chattext").html(
                 htmlForTextWithEmbeddedNewlines(
                     this.chatHistory.join("\n")));
+              var elem = document.getElementById('chattext');
+              elem.scrollTop = elem.scrollHeight;
             if (selfmsg) {
                 $(".lastmsg").removeClass("lastmsg");
+            } else if (!$('#chat-wrapper').is(':visible')) {
+                $("#chatbanner").fadeIn(100).fadeOut(100).fadeIn(100).fadeIn(100).fadeOut(100).fadeIn(100);
             }
             break;
     }
