@@ -953,6 +953,17 @@ KansasUI.prototype._handleSelectionClicked = function(selectedSet, event) {
             this.deepenSelectionTimeoutId = null;
         }
     } else {
+        var txn = this.view.startBulkMove();
+        var that = this;
+        $.each(zSorted(selectedSet), function() {
+            var orient = that.client.getOrient($(this));
+            if (Math.abs(orient) == 1) {
+                txn.rotate($(this));
+            } else {
+                txn.unrotate($(this));
+            }
+        });
+        txn.commit();
         this._removeFocus();
     }
 }
@@ -1345,10 +1356,10 @@ KansasUI.prototype._showHoverMenu = function(card) {
     var old = $(".hovermenu");
     var oldimg = $(".hovermenu img");
     if (card.length > 1) {
-        hoverCardId = "#selectionbox";
+        this.hoverCardId = "#selectionbox";
         var newNode = this._menuForSelection(card);
     } else {
-        hoverCardId = card.prop("id");
+        this.hoverCardId = card.prop("id");
         var newNode = this._menuForCard(card);
     }
 
@@ -1472,7 +1483,7 @@ KansasUI.prototype._menuForSelection = function(selectedSet) {
 }
 
 KansasUI.prototype._menuForCard = function(card) {
-    this.vlog(2, "Hover menu for #" + hoverCardId
+    this.vlog(2, "Hover menu for #" + this.hoverCardId
         + "@" + this.client.getPos(card)[1]);
     var numCards = this.client.stackHeight(card);
     var i = numCards - this.client.stackIndex(card);
@@ -2833,6 +2844,7 @@ KansasUI.prototype._initCards = function(sel) {
                 }
             } else if (that.hoverCardId != card.prop("id")) {
                 if (!inophand) {
+                    console.log(that.hoverCardId + " " + card.prop("id"));
                     that.vlog(2, "case 3a");
                     // Taps/untaps by middle-click.
                     if (event.which == 2) {
@@ -2846,7 +2858,8 @@ KansasUI.prototype._initCards = function(sel) {
                 }
             } else {
                 that.vlog(2, "case 4");
-                removeFocus();
+                that._toggleRotateCard(card);
+                that._removeFocus();
             }
         }
         that.disableArenaEvents = true;
