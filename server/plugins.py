@@ -505,17 +505,27 @@ class LocalDBPlugin(DefaultPlugin):
             def expand(parts):
                 out = []
                 num_mana = 0
+                num_other_mana = 0
                 for p in parts:
                     if p == 'x':
                         out.append('mana=X')
                     if p in mana:
                         num_mana += 1
+                    if p in other_mana:
+                        num_other_mana += 1
                     if p in mana or p in other_mana:
                         out.append('mana=' + p)
-                if num_mana == 1 and 'dual' not in out:
-                    out.append('mana=mono')
-                elif num_mana == 2 and 'mono' not in out:
-                    out.append('mana=dual')
+                if num_other_mana == 0:
+                    if num_mana == 1:
+                        out.append('mana=mono')
+                    elif num_mana == 2:
+                        out.append('mana=dual')
+                    elif num_mana == 3:
+                        out.append('mana=tri')
+                    elif num_mana == 4:
+                        out.append('mana=quad')
+                    elif num_mana == 5:
+                        out.append('mana=all')
                 return out
             ct = 0
             ranked = collections.defaultdict(list)
