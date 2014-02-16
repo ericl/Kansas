@@ -472,6 +472,7 @@ class LocalDBPlugin(DefaultPlugin):
                     'info_url': self.catalog[needle],
                 })
         else:
+            range_expr = "(\d+)\s*(to|-)\s*(\d+)\s*(mana|cost|cmc)"
             mana_expr = "(mana|cost|cmc)\s*(>|<|>=|<=|=|==|)\s*(\d+)"
             mana_expr2 = "(\d+)\s*(mana|cost|cmc)"
             predicates = []
@@ -488,6 +489,14 @@ class LocalDBPlugin(DefaultPlugin):
                     predicates.append(lambda c: c.cost <= val)
                 else:
                     assert False, op
+            for match in re.finditer(range_expr, needle):
+                needle = re.sub(range_expr, '', needle)
+                lo, hi = int(match.group(1)), int(match.group(3))
+                if lo > hi:
+                    lo, hi = hi, lo
+                logging.info("Using predicate: cost in [%d, %d]" % (lo, hi))
+                add_pred(">=", lo)
+                add_pred("<=", hi)
             for match in re.finditer(mana_expr, needle):
                 needle = re.sub(mana_expr, '', needle)
                 op, val = match.group(2), int(match.group(3))
