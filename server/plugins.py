@@ -262,6 +262,8 @@ class CardCatalog(object):
             except:
                 pass
         logging.info("FOUND " + str(total))
+        if total >= 60:
+            return []
         colorVotes = collections.defaultdict(float)
         for card in deck.values():
             colors = card.colors()
@@ -574,7 +576,7 @@ class MagicCardsInfoPlugin(DefaultPlugin):
     def SampleDeck(self, term, num_decks):
         return Catalog.makeDecks(term, num_decks)
 
-    def Fetch(self, name, exact):
+    def Fetch(self, name, exact, limit):
         if name == '':
             return [], {}
 

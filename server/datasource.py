@@ -15,7 +15,7 @@ Knowledge = namespaces.Namespace(
 
 _SOURCES = {
     'localdb': plugins.LocalDBPlugin(),
-#    'magiccards.info': plugins.MagicCardsInfoPlugin(),
+    'magiccards.info': plugins.MagicCardsInfoPlugin(),
     'pokerdb': plugins.PokerCardsPlugin(),
 }
 

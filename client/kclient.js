@@ -50,7 +50,7 @@
  *          .commit();
  */
 
-var kClientVersion = 82;  // keep in sync with config.py
+var kClientVersion = 86;  // keep in sync with config.py
 
 function checkVersion(required) {
     if (required && required != kClientVersion) {
@@ -101,7 +101,7 @@ function toId(id) {
 }
 
 KansasClient.prototype.queueLatencyMillis = function() {
-    if (this._ws.lastSent > this._ws.lastAction) {
+    if (this._ws.lastSent >= this._ws.lastAction) {
         return new Date() - this._ws.lastAction;
     }
     return 0;
