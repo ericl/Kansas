@@ -1884,8 +1884,9 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         }
         if (key == 109 /* 'm' */) {
             $("#chatbox").select().prop("placeholder", "");
-            $("#chat-wrapper").slideDown();
+            $("#chat-wrapper").slideDown('fast');
             $('#chatbox').focus();
+            that._redrawHand();
             return false;
         }
     });
@@ -1909,10 +1910,11 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
 
     $("#chatbanner").on('click', function (e) {
         if ($('#chat-wrapper').is(':visible')) {
-            $('#chat-wrapper').slideUp();
+            $('#chat-wrapper').slideUp('fast', that._redrawHand.bind(that));
         } else {
-            $('#chat-wrapper').slideDown();
+            $('#chat-wrapper').slideDown('fast');
             $('#chatbox').focus();
+            that._redrawHand();
         }
     });
 
@@ -2588,6 +2590,9 @@ KansasUI.prototype._redrawHand = function() {
     var kHandSpacing = 4;
     var kConsiderUnloaded = 20;
     var handWidth = $("#hand").outerWidth();
+    if ($("#chatbox").is(":visible")) {
+        handWidth -= $("#chat").outerWidth();
+    }
     var cardWidth = kCardWidth + 6;
     var cardHeight = kCardHeight + 6;
     var collapsedHandSpacing = Math.min(
