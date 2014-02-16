@@ -2223,9 +2223,13 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
     $("#chat").draggable({
         handle: "#chatbanner",
         containment: $("#arena"),
+        distance: 50,
     });
 
     $("#chat").bind("dragstart", function(event, ui) {
+        if (!$("#chatbox").is(":visible")) {
+            return false;
+        }
         $("#chat").css("bottom", "auto");
         $("#chat").css("right", "auto");
         $("#chatbanner").off();
