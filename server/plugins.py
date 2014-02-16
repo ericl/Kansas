@@ -503,18 +503,19 @@ class LocalDBPlugin(DefaultPlugin):
             mana = {'red', 'blue', 'white', 'black', 'green'}
             other_mana = {'dual', 'mono', 'multi', 'colored', 'colorless', 'single', 'two', 'three', 'tri', 'quad', 'four', 'five', 'all', 'rainbow'}
             def expand(parts):
+                core = []
                 out = []
                 num_mana = 0
                 num_other_mana = 0
                 for p in parts:
-                    if p == 'x':
-                        out.append('mana=X')
                     if p in mana:
                         num_mana += 1
                     if p in other_mana:
                         num_other_mana += 1
-                    if p in mana or p in other_mana:
+                    if p in mana or p in other_mana or p == 'x':
                         out.append('mana=' + p)
+                    else:
+                        core.append(p)
                 if num_other_mana == 0:
                     if num_mana == 1:
                         out.append('mana=mono')
@@ -526,14 +527,14 @@ class LocalDBPlugin(DefaultPlugin):
                         out.append('mana=quad')
                     elif num_mana == 5:
                         out.append('mana=all')
-                return out
+                return core, out
             ct = 0
             ranked = collections.defaultdict(list)
             try:
                 parts = shlex.split(needle)
             except ValueError:
                 parts = needle.split()
-            expanded = expand(parts)
+            parts, expanded = expand(parts)
             logging.info("Expanded query: " + str(parts) + " " + str(expanded))
             for title, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(title)
