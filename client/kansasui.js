@@ -953,17 +953,29 @@ KansasUI.prototype._handleSelectionClicked = function(selectedSet, event) {
             this.deepenSelectionTimeoutId = null;
         }
     } else {
-        var txn = this.view.startBulkMove();
-        var that = this;
-        $.each(zSorted(selectedSet), function() {
-            var orient = that.client.getOrient($(this));
-            if (Math.abs(orient) == 1) {
-                txn.rotate($(this));
-            } else {
-                txn.unrotate($(this));
-            }
-        });
-        txn.commit();
+        if (!this.client.inHand(selectedSet)) {
+            var txn = this.view.startBulkMove();
+            var that = this;
+            var num_rotated = 0;
+            var num_unrotated = 0;
+            $.each(selectedSet, function() {
+                var orient = that.client.getOrient($(this));
+                if (Math.abs(orient) == 1) {
+                    num_unrotated += 1;
+                } else {
+                    num_rotated += 1;
+                }
+            });
+            $.each(zSorted(selectedSet), function() {
+                var orient = that.client.getOrient($(this));
+                if (num_unrotated > num_rotated) {
+                    txn.rotate($(this));
+                } else {
+                    txn.unrotate($(this));
+                }
+            });
+            txn.commit();
+        }
         this._removeFocus();
     }
 }
@@ -2858,7 +2870,13 @@ KansasUI.prototype._initCards = function(sel) {
                 }
             } else {
                 that.vlog(2, "case 4");
-                that._toggleRotateCard(card);
+                if (!that.client.inHand(card)) {
+                    if (that.client.stackHeight(card) > 10) {
+                        that._draw(card);
+                    } else {
+                        that._toggleRotateCard(card);
+                    }
+                }
                 that._removeFocus();
             }
         }

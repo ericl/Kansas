@@ -50,14 +50,24 @@
  *          .commit();
  */
 
-var kClientVersion = 101;  // keep in sync with config.py
+var kClientVersion = 114;  // keep in sync with config.py
+var versionRequired = kClientVersion;
 
-function checkVersion(required) {
-    if (required && required != kClientVersion) {
-        if (confirm("Server requires client version " + required + ", reload page now?")) {
-            window.location.reload();
+function doCheckPopup() {
+    if (versionRequired != kClientVersion) {
+        if (document.hasFocus()) {
+            if (confirm("Server requires client version " + versionRequired + ", reload page now?")) {
+                window.location.reload();
+            }
+        } else {
+            console.log("Have version " + kClientVersion + ", require " + versionRequired + ".");
         }
     }
+}
+
+function checkVersion(required) {
+    versionRequired = required;
+    doCheckPopup();
 }
 
 function KansasClient(hostname, ip_port, kansas_ui, scope, sourceid) {
@@ -78,7 +88,8 @@ function KansasClient(hostname, ip_port, kansas_ui, scope, sourceid) {
         if (that._state == 'connected') {
             that._ws.send('keepalive');
         }
-    }, 30000);
+        doCheckPopup();
+    }, 15000);
 }
 
 (function() {  /* begin namespace kclient */
