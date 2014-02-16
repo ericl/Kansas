@@ -473,6 +473,7 @@ class LocalDBPlugin(DefaultPlugin):
                 })
         else:
             mana_expr = "(mana|cost|cmc)\s*(>|<|>=|<=|=|==|)\s*(\d+)"
+            mana_expr2 = "(\d+)\s*(mana|cost|cmc)"
             predicates = []
             def add_pred(op, val):
                 if op == '==':
@@ -492,6 +493,11 @@ class LocalDBPlugin(DefaultPlugin):
                 op, val = match.group(2), int(match.group(3))
                 if op == '=' or op == '':
                     op = '=='
+                logging.info("Using predicate: cost %s %d" % (op, val))
+                add_pred(op, val)
+            for match in re.finditer(mana_expr2, needle):
+                needle = re.sub(mana_expr2, '', needle)
+                op, val = '==', int(match.group(1))
                 logging.info("Using predicate: cost %s %d" % (op, val))
                 add_pred(op, val)
             mana = {'red', 'blue', 'white', 'black', 'green'}
