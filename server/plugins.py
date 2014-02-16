@@ -510,7 +510,6 @@ class LocalDBPlugin(DefaultPlugin):
                     out.append('mana=mono')
                 elif num_mana == 2 and 'mono' not in out:
                     out.append('mana=dual')
-                logging.info("Expanded query: " + str(out))
                 return out
             ct = 0
             ranked = collections.defaultdict(list)
@@ -519,6 +518,7 @@ class LocalDBPlugin(DefaultPlugin):
             except ValueError:
                 parts = needle.split()
             expanded = expand(parts)
+            logging.info("Expanded query: " + str(parts) + " " + str(expanded))
             for title, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(title)
                 rank = 0.0
@@ -529,7 +529,7 @@ class LocalDBPlugin(DefaultPlugin):
                         continue
                 if needle == title:
                     rank += 20
-                def rankit(p, missing):
+                def rankit(p, has):
                     rank = 0
                     if p in title or p in card.searchtype:
                         rank += 1
@@ -541,17 +541,17 @@ class LocalDBPlugin(DefaultPlugin):
                         else:
                             rank += 1
                     else:
-                        missing[0] += 1
+                        has[0] -= 1
                     return rank
                 if card:
                     if card.goodQuality:
                         rank += 0.5
-                    missing = [0]
+                    has_bonus = [len(parts)]
                     for p in parts:
-                        rank += rankit(p, missing)
-                    rank -= 3 * missing[0]
+                        rank += rankit(p, has_bonus)
+                    rank += 3 * has_bonus[0]
                     for p in expanded:
-                        rank += rankit(p, missing)
+                        rank += rankit(p, has_bonus)
                 if rank >= 1:
                     ranked[rank].append(title)
             ranks = sorted(ranked.keys(), reverse=True)
