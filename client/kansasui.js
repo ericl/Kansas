@@ -158,25 +158,26 @@ function deckPanelVisible() {
 
 KansasUI.prototype._showDeckPanel = function(cb, imm) {
     this._refreshDeckList();
-    function load() {
-        $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);
-        if (!isMobile.any()) {
-            $("#kansas_typeahead").select();
-        }
-    }
+    var panelLoadReq = null;
     if (this.firstTimeShowingPanel) {
         this.firstTimeShowingPanel = false;
-        this.client.callAsync("samplecards").then(function(data) {
+        panelLoadReq = this.client.callAsync("samplecards").then(function(data) {
             var html = "<br>";
             for (i in data) {
                 html += data[i] + "<br>";
             }
             $("#samplecards").html(html);
-            load();
         });
     } else {
-        load();
+        panelLoadReq = new Future();
+        panelLoadReq.set();
     }
+    panelLoadReq.then(function() {
+        $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);
+        if (!isMobile.any()) {
+            $("#kansas_typeahead").select();
+        }
+    });
 }
 
 /**
@@ -1039,10 +1040,10 @@ KansasUI.prototype._removeCard = function() {
         var cards = $.map(this.selectedSet, function(x) {
             return parseInt(x.id.substr(5));
         });
-        this.client.callAsync("remove", cards).done();
+        this.client.callAsync("remove", cards);
         num = cards.length;
     } else {
-        this.client.callAsync("remove", [parseInt(this.activeCard.attr("id").substr(5))]).done();
+        this.client.callAsync("remove", [parseInt(this.activeCard.attr("id").substr(5))]);
         num = 1;
     }
     this.fyi(this.user + " has removed " + num + " cards.");
@@ -1174,7 +1175,6 @@ KansasUI.prototype._browseStack = function(memberCard, useSelection) {
     for (i in cards) {
         i_counts.push(counts[cards[i]['img_url']]);
     }
-    console.log(counts);
 
     this._showDeckPanel(function() {
         s.previewItems(cards, null, true, i_counts);
@@ -1794,7 +1794,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                     client.callAsync('add', {
                         'cards': [{tohand: true, loc: that.hand_user, name: name}],
                         'requestor': that.uuid,
-                    }).done();
+                    });
                 });
                 var addButton = $("<div title='Add to deck list' class='cardbutton addbutton'>+</div>").appendTo(cardbox);
                 if (found) {
@@ -2122,12 +2122,10 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         shuffle(toAdd);
         var oldStack = client.getStack('board', pos);
         if (oldStack) {
-            client.callAsync('remove', oldStack).done();
+            client.callAsync('remove', oldStack);
         }
         that.fyi(that.user + " has added " + that.pronoun() + " new deck to the board.");
-        client
-            .callAsync('add', {'cards': toAdd, 'requestor': uuid})
-            .done();
+        client.callAsync('add', {'cards': toAdd, 'requestor': uuid});
         hideDeckPanel();
     });
 
@@ -2856,7 +2854,6 @@ KansasUI.prototype._initCards = function(sel) {
                 }
             } else if (that.hoverCardId != card.prop("id")) {
                 if (!inophand) {
-                    console.log(that.hoverCardId + " " + card.prop("id"));
                     that.vlog(2, "case 3a");
                     // Taps/untaps by middle-click.
                     if (event.which == 2) {
@@ -2871,11 +2868,7 @@ KansasUI.prototype._initCards = function(sel) {
             } else {
                 that.vlog(2, "case 4");
                 if (!that.client.inHand(card)) {
-                    if (that.client.stackHeight(card) > 10) {
-                        that._draw(card);
-                    } else {
-                        that._toggleRotateCard(card);
-                    }
+                    that._toggleRotateCard(card);
                 }
                 that._removeFocus();
             }
@@ -2972,12 +2965,12 @@ KansasUI.prototype._setDeckInputHtml = function(res) {
 
 KansasUI.prototype._refreshDeckList = function() {
     var that = this;
-    this.vlog(1, 'send refresh deck');
+    this.vlog(2, 'send refresh deck');
     this.client.callAsync('kvop', {
         'namespace': 'Decks#' + that.user_id,
         'op': 'List',
     }).then(function(data) {
-        that.vlog(1, 'showing deck data');
+        that.vlog(2, 'showing deck data');
         var html = "<br>Your saved decks:";
         that.decksAvail = data['resp'];
         data['resp'].forEach(function(name) {

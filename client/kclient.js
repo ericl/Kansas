@@ -11,7 +11,7 @@
  *
  *  to send a message:
  *      var fut = kclient.callAsync(msg_type, msg_payload);
- *      fut.then(myCallback).then(mySecondCallback);
+ *      fut.then(myAsyncCallback).then(mySecondCallback);
  *
  *  to send raw messages:
  *      kclient.send(msg_type, args);
@@ -50,7 +50,7 @@
  *          .commit();
  */
 
-var kClientVersion = 114;  // keep in sync with config.py
+var kClientVersion = 123;  // keep in sync with config.py
 var versionRequired = kClientVersion;
 
 function doCheckPopup() {
@@ -180,10 +180,11 @@ KansasClient.prototype.bind = function(name, fn) {
 /* Sends message and returns a pending Future for the result.
  * The client will be "Loading..." as long as the Future is pending. */
 KansasClient.prototype.callAsync = function(tag, data) {
-    var fut = new Future(tag);
+    var uniq_tag = tag + "_" + Math.random().toString(36).substring(2);
+    var fut = new Future();
     if (this._ws != null) {
-        this._ws.send(tag, data, fut.id);
-        this._futures[fut.id] = fut;
+        this._ws.send(tag, data, uniq_tag);
+        this._futures[uniq_tag] = fut;
     }
     return fut;
 }
@@ -359,7 +360,7 @@ KansasClient.prototype._eventHandlers = function(that) {
     return {
         _future_router: function(e) {
             if (that._futures[e.future_id]) {
-                that._futures[e.future_id].complete(e.data);
+                that._futures[e.future_id].set(e.data);
                 delete that._futures[e.future_id];
             } else {
                 that.ui.vlog(0, "Dropped future: " + JSON.stringify(e.future_id));

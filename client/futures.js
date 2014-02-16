@@ -2,80 +2,82 @@
  * A simple implementation of Futures in javascript.
  * 
  *  Usage:
- *      var fut1 = Future();
- *      var fut2 = fut1.then(function(v) {
- *          return v * 2;
+ *      var fut1 = UI.showNonModalPrompt("What is your name?");
+ *
+ *      fut1.then(function(v, continueWith) {
+ *          if (v == null) {
+ *              continueWith("Illegal login name: " + v);
+ *          } else {
+ *              $.ajax(v, ...).done(continueWith);
+ *          }
+ *      }).then(function(v) {
+ *          console.log("Login result is: " + v);
  *      });
- *      var fut3 = fut2.then(function(v) {
- *          console.log(v + 10);
- *      });
- *      fut1.complete(4);
- *      >> 18
- *      fut3.state;
- *      >> 'completed'
+ *
+ *      fut1.set("Alice");
+ *      >> Login result is: hello Alice, you are now logged in.
  */
 
-function Future(tag, isChild) {
-    this.result = null;
-    this.state = 'pending';
-    this.id = tag + "_" + Math.random().toString(36).substring(2)
-    this.isChild = isChild;
-    this._oncomplete = null;
+function Future() {
+    this._state = 'pending';
+    this._oncomplete = undefined;
+    this._result = undefined;
 }
 
 
 (function() {  /* begin namespace futures */
 
 /**
- * When this future completes, execute the given _oncomplete on the result.
- * Returns another future on the result of the _oncomplete given.
+ * When this future completes, runs callback with the computed result.
+ * @param callback: Called when this future is completed.
+ * @return Future on the optional result of the callback.
+ *
+ * Callback takes three optional arguments:
+ *  value: The value this future was completed with.
+ *  continueWith: Function that completes the returned future with its first argument.
+ *  retryWith: Function that retries this callback with its first argument.
+ *
+ * Using continueWith and retryWith, it is possible to express complex work flows
+ * using Futures while avoiding nested callbacks. For example, consider this
+ * login flow example:
+ * 
+ * UI.showNonModalPrompt("What is your name?")
+ *   .then(function(v, continueWith, retryWith) {
+ *       if (v) {
+ *           $.ajax(v, ...).done(continueWith);
+ *       } else {
+ *           $.showNonModalPrompt("Try again. Your name?").then(retryWith);
+ *       }
+ *   }).then(function(v) { console.log("Login result: " + v));
  */
 Future.prototype.then = function(callback) {
-    if (this._oncomplete !== null) {
+    if (this._oncomplete !== undefined) {
         throw "callback already set for this future.";
     }
-
-    var child = new Future(this.id, true);
-    this._oncomplete = function(v) {
-        child.complete(callback(v));
+    var child = new Future();
+    this._oncomplete = function(value) {
+        function retryWith(newValue) {
+            callback(newValue, child.set.bind(child), retryWith);
+        }
+        callback(value, child.set.bind(child), retryWith);
     };
-
     if (this.state == 'completed') {
         this._oncomplete(this.result);
-        console.log("Note: Late completion of " + this.id);
     }
-
     return child;
-}
-
-/* Convenience function to ignore a future's result. */
-Future.prototype.done = function() {
-    this.then(function() {});
-}
-
-/* Convenience function to print a future's result. */
-Future.prototype.print = function() {
-    this.then(function(v) {
-        console.log(JSON.stringify(v));
-    });
 }
 
 /**
  * Called on this future when the pending computation is completed.
  */
-Future.prototype.complete = function(result) {
+Future.prototype.set = function(result) {
     if (this.state == 'completed') {
         throw "This future has already completed.";
     }
-
     this.result = result;
-    if (this._oncomplete !== null) {
+    if (this._oncomplete !== undefined) {
         this._oncomplete(result);
-    } else if (!this.isChild) {
-        console.log("Note: future "
-            + this.id + " completed without callback.");
     }
-
     this.state = 'completed';
 }
 

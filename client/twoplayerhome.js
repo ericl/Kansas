@@ -49,70 +49,76 @@ $(window).bind('hashchange', function() {
     }
 });
 
-function doLogin(immediate, cb) {
-    gapi.auth.authorize({
-        client_id: "8882673983-m7poir3vrdgjqeeavqh2i7jf7geeo2tk.apps.googleusercontent.com",
-        immediate: immediate,
-        scope: "profile",
-    }, cb);
-}
+var kClientId = "8882673983-m7poir3vrdgjqeeavqh2i7jf7geeo2tk.apps.googleusercontent.com";
 
 function enterGame() {
-    function signinCallback(authResult) {
-        if (authResult == null) {
-            console.log("Not already logged in.");
-            doLogin(false, signinCallback);
-            return;
-        }
-        console.log(authResult);
-        if (!authResult.status.signed_in) {
-            if (authResult.error != "immediate_failed") {
-                console.log("You are not logged in.");
-                document.location = "/";
-            }
-            return;
-        }
-        if (signed_on) {
-            return;
-        }
-        signed_on = true;
-        function toKansas(resp) {
-            kansas_ui.hideSpinner();
-            var user = resp.displayName;
-            $("#homescreen").fadeOut('slow');
-            $(".home-hidden").fadeIn('slow');
-            var orient;
-            if ($("#player1").is(":checked")) {
-                orient = "player1";
-            } else {
-                orient = "player2";
-            }
-            document.title = 'Kansas: ' + orient + '@' + gameid;
-            prev_hash = document.location.hash = orient + ';' + gameid;
-            localstore.put('orient', orient);
-
-            kansas_ui.init(client, uuid, user, orient, gameid, resp.gender, resp.id);
-            connect_info = {
-                user: user,
-                gameid: gameid,
-                uuid: uuid,
-                profile: resp,
-                orient: orient,
-            }
-
-            client._state = 'opened_pending_connect';
-            client.send("connect", connect_info);
-        }
-        gapi.client.load('plus','v1', function() {
-            kansas_ui.showSpinner();
-            var request = gapi.client.plus.people.get({
-                'userId': 'me'
-            });
-            request.execute(toKansas);
-        });
-    }
     kansas_ui.showSpinner("Logging in...");
-    doLogin(true, signinCallback);
+
+    var immediateAuthReq = new Future();
+    gapi.auth.authorize({
+        client_id: kClientId,
+        immediate: true,
+        scope: "profile",
+    }, immediateAuthReq.set.bind(immediateAuthReq));
+
+    var authReq = immediateAuthReq.then(
+        function(authResult, continueWith, retryWith) {
+            console.log("Auth result: " + JSON.stringify(authResult));
+            if (authResult == null || !authResult.status.signed_in) {
+                console.log("Retrying login with immediate = false.");
+                gapi.auth.authorize({
+                    client_id: kClientId,
+                    immediate: false,
+                    scope: "profile",
+                }, retryWith);
+            } else {
+                console.log("Immediate log in succeeded.");
+                continueWith(authResult);
+            }
+        });
+
+    var profileReq = authReq.then(
+        function(authResult, continueWith) {
+            if (signed_on) {
+                console.log("Already signed on.");
+                return;
+            }
+            signed_on = true;
+            gapi.client.load('plus','v1', function() {
+                kansas_ui.showSpinner("Almost done...");
+                gapi.client.plus.people.get({
+                    'userId': 'me'
+                }).execute(continueWith);
+            });
+        });
+    
+    profileReq.then(function(resp) {
+        kansas_ui.hideSpinner();
+        var user = resp.displayName;
+        $("#homescreen").fadeOut('slow');
+        $(".home-hidden").fadeIn('slow');
+        var orient;
+        if ($("#player1").is(":checked")) {
+            orient = "player1";
+        } else {
+            orient = "player2";
+        }
+        document.title = 'Kansas: ' + orient + '@' + gameid;
+        prev_hash = document.location.hash = orient + ';' + gameid;
+        localstore.put('orient', orient);
+
+        kansas_ui.init(client, uuid, user, orient, gameid, resp.gender, resp.id);
+        connect_info = {
+            user: user,
+            gameid: gameid,
+            uuid: uuid,
+            profile: resp,
+            orient: orient,
+        };
+
+        client._state = 'opened_pending_connect';
+        client.send("connect", connect_info);
+    });
 }
 
 function handleRedirect(e) {
