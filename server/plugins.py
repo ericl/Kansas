@@ -107,21 +107,21 @@ class MagicCard(object):
             colorstring += "mana=white "
             numcolors += 1
         if numcolors > 1:
-            colorstring += "multi "
+            colorstring += "mana=multi "
         if numcolors != 0:
-            colorstring += "colored "
+            colorstring += "mana=colored "
         if numcolors == 0:
-            colorstring += "colorless "
+            colorstring += "mana=colorless "
         elif numcolors == 1:
-            colorstring += "mono single "
+            colorstring += "mana=mono mana=single "
         elif numcolors == 2:
-            colorstring += "dual two "
+            colorstring += "mana=dual mana=two "
         elif numcolors == 3:
-            colorstring += "tri three "
+            colorstring += "mana=tri mana=three "
         elif numcolors == 4:
-            colorstring += "quad four "
+            colorstring += "mana=quad mana=four "
         elif numcolors == 5:
-            colorstring += "five all rainbow "
+            colorstring += "mana=five mana=all mana=rainbow "
         self.searchtext = ' '.join([self.name, self.type, self.text, self.subtype, coststring, colorstring, 'mana=' + self.mana]).lower()
         self.searchtokens = set(self.searchtext.split())
         self.tokens = (
@@ -495,6 +495,7 @@ class LocalDBPlugin(DefaultPlugin):
                 logging.info("Using predicate: cost %s %d" % (op, val))
                 add_pred(op, val)
             mana = {'red', 'blue', 'white', 'black', 'green'}
+            other_mana = {'dual', 'mono', 'multi', 'colored', 'colorless', 'single', 'two', 'three', 'tri', 'quad', 'four', 'five', 'all', 'rainbow'}
             def expand(parts):
                 out = []
                 num_mana = 0
@@ -503,12 +504,12 @@ class LocalDBPlugin(DefaultPlugin):
                         out.append('mana=X')
                     if p in mana:
                         num_mana += 1
+                    if p in mana or p in other_mana:
                         out.append('mana=' + p)
-                    out.append(p)
                 if num_mana == 1 and 'dual' not in out:
-                    out.append('mono')
+                    out.append('mana=mono')
                 elif num_mana == 2 and 'mono' not in out:
-                    out.append('dual')
+                    out.append('mana=dual')
                 logging.info("Expanded query: " + str(out))
                 return out
             ct = 0
@@ -517,7 +518,7 @@ class LocalDBPlugin(DefaultPlugin):
                 parts = shlex.split(needle)
             except ValueError:
                 parts = needle.split()
-            parts = expand(parts)
+            expanded = expand(parts)
             for title, url in self.catalog.iteritems():
                 card = Catalog.bySlug.get(title)
                 rank = 0.0
@@ -528,19 +529,29 @@ class LocalDBPlugin(DefaultPlugin):
                         continue
                 if needle == title:
                     rank += 20
+                def rankit(p, missing):
+                    rank = 0
+                    if p in title or p in card.searchtype:
+                        rank += 1
+                    if p in card.searchtokens:
+                        rank += 1
+                    if p in card.searchtext:
+                        if ' ' in p:
+                            rank += len(p.split())
+                        else:
+                            rank += 1
+                    else:
+                        missing[0] += 1
+                    return rank
                 if card:
                     if card.goodQuality:
                         rank += 0.5
+                    missing = [0]
                     for p in parts:
-                        if p in title or p in card.searchtype:
-                            rank += 1
-                        if p in card.searchtokens:
-                            rank += 1
-                        if p in card.searchtext:
-                            if ' ' in p:
-                                rank += len(p.split())
-                            else:
-                                rank += 1
+                        rank += rankit(p, missing)
+                    rank -= 3 * missing[0]
+                    for p in expanded:
+                        rank += rankit(p, missing)
                 if rank >= 1:
                     ranked[rank].append(title)
             ranks = sorted(ranked.keys(), reverse=True)
