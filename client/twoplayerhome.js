@@ -52,48 +52,55 @@ $(window).bind('hashchange', function() {
 var kClientId = "8882673983-m7poir3vrdgjqeeavqh2i7jf7geeo2tk.apps.googleusercontent.com";
 
 function enterGame() {
-    kansas_ui.showSpinner("Logging in...");
+    var profile = localstore.get('profile');
+    if (profile) {
+        var profileReq = new Future();
+        console.log("Using cached profile; run localstore.put('profile') to reset.");
+        profileReq.set(profile);
+    } else {
+        kansas_ui.showSpinner("Logging in...");
+        var immediateAuthReq = new Future();
+        gapi.auth.authorize({
+            client_id: kClientId,
+            immediate: true,
+            scope: "profile",
+        }, immediateAuthReq.set.bind(immediateAuthReq));
 
-    var immediateAuthReq = new Future();
-    gapi.auth.authorize({
-        client_id: kClientId,
-        immediate: true,
-        scope: "profile",
-    }, immediateAuthReq.set.bind(immediateAuthReq));
-
-    var authReq = immediateAuthReq.then(
-        function(authResult, continueWith, retryWith) {
-            console.log("Auth result: " + JSON.stringify(authResult));
-            if (authResult == null || !authResult.status.signed_in) {
-                console.log("Retrying login with immediate = false.");
-                gapi.auth.authorize({
-                    client_id: kClientId,
-                    immediate: false,
-                    scope: "profile",
-                }, retryWith);
-            } else {
-                console.log("Immediate log in succeeded.");
-                continueWith(authResult);
-            }
-        });
-
-    var profileReq = authReq.then(
-        function(authResult, continueWith) {
-            if (signed_on) {
-                console.log("Already signed on.");
-                return;
-            }
-            signed_on = true;
-            gapi.client.load('plus','v1', function() {
-                kansas_ui.showSpinner("Almost done...");
-                gapi.client.plus.people.get({
-                    'userId': 'me'
-                }).execute(continueWith);
+        var authReq = immediateAuthReq.then(
+            function(authResult, continueWith, retryWith) {
+                console.log("Auth result: " + JSON.stringify(authResult));
+                if (authResult == null || !authResult.status.signed_in) {
+                    console.log("Retrying login with immediate = false.");
+                    gapi.auth.authorize({
+                        client_id: kClientId,
+                        immediate: false,
+                        scope: "profile",
+                    }, retryWith);
+                } else {
+                    console.log("Immediate log in succeeded.");
+                    continueWith(authResult);
+                }
             });
-        });
+
+        var profileReq = authReq.then(
+            function(authResult, continueWith) {
+                if (signed_on) {
+                    console.log("Already signed on.");
+                    return;
+                }
+                signed_on = true;
+                gapi.client.load('plus','v1', function() {
+                    kansas_ui.showSpinner("Almost done...");
+                    gapi.client.plus.people.get({
+                        'userId': 'me'
+                    }).execute(continueWith);
+                });
+            });
+    }
     
     profileReq.then(function(resp) {
         kansas_ui.hideSpinner();
+        localstore.put('profile', resp);
         var user = resp.displayName;
         $("#homescreen").fadeOut('slow');
         $(".home-hidden").fadeIn('slow');

@@ -1913,7 +1913,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
             $('#chat-wrapper').slideUp('fast', that._redrawHand.bind(that));
         } else {
             $('#chat-wrapper').slideDown('fast');
-            $('#chatbox').focus();
             that._redrawHand();
         }
     });
