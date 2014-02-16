@@ -161,13 +161,15 @@ KansasUI.prototype._showDeckPanel = function(cb, imm) {
     var panelLoadReq = null;
     if (this.firstTimeShowingPanel) {
         this.firstTimeShowingPanel = false;
-        panelLoadReq = this.client.callAsync("samplecards").then(function(data) {
-            var html = "<br>";
-            for (i in data) {
-                html += data[i] + "<br>";
-            }
-            $("#samplecards").html(html);
-        });
+        panelLoadReq = this.client.callAsync("samplecards").then(
+            function(data, continueWith) {
+                var html = "<br>";
+                for (i in data) {
+                    html += data[i] + "<br>";
+                }
+                $("#samplecards").html(html);
+                continueWith();
+            });
     } else {
         panelLoadReq = new Future();
         panelLoadReq.set();
