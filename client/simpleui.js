@@ -70,11 +70,11 @@ SimpleUI.prototype.handleStackChanged = function(key) {
 }
 
 SimpleUI.prototype.handleBroadcast = function(data) {
-    console.log("Broadcast: " + data);
+    console.log("Broadcast: " + JSON.stringify(data));
 }
 
 SimpleUI.prototype.handlePresence = function(data) {
-    console.log("Presence: " + data);
+    console.log("Presence: " + JSON.stringify(data));
 }
 
 SimpleUI.prototype.showSpinner = function() {}
