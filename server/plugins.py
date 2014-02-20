@@ -466,10 +466,14 @@ class LocalDBPlugin(DefaultPlugin):
         needle = str(name.lower())
         if exact:
             if needle in self.catalog:
+                card = Catalog.byName.get(name)
+                card_type = None
+                if card: card_type = card.type + " " + card.subtype
                 stream.append({
                     'name': name,
                     'img_url': self.catalog[needle],
                     'info_url': self.catalog[needle],
+                    'type': card_type,
                 })
         else:
             range_expr = "(\d+)\s*(to|-)\s*(\d+)\s*(mana|cost|cmc)"
