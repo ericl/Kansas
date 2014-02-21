@@ -3064,7 +3064,7 @@ KansasUI.prototype.fyi = function(msg) {
             uuid: 0,
             name: '',
             msg: msg,
-            include_self: !this.agent_visible,
+            include_self: false,
         });
 }
 
