@@ -1762,6 +1762,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                     event.preventDefault();
                     if (that.selectedSet.length > 0) {
                         var stack = [];
+                        shuffle(that.selectedSet);
                         that.selectedSet.map(function(i) {
                             var card = $(this);
                             var ans = parseInt(card.prop("id").substr(5));
