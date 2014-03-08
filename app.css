@@ -26,8 +26,52 @@ html, body {
     right: 0;
 }
 
+.kansas_header {
+  text-shadow:
+  -1px -1px 0 #000,
+  1px -1px 0 #000,
+  -1px 1px 0 #000,
+  1px 1px 0 #000;
+  color: white;
+}
+
+#logout {
+  text-decoration: none;
+  color: #eee;
+  font-size: small;
+  position: absolute;
+  right: 9px;
+  bottom: 5px;
+}
+
+#logout:hover {
+  text-decoration: underline;
+  color: #eee;
+}
+
+#homescreen, #scopechooser {
+  background: url(third_party/images/208_barren.jpg);
+  background-size: cover;
+  display: none;
+  color: #eee;
+  border-radius: 10px;
+  font-family: sans;
+  position: absolute;
+  width: 550px;
+  top: 10%;
+  left: 50%;
+  margin: 0px 0 0 -300px;
+  padding: 0px 20px 20px 20px;
+  z-index: 9800000;
+  text-shadow:
+  -1px -1px 0 #000,
+  1px -1px 0 #000,
+  -1px 1px 0 #000,
+  1px 1px 0 #000;
+}
+
 .lastmsg {
-    color: orange;
+  color: orange;
 }
 
 .deckheader {
@@ -561,19 +605,6 @@ div.hovernote {
 
 .blueglow:hover {
     background-color: #257491;
-}
-
-#homescreen, #scopechooser {
-    display: none;
-    background-color: #fffbdf;
-    font-family: sans;
-    position: absolute;
-    width: 550px;
-    top: 10%;
-    left: 50%;
-    margin: 0px 0 0 -300px;
-    padding: 0px 20px 20px 20px;
-    z-index: 9800000;
 }
 
 .home-hidden {

@@ -276,10 +276,10 @@ $(document).ready(function() {
             }
         }
     }
-    if (localstore.get('scope')) {
+    if (localstore.get('scope') !== false) {
         scopeset = true;
     }
-    if (localstore.get('sourceid')) {
+    if (localstore.get('sourceid') !== false) {
         sourceset = true;
     }
     if (scopeset && sourceset) {
@@ -329,8 +329,8 @@ $(document).ready(function() {
     });
 
     $("#logout").click(function() {
-        localstore.put('scope', undefined);
-        localstore.put('sourceid', undefined);
+        localstore.put('scope', false);
+        localstore.put('sourceid', false);
     });
 
     $(".entergame").live('click', function(event) {

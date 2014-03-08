@@ -35,8 +35,8 @@
     <body>
         <div id="style"></div>
         <div id="scopechooser">
-            <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
-            <h3>Choose a server name</h3>
+            <h1 class="kansas_header" style="margin: 20px 0px 0px 0px; font-size: 75pt; text-align: center; font-family: Arial">Kansas</h1>
+            <h3>Choose a server name and type</h3>
             <form id="login">
             <input id="scopename" type=textbox value="DEFAULT" name="scope">
             using
@@ -45,22 +45,20 @@
                 <option value="magiccards.info">magiccards.info</option>
                 <option value="pokerdb">standard 52-card deck</option>
             </select>
-            <input type="submit" value="Create / Connect">
+            <input type="submit" value="Join">
             </form>
             <br>
-            <i>Anyone who knows the name you choose may also connect.</i>
+            <i>Anyone who knows what name you choose may also join.</i>
         </div>
         <div id="homescreen">
-            <h1 style="color: rgb(189, 133, 106); margin: 20px 0px 0px 0px; font-size: 55pt; text-align: center; font-family: Arial">Kansas</h1>
+            <h1 class="kansas_header" style="margin: 20px 0px 0px 0px; font-size: 55pt; text-align: center; font-family: Arial">Kansas</h1>
             <h3>Choose Game</h3>
             <div id="gamelist"><span id="gamelist_loading">...</span></div>
             <div class="gamechoice">
-                <input id="gamename" type=textbox>
+                <input id="gamename" style="width:250px" type=textbox>
                 <button id="newgame">New Game</button>
             </div>
-            <hr>
-            <div style="text-align: center; font-size: small;"><b>On server <span id="scopetxt"></span></b> | <a id="logout" href="/">Change server.</a><br>This server is using <span id="sourceidtxt"></span> for data.</div>
-            </div>
+            <a id="logout" href="/">Switch server</a>
         </div>
         <textarea id="console" rows=15 cols=60></textarea><br>
         <div id="deckpanel">
