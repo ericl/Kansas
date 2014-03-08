@@ -51,7 +51,11 @@ $(window).bind('hashchange', function() {
 
 var kClientId = "8882673983-m7poir3vrdgjqeeavqh2i7jf7geeo2tk.apps.googleusercontent.com";
 
-function enterGame() {
+function enterGame(orient) {
+    if (orient != "player1" && orient != "player2") {
+        console.log("Reset invalid orient " + orient + " to player1.");
+        orient = "player1";
+    }
     var profile = localstore.get('profile');
     var profileReq = new Future();
     if (profile) {
@@ -98,12 +102,6 @@ function enterGame() {
         var user = resp.displayName;
         $("#homescreen").fadeOut('slow');
         $(".home-hidden").fadeIn('slow');
-        var orient;
-        if ($("#player1").is(":checked")) {
-            orient = "player1";
-        } else {
-            orient = "player2";
-        }
         document.title = 'Kansas: ' + orient + '@' + gameid;
         prev_hash = document.location.hash = orient + ';' + gameid;
         localstore.put('orient', orient);
@@ -136,11 +134,7 @@ function handleSocketOpen() {
     if (document.location.hash) {
         var arr = document.location.hash.substr(1).split(';');
         gameid = arr[1] || "0";
-        if (arr[0] == "player1")
-            $("#player1").prop("checked", true);
-        else if (arr[0] == "player2")
-            $("#player2").prop("checked", true);
-        enterGame();
+        enterGame(arr[0]);
     } else {
         kansas_ui.vlog(3, "client: "  + client);
         client.callAsync("list_games").then(handleListGames);
@@ -189,11 +183,22 @@ function handleListGames(data) {
                 online = " (" + data[g].presence + " online)";
 //                var disabled = " disabled=true ";
             }
+            var orients = {};
+            for (k in data[g].orients) {
+                orients[data[g].orients[k]] = true;
+            }
+            if (orients["player1"]) {
+                var orient = "player2";
+            } else {
+                var orient = "player1";
+            }
 
             var button = "<button "
                 + priv
                 + "class='entergame' data-gameid=\""
-                + data[g].gameid
+                + data[g].gameid + "\""
+                + " data-suggested_orient=\""
+                + orient
                 + "\">"
                 + "Join"
                 + "</button>";
@@ -241,11 +246,6 @@ function handleListGames(data) {
 }
 
 $(document).ready(function() {
-    var orient = localstore.get('orient', "player1");
-    if (orient == "player2") {
-        $("#player2").prop("checked", true);
-    }
-
     $("#gamename").val(new Date().toJSON());
 
     $("#login").submit(function() {
@@ -325,7 +325,7 @@ $(document).ready(function() {
     $("#newgame").click(function() {
         if ($("#gamename").val())
             gameid = $("#gamename").val();
-        enterGame();
+        enterGame("player1");
     });
 
     $("#logout").click(function() {
@@ -334,8 +334,9 @@ $(document).ready(function() {
     });
 
     $(".entergame").live('click', function(event) {
-        gameid = $(event.currentTarget).data("gameid");
-        enterGame();
+        var button = $(event.currentTarget)
+        gameid = button.data("gameid");
+        enterGame(button.data("suggested_orient"));
     });
 
     $(".endgame").live('click', function(event) {

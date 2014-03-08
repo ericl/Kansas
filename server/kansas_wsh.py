@@ -437,9 +437,13 @@ class KansasSpaceHandler(KansasHandler):
                 self.games.items(),
                 key=lambda (k, v): (bool(not v.presence_count()), -v.last_used))
             for gameid, handler in ranked:
+                orients = set()
+                for p in handler.presence_breakdown():
+                    orients.add(p['orient'])
                 resp.append({
                     'gameid': gameid,
-                    'presence': handler.presence_count()})
+                    'presence': handler.presence_count(),
+                    'orients': list(orients)})
             output.reply(resp)
 
     def garbage_collect_games(self):
