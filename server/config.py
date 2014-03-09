@@ -4,7 +4,7 @@ kSmallImageSize = (92, 131)
 kServingPrefix = ''
 kLocalServingAddress = 'http://localhost:8000/'
 kCachePath = '../cache'
-kClientVersion = 144
+kClientVersion = 145
 kDBPath = '../db'
 
 if not os.path.exists(kCachePath):

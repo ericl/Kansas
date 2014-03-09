@@ -2153,10 +2153,12 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         shuffle(toAdd);
         var myCards = $.map($(".card").not(".flipped"),
             function(i) { return toId($(i)); });
-        console.log(myCards);
-        console.log(Object.keys(myCards));
-        if (myCards) {
-            client.callAsync('remove', myCards);
+        if (myCards.length > 0) {
+            if (confirm("This will replace all cards on your side of the board.")) {
+                client.callAsync('remove', myCards);
+            } else {
+                return;
+            }
         }
         that.fyi(that.user + " has added " + that.pronoun() + " new deck to the board.");
         var f = client.callAsync('add', {'cards': toAdd, 'requestor': uuid});
