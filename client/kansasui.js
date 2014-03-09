@@ -566,8 +566,7 @@ KansasUI.prototype._findSnapPoint = function(target) {
 
     var kSnapThresholdPixels = 100;
     var kAxisThresholdPixels = 50;
-    var targetId = target.prop("id");
-    var cid = parseInt(targetId.substr(5));
+    var cid = toId(target);
     var x = target.offset().left;
     var y = target.offset().top;
     var w = target.width();
@@ -1040,14 +1039,11 @@ KansasUI.prototype._changeOrient = function(card, orient) {
 KansasUI.prototype._removeCard = function() {
     var num = 0;
     if (this.selectedSet.length > 0) {
-        // extra card ID, (substr(5) == length of _card)
-        var cards = $.map(this.selectedSet, function(x) {
-            return parseInt(x.id.substr(5));
-        });
+        var cards = $.map(this.selectedSet, toId);
         this.client.callAsync("remove", cards);
         num = cards.length;
     } else {
-        this.client.callAsync("remove", [parseInt(this.activeCard.attr("id").substr(5))]);
+        this.client.callAsync("remove", [toId(this.activeCard)]);
         num = 1;
     }
     this.fyi(this.user + " has removed " + num + " cards.");
@@ -1149,7 +1145,7 @@ KansasUI.prototype._browseStack = function(memberCard, useSelection) {
             if (card.hasClass("flipped")) {
                 mine = false;
             }
-            var ans = parseInt(card.prop("id").substr(5));
+            var ans = toId(card);
             if (!isNaN(ans)) {
                 stack.push(ans);
             }
@@ -1199,7 +1195,7 @@ KansasUI.prototype._browseStack = function(memberCard, useSelection) {
 
 KansasUI.prototype._draw = function(memberCard) {
     var txn = this.view.startBulkMove();
-    txn.moveToHand(parseInt(memberCard.prop("id").substr(5)), this.hand_user)
+    txn.moveToHand(toId(memberCard), this.hand_user);
     txn.commit();
 }
 
@@ -1717,10 +1713,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
             var cards = extractCards(html)[0];
             var resp = cardsToHtml(cards, 'validated', data.resp);
             that._setDeckInputHtml(resp);
-            // Only allows actions if verification had no errors.
-            if (resp[2] == 0 && resp[1] > 0) {
-                $('.requiresvalidation').prop("disabled", false);
-            }
             var urls = [];
             var counts = [];
             for (i in cards) {
@@ -1765,7 +1757,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                         shuffle(that.selectedSet);
                         that.selectedSet.map(function(i) {
                             var card = $(this);
-                            var ans = parseInt(card.prop("id").substr(5));
+                            var ans = toId(card);
                             if (!isNaN(ans)) {
                                 stack.push(ans);
                             }
@@ -1794,7 +1786,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                         var stack = [];
                         that.selectedSet.map(function(i) {
                             var card = $(this);
-                            var ans = parseInt(card.prop("id").substr(5));
+                            var ans = toId(card);
                             if (!isNaN(ans)) {
                                 stack.push(ans);
                             }
@@ -2070,10 +2062,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         e.stopPropagation();
     });
 
-    $("#deckinput").keyup(function(e) {
-        $('.requiresvalidation').prop("disabled", true);
-    });
-
     $("#savedeck").mouseup(function(e) {
         var name = $('#deckname').val().replace("\"", "'");
         var res = extractCards($("#deckinput").html());
@@ -2134,7 +2122,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
             var cards = JSON.parse(data.resp);
             $("#deckname").val(data.req.key);
             that._setDeckInputHtml(cardsToHtml(cards));
-            $('.requiresvalidation').prop("disabled", false);
             doValidate();
         });
     });
@@ -2164,14 +2151,29 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
             }
         }
         shuffle(toAdd);
-        var oldStack = client.getStack('board', pos);
-        if (oldStack) {
-            client.callAsync('remove', oldStack);
+        var myCards = $.map($(".card").not(".flipped"),
+            function(i) { return toId($(i)); });
+        console.log(myCards);
+        console.log(Object.keys(myCards));
+        if (myCards) {
+            client.callAsync('remove', myCards);
         }
         that.fyi(that.user + " has added " + that.pronoun() + " new deck to the board.");
-        client.callAsync('add', {'cards': toAdd, 'requestor': uuid});
+        var f = client.callAsync('add', {'cards': toAdd, 'requestor': uuid});
         hideDeckPanel();
         summonMerlin();
+        f.then(function() {
+            var oldHand = client.getStack('hands', that.hand_user);
+            if (oldHand) {
+                client.callAsync('remove', oldHand);
+            }
+            var stack = client.getStack('board', pos).slice(-7);
+            var txn = that.view.startBulkMove();
+            for (i in stack) {
+                txn.moveToHand(stack[i], that.hand_user);
+            }
+            txn.commit();
+        });
     });
 
     $("#opposinghand").droppable({
@@ -2187,7 +2189,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
     $("#hand").droppable({
         over: function(event, ui) {
             if (ui.draggable.hasClass("card")) {
-                var card = parseInt(ui.draggable.prop("id").substr(5));
+                var card = toId(ui.draggable);
                 if (!that.client.inHand(ui.draggable)) {
                     that._redrawHand();
                 }
@@ -2626,9 +2628,11 @@ KansasUI.prototype._redrawOtherHands = function() {
 /* Forces a re-render of the hand after a handCache update. */
 KansasUI.prototype._redrawHand = function() {
     this.vlog(2, "redrawHand");
+    var that = this;
     var hand = this.client.getStack('hands', this.hand_user);
-    if (!hand)
+    if (!hand) {
         hand = [];
+    }
 
     var kHandSpacing = 4;
     var kConsiderUnloaded = 20;
@@ -2659,11 +2663,15 @@ KansasUI.prototype._redrawHand = function() {
     var currentY = $("#hand").position().top - $(window).scrollTop() + kHandSpacing;
 
     var skips = 0;
+    function onCompleteAnimation(cd) {
+        return function() {
+            that._setOrientProperties(cd, that.client.getOrient(cd));
+        }
+    }
 
     for (i in hand) {
         var cd = $("#card_" + hand[i]);
         updateCardFlipState(cd, 999999);
-        this._setOrientProperties(cd, this.client.getOrient(cd));
         if (!collapsed) {
             if (currentX + cardWidth > handWidth) {
                 currentY += cardHeight + kHandSpacing;
@@ -2680,7 +2688,7 @@ KansasUI.prototype._redrawHand = function() {
                 left: currentX,
                 top: currentY,
                 opacity: 1.0,
-            }, kAnimationLength);
+            }, kAnimationLength, undefined, onCompleteAnimation(cd));
         } else {
             skips += 1;
         }

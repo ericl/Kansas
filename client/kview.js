@@ -45,6 +45,14 @@ function KansasView(kclient, rotation, translation, bbox) {
     this.warning = this.client.ui.warning;
 }
 
+function toId(id) {
+    if (isNaN(id)) {
+        /* converts jquery selection to integer id */
+        id = parseInt(id.prop("id").substr(5));
+    }
+    return id;
+}
+
 (function() {  /* begin namespace kview */
 
 function keyFromCoords(view, x, y) {
@@ -118,14 +126,6 @@ function toCanonicalY(view, y, invert) {
         y += view.translation[1];
     }
     return y;
-}
-
-function toId(id) {
-    if (isNaN(id)) {
-        /* converts jquery selection to integer id */
-        id = parseInt(id.prop("id").substr(5));
-    }
-    return id;
 }
 
 KansasView.prototype.posToCoord = function(board_pos) {
