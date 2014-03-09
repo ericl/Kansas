@@ -2928,6 +2928,7 @@ KansasUI.prototype._initCards = function(sel) {
     });
 }
 
+var panelShownOnce = false;
 KansasUI.prototype.handleReset = function() {
     this.vlog(3, "Reset all local state.");
     $(".uuid_frame").remove();
@@ -2936,7 +2937,8 @@ KansasUI.prototype.handleReset = function() {
         'cards': this.client.listAll(),
         'requestor': 'reset',
     });
-    if ($(".card").not(".flipped").length == 0) {
+    if (!panelShownOnce && $(".card").not(".flipped").length == 0) {
+        panelShownOnce = true;
         this._showDeckPanel();
     }
 }
