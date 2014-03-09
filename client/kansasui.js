@@ -2936,6 +2936,9 @@ KansasUI.prototype.handleReset = function() {
         'cards': this.client.listAll(),
         'requestor': 'reset',
     });
+    if ($(".card").not(".flipped").length == 0) {
+        this._showDeckPanel();
+    }
 }
 
 KansasUI.prototype.handleAdd = function(data) {
