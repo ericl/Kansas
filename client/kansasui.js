@@ -1748,7 +1748,17 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         },
         doValidate,
         function(cardbox, name, search_term) {
+            function makeSearchButton(name) {
+                var searchButton = $('<div title="Web search" class="button3 cardbutton searchbutton">' +
+                    '<div class="innerbutton" style="-webkit-transform: rotate(45deg); -moz-transform: rotate(45deg);' +
+                    '-o-transform: rotate(45deg);">&#9906;</div></div>').appendTo(cardbox);
+                searchButton.on("click", function(event) {
+                    window.open("http://google.com/search?q=" + name, '_blank');
+                });
+                return searchButton;
+            }
             if (search_term == true) {
+                var searchButton = makeSearchButton(name);
                 var moveButton = $("<div title='Move to hand' class='cardbutton movebutton'>↴</div>").appendTo(cardbox);
                 moveButton.on("click", function(event) {
                     event.preventDefault();
@@ -1817,6 +1827,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                         found = true;
                     }
                 }
+                var searchButton = makeSearchButton(name);
                 var getButton = $("<div title='Add to hand' class='button2 cardbutton getbutton'>↴</div>").appendTo(cardbox);
                 getButton.on("click", function(event) {
                     event.preventDefault();
@@ -1833,15 +1844,18 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                 }
                 if (!isMobile.any()) {
                     getButton.hide();
+                    searchButton.hide();
                     if (!addButton.hasClass("found")) {
                         addButton.hide();
                     }
                     cardbox.on('mousemove', function() {
                         getButton.fadeIn();
                         addButton.fadeIn();
+                        searchButton.fadeIn();
                     });
                     cardbox.on('mouseleave', function() {
                         getButton.fadeOut();
+                        searchButton.fadeOut();
                         if (!addButton.hasClass("found")) {
                             addButton.fadeOut();
                         }
@@ -1871,6 +1885,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                     addButton.text("✓");
                 });
             } else {
+                var searchButton = makeSearchButton(name);
                 var addButton = $("<div title='Add 1' class='cardbutton addbutton'>+</div>").appendTo(cardbox);
                 var removeButton = $("<div title='Remove 1' class='cardbutton button2 removebutton'>−</div>").appendTo(cardbox);
                 removeButton.on("click", function(event) {
