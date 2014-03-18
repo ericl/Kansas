@@ -48,7 +48,7 @@ function KansasView(kclient, rotation, translation, bbox) {
 function toId(id) {
     if (isNaN(id)) {
         /* converts jquery selection to integer id */
-        id = parseInt(id.prop("id").substr(5));
+        id = parseInt($(id).prop("id").substr(5));
     }
     return id;
 }
