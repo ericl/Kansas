@@ -364,6 +364,10 @@ li.confirm:hover, li.confirm.hover {
   right: 60px !important;
 }
 
+.button3.largebutton {
+  right: 120px !important;
+}
+
 .found {
   cursor: pointer;
   background-color: white;
