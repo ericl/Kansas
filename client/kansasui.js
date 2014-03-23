@@ -21,8 +21,6 @@
  */
 
 function KansasUI() {
-    this.agent = null;
-    this.agent_visible = false;
     this.view = null;
     this.client = null;
     this.user = null;
@@ -1063,10 +1061,6 @@ KansasUI.prototype._toggleRotateCard = function(card) {
 KansasUI.prototype._rotateCard = function(card) {
     var orient = this.client.getOrient(card);
     if (Math.abs(orient) == 1) {
-        if (this.agent_visible) {
-            this.agent.stop();
-            this.agent.animate();
-        }
         this._changeOrient(card, Math.abs(orient) / orient * 2);
         $(".hovermenu")
             .children("img")
@@ -1666,35 +1660,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         $(".actionbutton").addClass("largeactionbutton");
     }
 
-    function summonMerlin() {
-        var html = $("#deckinput").html();
-        var cards = extractCards(html)[0];
-        client.callAsync('bulkquery', {
-            'terms': $.map(cards, function(x) {
-                if (x[0] > 0) {
-                    return [[x[0], x[1]]];
-                } else {
-                    return [];
-                }
-            }),
-        }).then(function(data) {
-            for (k in data.resp) {
-                var type = data.resp[k].type;
-                if (type && type.indexOf('Wizard') != -1) {
-                    if (that.agent == null) {
-                        that.agent = "loading";
-                        clippy.load('Merlin', function(agent) {
-                            that.agent = agent;
-                            that.agent.show();
-                            that.agent_visible = true;
-                        });
-                        break;
-                    }
-                }
-            }
-        });
-    }
-
     function doValidate(inPlace) {
         var html = $("#deckinput").html();
         var cards = extractCards(html)[0];
@@ -2065,11 +2030,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
             that.client.send("remove", that.client.listAll());
         }
         that.fyi(that.user + " has cleared all cards from the board.");
-        if (that.agent) {
-            that.agent.hide();
-            that.agent_visible = false;
-            that.agent = null;
-        }
     });
 
     $("#deck").mouseup(function(e) {
@@ -2178,7 +2138,6 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         that.fyi(that.user + " has added " + that.pronoun() + " new deck to the board.");
         var f = client.callAsync('add', {'cards': toAdd, 'requestor': uuid});
         hideDeckPanel();
-        summonMerlin();
         f.then(function() {
             var oldHand = client.getStack('hands', that.hand_user);
             if (oldHand) {
@@ -3085,10 +3044,6 @@ function htmlForTextWithEmbeddedNewlines(text) {
 }
 
 KansasUI.prototype.fyi = function(msg) {
-    if (this.agent_visible) {
-        this.agent.stop();
-        this.agent.speak(msg);
-    }
     this.client.send("broadcast",
         {
             subtype: "message",
@@ -3122,11 +3077,6 @@ KansasUI.prototype.handleBroadcast = function(data) {
             }
             var newtext = name + ': ' + data.msg;
             if (!name) {
-                if (this.agent_visible) {
-                    this.agent.stop();
-                    this.agent.speak(data.msg);
-                    return;
-                }
                 newtext = data.msg;
             }
             this.chatHistory.push(newtext);
