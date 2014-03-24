@@ -1715,8 +1715,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
         function(cardbox, name, search_term) {
             function makeSearchButton(name) {
                 var searchButton = $('<div title="Web search" class="button3 cardbutton searchbutton">' +
-                    '<div class="innerbutton" style="-webkit-transform: rotate(45deg); -moz-transform: rotate(45deg);' +
-                    '-o-transform: rotate(45deg);">&#9906;</div></div>').appendTo(cardbox);
+                    '?</div>').appendTo(cardbox);
                 searchButton.on("click", function(event) {
                     window.open("http://google.com/search?q=" + name, '_blank');
                 });
