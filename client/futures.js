@@ -61,8 +61,8 @@ Future.prototype.then = function(callback) {
         }
         callback(value, child.set.bind(child), retryWith);
     };
-    if (this.state == 'completed') {
-        this._oncomplete(this.result);
+    if (this._state == 'completed') {
+        this._oncomplete(this._result);
     }
     return child;
 }
@@ -71,14 +71,14 @@ Future.prototype.then = function(callback) {
  * Called on this future when the pending computation is completed.
  */
 Future.prototype.set = function(result) {
-    if (this.state == 'completed') {
+    if (this._state == 'completed') {
         throw "This future has already completed.";
     }
-    this.result = result;
+    this._result = result;
     if (this._oncomplete !== undefined) {
         this._oncomplete(result);
     }
-    this.state = 'completed';
+    this._state = 'completed';
 }
 
 })();  /* end namespace futures */
