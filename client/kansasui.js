@@ -54,7 +54,6 @@ function KansasUI() {
     this.searcher = null;
     this.oldtitle = null;
     this.deepenSelectionTimeoutId = null;
-    this.firstTimeShowingPanel = true;
     var that = this;
     setInterval(function() {
         if (!that.client || that.client._state != 'connected') {
@@ -158,28 +157,10 @@ function deckPanelVisible() {
 
 KansasUI.prototype._showDeckPanel = function(cb, imm) {
     this._refreshDeckList();
-    var panelLoadReq = null;
-    if (this.firstTimeShowingPanel) {
-        this.firstTimeShowingPanel = false;
-        panelLoadReq = this.client.callAsync("samplecards").then(
-            function(data, continueWith) {
-                var html = "<br>";
-                for (i in data) {
-                    html += data[i] + "<br>";
-                }
-                $("#samplecards").html(html);
-                continueWith();
-            });
-    } else {
-        panelLoadReq = new Future();
-        panelLoadReq.set();
+    $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);
+    if (!isMobile.any()) {
+        $("#kansas_typeahead").select();
     }
-    panelLoadReq.then(function() {
-        $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);
-        if (!isMobile.any()) {
-            $("#kansas_typeahead").select();
-        }
-    });
 }
 
 /**
