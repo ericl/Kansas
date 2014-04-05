@@ -50,7 +50,7 @@
  *          .commit();
  */
 
-var kClientVersion = 154;  // keep in sync with config.py
+var kClientVersion = 155;  // keep in sync with config.py
 var versionRequired = kClientVersion;
 
 function doCheckPopup() {

@@ -54,6 +54,8 @@ function KansasUI() {
     this.searcher = null;
     this.oldtitle = null;
     this.deepenSelectionTimeoutId = null;
+    this.firstTimeShowingPanel = true;
+    this.lastSavedDeckContents = null;
     var that = this;
     setInterval(function() {
         if (!that.client || that.client._state != 'connected') {
@@ -72,6 +74,8 @@ function KansasUI() {
 }
 
 (function() {  /* begin namespace kansasui */
+
+var kDefaultDeckPanelHtml = "=== Welcome to the card browser ===<br><br>Use the search bar above to find cards and add them to your deck list. Then hit 'Preview' below to further edit your deck and add it to the board.<br><br>Tip: use Ctrl-F to jump to card search."
 
 var isMobile = {
     Android: function() {
@@ -157,10 +161,52 @@ function deckPanelVisible() {
 
 KansasUI.prototype._showDeckPanel = function(cb, imm) {
     this._refreshDeckList();
-    $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);
-    if (!isMobile.any()) {
-        $("#kansas_typeahead").select();
+    var panelLoadReq = null;
+    if (this.firstTimeShowingPanel) {
+        this.firstTimeShowingPanel = false;
+        var that = this;
+        panelLoadReq = this.client.callAsync('kvop', {
+            'namespace': 'DeckPanel#' + that.user_id,
+            'op': 'Get',
+            'key': 'saved_panel_contents',
+        }).then(function(data, continueWith) {
+            if (data.resp) {
+                $("#deckinput").html(data.resp);
+                continueWith();
+            } else {
+                that.client.callAsync("samplecards").then(function(data) {
+                   var html = kDefaultDeckPanelHtml + "<br><br>";
+                   for (i in data) {
+                       html += data[i] + "<br>";
+                   }
+                   $("#deckinput").html(html);
+                   continueWith();  // from outer then()
+                });
+            }
+        });
+        setInterval(function() {
+            var text = $("#deckinput").html();
+            if (text != that.lastSavedDeckContents) {
+                that.lastSavedDeckContents = text;
+                that.vlog(1, "Saved changed deck contents.");
+                that.client.callAsync('kvop', {
+                    'namespace': 'DeckPanel#' + that.user_id,
+                    'op': 'Put',
+                    'key': 'saved_panel_contents',
+                    'value': $("#deckinput").html(),
+                });
+            }
+        }, 1000);
+    } else {
+        panelLoadReq = new Future();
+        panelLoadReq.set();
     }
+    panelLoadReq.then(function() {
+        $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);
+        if (!isMobile.any()) {
+            $("#kansas_typeahead").select();
+        }
+    });
 }
 
 /**
