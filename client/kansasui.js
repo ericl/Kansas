@@ -1744,7 +1744,7 @@ KansasUI.prototype.init = function(client, uuid, user, orient, gameid, gender, u
                 var searchButton = $('<div title="Web search" class="button3 cardbutton searchbutton">' +
                     '?</div>').appendTo(cardbox);
                 searchButton.on("click", function(event) {
-                    window.open("http://google.com/search?q=" + name, '_blank');
+                    window.open("http://google.com/search?q=mtg:" + name, '_blank');
                 });
                 return searchButton;
             }
