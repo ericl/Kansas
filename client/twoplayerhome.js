@@ -100,8 +100,8 @@ function enterGame(orient) {
         kansas_ui.hideSpinner();
         localstore.put('profile', resp);
         var user = resp.displayName;
-        $("#homescreen").fadeOut('slow');
-        $(".home-hidden").fadeIn('slow');
+        $("#homescreen").hide();
+        $(".home-hidden").show();
         document.title = 'Kansas: ' + orient + '@' + gameid;
         prev_hash = document.location.hash = orient + ';' + gameid;
         localstore.put('orient', orient);

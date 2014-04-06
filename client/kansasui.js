@@ -2993,7 +2993,7 @@ KansasUI.prototype.handleAdd = function(data) {
 
     for (i in cards) {
         var card = $("#card_" + cards[i]);
-        card.fadeIn();
+        card.fadeIn(1);
         this._initCards(card);
     }
 }
