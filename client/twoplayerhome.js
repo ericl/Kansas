@@ -60,7 +60,7 @@ function enterGame(orient) {
     var profileReq = new Future();
     if (profile) {
         console.log("Using cached profile; run localstore.put('profile') to reset.");
-        profileReq.set(profile);
+        profileReq.done(profile);
     } else {
         kansas_ui.showSpinner("Logging in...");
         var immediateAuthReq = new Future();
@@ -68,8 +68,8 @@ function enterGame(orient) {
             client_id: kClientId,
             immediate: true,
             scope: "profile",
-        }, immediateAuthReq.set.bind(immediateAuthReq));
-        immediateAuthReq.then(function(authResult, continueWith, retryWith) {
+        }, immediateAuthReq.done.bind(immediateAuthReq));
+        immediateAuthReq.then(function(authResult, context) {
             console.log("Auth result: " + JSON.stringify(authResult));
             if (authResult == null || !authResult.status.signed_in) {
                 console.log("Retrying login with immediate = false.");
@@ -77,10 +77,11 @@ function enterGame(orient) {
                     client_id: kClientId,
                     immediate: false,
                     scope: "profile",
-                }, retryWith);
+                }, context.retry);
+                return Future.Pending;
             } else {
                 console.log("Immediate log in succeeded.");
-                continueWith(authResult);
+                return authResult;
             }
         }).then(function(authResult) {
             if (signed_on) {
@@ -92,7 +93,7 @@ function enterGame(orient) {
                 kansas_ui.showSpinner("Almost done...");
                 gapi.client.plus.people.get({
                     'userId': 'me'
-                }).execute(profileReq.set.bind(profileReq));
+                }).execute(profileReq.done.bind(profileReq));
             });
         });
     }

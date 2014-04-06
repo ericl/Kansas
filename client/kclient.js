@@ -360,7 +360,7 @@ KansasClient.prototype._eventHandlers = function(that) {
     return {
         _future_router: function(e) {
             if (that._futures[e.future_id]) {
-                that._futures[e.future_id].set(e.data);
+                that._futures[e.future_id].done(e.data);
                 delete that._futures[e.future_id];
             } else {
                 that.ui.vlog(0, "Dropped future: " + JSON.stringify(e.future_id));

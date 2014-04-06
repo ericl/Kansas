@@ -169,10 +169,9 @@ KansasUI.prototype._showDeckPanel = function(cb, imm) {
             'namespace': 'DeckPanel#' + that.user_id,
             'op': 'Get',
             'key': 'saved_panel_contents',
-        }).then(function(data, continueWith) {
+        }).then(function(data, context) {
             if (data.resp) {
                 $("#deckinput").html(data.resp);
-                continueWith();
             } else {
                 that.client.callAsync("samplecards").then(function(data) {
                    var html = kDefaultDeckPanelHtml + "<br><br>";
@@ -180,8 +179,9 @@ KansasUI.prototype._showDeckPanel = function(cb, imm) {
                        html += data[i] + "<br>";
                    }
                    $("#deckinput").html(html);
-                   continueWith();  // from outer then()
+                   context.done();  // from outer then()
                 });
+                return Future.Pending;
             }
         });
         setInterval(function() {
@@ -199,7 +199,7 @@ KansasUI.prototype._showDeckPanel = function(cb, imm) {
         }, 1000);
     } else {
         panelLoadReq = new Future();
-        panelLoadReq.set();
+        panelLoadReq.done();
     }
     panelLoadReq.then(function() {
         $('#deckpanel').animate({left:'0%'}, imm ? 0 : 300, cb);

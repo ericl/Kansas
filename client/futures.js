@@ -3,18 +3,17 @@
  * 
  *  Usage:
  *      var fut1 = UI.showNonModalPrompt("What is your name?");
- *
- *      fut1.then(function(v, continueWith) {
- *          if (v == null) {
- *              continueWith("Illegal login name: " + v);
+ *      fut1.then(function(name, context) {
+ *          if (name == null) {
+ *              return "Illegal login name: " + v;
  *          } else {
- *              $.ajax(v, ...).done(continueWith);
+ *              $.ajax("loginWithName", name, context.done);
+ *              return Future.Pending;
  *          }
  *      }).then(function(v) {
  *          console.log("Login result is: " + v);
  *      });
- *
- *      fut1.set("Alice");
+ *      fut1.done("Alice");
  *      >> Login result is: hello Alice, you are now logged in.
  */
 
@@ -24,42 +23,56 @@ function Future() {
     this._result = undefined;
 }
 
-
 (function() {  /* begin namespace futures */
+
+// Return this to signal that the result is still pending a call to
+// context.done or context.retry.
+Future.Pending = Object();
 
 /**
  * When this future completes, runs callback with the computed result.
  * @param callback: Called when this future is completed.
  * @return Future on the optional result of the callback.
  *
- * Callback takes three optional arguments:
+ * Callback takes two optional arguments:
  *  value: The value this future was completed with.
- *  continueWith: Function that completes the returned future with its first argument.
- *  retryWith: Function that retries this callback with its first argument.
+ *  context: Object with two methods: done(val) and retry(val).
  *
- * Using continueWith and retryWith, it is possible to express complex work flows
- * using Futures while avoiding nested callbacks. For example, consider this
- * login flow example:
+ * If the return value of callback is not Future.Pending, context.done will
+ * be called on the returned value of callback.
+ *
+ * Using the done and retry methods, it is possible to express complex work
+ * flows using Futures while avoiding nested callbacks. For example, consider
+ * this login flow example:
  * 
  * UI.showNonModalPrompt("What is your name?")
- *   .then(function(v, continueWith, retryWith) {
- *       if (v) {
- *           $.ajax(v, ...).done(continueWith);
+ *   .then(function(name, this) {
+ *       if (name) {
+ *           return name;
+ *       } else if (autoSuggestNamesEnabled) {
+ *           $.ajax("getRandomName", this.done);
+ *           return Future.Pending;
  *       } else {
- *           $.showNonModalPrompt("Try again. Your name?").then(retryWith);
+ *           $.showNonModalPrompt("Try again. Your name?").then(this.retry);
+ *           return Future.Pending;
  *       }
- *   }).then(function(v) { console.log("Login result: " + v));
+ *   }).then(function(name) { console.log("Login result: " + name));
  */
 Future.prototype.then = function(callback) {
     if (this._oncomplete !== undefined) {
         throw "callback already set for this future.";
     }
     var child = new Future();
+    var that = this;
+    var context = {
+        done: function(value) { child.done(value); },
+        retry: function(value) { that._oncomplete(value); },
+    };
     this._oncomplete = function(value) {
-        function retryWith(newValue) {
-            callback(newValue, child.set.bind(child), retryWith);
+        var result = callback(value, context);
+        if (result !== Future.Pending) {
+            context.done(result);
         }
-        callback(value, child.set.bind(child), retryWith);
     };
     if (this._state == 'completed') {
         this._oncomplete(this._result);
@@ -70,7 +83,7 @@ Future.prototype.then = function(callback) {
 /**
  * Called on this future when the pending computation is completed.
  */
-Future.prototype.set = function(result) {
+Future.prototype.done = function(result) {
     if (this._state == 'completed') {
         throw "This future has already completed.";
     }
