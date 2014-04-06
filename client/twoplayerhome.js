@@ -78,7 +78,7 @@ function enterGame(orient) {
                     immediate: false,
                     scope: "profile",
                 }, context.retry);
-                return Future.Pending;
+                return context.Pending;
             } else {
                 console.log("Immediate log in succeeded.");
                 return authResult;

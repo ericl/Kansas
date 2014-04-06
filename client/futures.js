@@ -8,7 +8,7 @@
  *              return "Illegal login name: " + v;
  *          } else {
  *              $.ajax("loginWithName", name, context.done);
- *              return Future.Pending;
+ *              return context.Pending;
  *          }
  *      }).then(function(v) {
  *          console.log("Login result is: " + v);
@@ -25,10 +25,6 @@ function Future() {
 
 (function() {  /* begin namespace futures */
 
-// Return this to signal that the result is still pending a call to
-// context.done or context.retry.
-Future.Pending = Object();
-
 /**
  * When this future completes, runs callback with the computed result.
  * @param callback: Called when this future is completed.
@@ -38,7 +34,7 @@ Future.Pending = Object();
  *  value: The value this future was completed with.
  *  context: Object with two methods: done(val) and retry(val).
  *
- * If the return value of callback is not Future.Pending, context.done will
+ * If the return value of callback is not context.Pending, context.done will
  * be called on the returned value of callback.
  *
  * Using the done and retry methods, it is possible to express complex work
@@ -46,15 +42,15 @@ Future.Pending = Object();
  * this login flow example:
  * 
  * UI.showNonModalPrompt("What is your name?")
- *   .then(function(name, this) {
+ *   .then(function(name, context) {
  *       if (name) {
  *           return name;
  *       } else if (autoSuggestNamesEnabled) {
- *           $.ajax("getRandomName", this.done);
- *           return Future.Pending;
+ *           $.ajax("getRandomName", context.done);
+ *           return context.Pending;
  *       } else {
- *           $.showNonModalPrompt("Try again. Your name?").then(this.retry);
- *           return Future.Pending;
+ *           $.showNonModalPrompt("Try again. Your name?").then(context.retry);
+ *           return context.Pending;
  *       }
  *   }).then(function(name) { console.log("Login result: " + name));
  */
@@ -67,10 +63,11 @@ Future.prototype.then = function(callback) {
     var context = {
         done: function(value) { child.done(value); },
         retry: function(value) { that._oncomplete(value); },
+        Pending: Object(),
     };
     this._oncomplete = function(value) {
         var result = callback(value, context);
-        if (result !== Future.Pending) {
+        if (result !== context.Pending) {
             context.done(result);
         }
     };

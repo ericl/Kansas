@@ -181,7 +181,7 @@ KansasUI.prototype._showDeckPanel = function(cb, imm) {
                    $("#deckinput").html(html);
                    context.done();  // from outer then()
                 });
-                return Future.Pending;
+                return context.Pending;
             }
         });
         setInterval(function() {
