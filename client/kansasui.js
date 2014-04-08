@@ -133,8 +133,8 @@ function extractCards(html) {
 }
 
 function hideDeckPanel() {
-    $('#deckpanel').animate({left:'-45%'}, 300);
-    $("#search_preview").fadeOut();
+    $('#deckpanel').animate({left:'-45%'}, 0);
+    $("#search_preview").hide();
 }
 
 function placeCaretAtEnd(el) {
