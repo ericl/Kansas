@@ -56,6 +56,7 @@ function KansasUI() {
     this.deepenSelectionTimeoutId = null;
     this.firstTimeShowingPanel = true;
     this.lastSavedDeckContents = null;
+    this.lastSavedDeckName = null;
     var that = this;
     setInterval(function() {
         if (!that.client || that.client._state != 'connected') {
@@ -168,10 +169,13 @@ KansasUI.prototype._showDeckPanel = function(cb, imm) {
         panelLoadReq = this.client.callAsync('kvop', {
             'namespace': 'DeckPanel#' + that.user_id,
             'op': 'Get',
-            'key': 'saved_panel_contents',
+            'key': 'saved_panel_name_contents',
         }).then(function(data, context) {
             if (data.resp) {
-                $("#deckinput").html(data.resp);
+                $("#deckinput").html(data.resp.html);
+                $("#deckname").val(data.resp.name);
+                that.lastSavedDeckContents = data.resp.html;
+                that.lastSavedDeckName = data.resp.name;
             } else {
                 that.client.callAsync("samplecards").then(function(data) {
                    var html = kDefaultDeckPanelHtml + "<br><br>";
@@ -186,14 +190,19 @@ KansasUI.prototype._showDeckPanel = function(cb, imm) {
         });
         setInterval(function() {
             var text = $("#deckinput").html();
-            if (text != that.lastSavedDeckContents) {
+            var name = $("#deckname").val();
+            if (text != that.lastSavedDeckContents || name != that.lastSavedDeckName) {
                 that.lastSavedDeckContents = text;
+                that.lastSavedDeckName = name;
                 that.vlog(1, "Saved changed deck contents.");
                 that.client.callAsync('kvop', {
                     'namespace': 'DeckPanel#' + that.user_id,
                     'op': 'Put',
-                    'key': 'saved_panel_contents',
-                    'value': $("#deckinput").html(),
+                    'key': 'saved_panel_name_contents',
+                    'value': {
+                        'html': text,
+                        'name': name,
+                    },
                 });
             }
         }, 1000);
