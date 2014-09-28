@@ -8,7 +8,7 @@ import os
 import urllib2
 
 # Stores map of url -> cached file, which can be used to invert _toHashName().
-CacheMap = namespaces.Namespace(config.kDBPath, 'CacheMap', version=0)
+CacheMap = namespaces.Namespace(config.kDBPath, 'CacheMap', version=1)
 
 
 def _toHashName(url):
