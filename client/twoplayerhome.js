@@ -144,6 +144,7 @@ function handleSocketOpen() {
 
 function handleSocketClose(client) {
     kansas_ui.showSpinner("Connecting...");
+    console.log("WebSocket disconnected.");
     function connect_to_game() {
         if (connect_info != null) {
             client.send("connect", connect_info);

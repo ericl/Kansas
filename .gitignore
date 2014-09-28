@@ -7,3 +7,5 @@ localdb
 mtg_info.txt
 classification.txt
 *.log
+import_mtg_card.py
+card-classifier

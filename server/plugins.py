@@ -82,13 +82,13 @@ class MagicCard(object):
         self.subtype = row[2]
         self.searchtype = ' '.join([self.type, self.subtype]).lower()
         self.mana = row[3]
-        self.cost = int(row[4]) if row[3] else 0
+        self.cost = int(row[4]) if row[3] else None
         self.text = sanitize(row[5])
         self.set = row[6]
         self.rarity = row[7]
         if self.set in ['Unhinged', 'Unglued']:
             self.goodQuality = False
-        coststring = "mana=%d" % self.cost
+        coststring = ("mana=%d" % self.cost) if self.cost is not None else ""
         colorstring = ""
         numcolors = 0
         if 'U' in self.mana or ('Land' in self.type and '{U}' in self.text):
@@ -154,8 +154,11 @@ class MagicCard(object):
 
 
 class CardCatalog(object):
-    def __init__(self, catalogFile):
+    def __init__(self, catalogFile, classifyFile, dbPath):
         logging.info("Building card catalog.")
+        self.catalogFile = catalogFile
+        self.classifyFile = classifyFile
+        self.dbPath = dbPath
         self.initialized = True
         self.byType = collections.defaultdict(list)
         self.byName = {}
@@ -165,7 +168,9 @@ class CardCatalog(object):
         self.byTokens = collections.defaultdict(list)
         try:
             self.newCards = set([sanitize(x[2:-1]) for x in
-                open("../classification.txt").readlines() if x[0] == "0"])
+                open(classifyFile).readlines() if x[0] == "0"])
+            self.classifiedCards = set([sanitize(x[2:-1]) for x in
+                open(classifyFile).readlines()])
         except Exception, e:
             logging.warning("Failed to load classification: %s", e)
             self.newCards = set()
@@ -181,6 +186,17 @@ class CardCatalog(object):
         except Exception, e:
             logging.warning("Failed to load catalog: %s", e)
             self.initialized = False
+        for c in os.listdir(self.dbPath):
+            if not c.endswith(".jpg"):
+                continue
+            name = c[:-4]
+            if name not in self.byName:
+                print "WARNING: card missing metadata: " + name
+                card = MagicCard([
+                    name, "type_unknown", "subtype_unknown", '', 'cost_unknown', "text_unknown",
+                    "set_unknown", "rarity_unknown"
+                ])
+                self._register(card)
         logging.info("Done building card catalog.")
         self.topTokens = []
         for k, v in self.byTokens.iteritems():
@@ -426,13 +442,17 @@ class CardCatalog(object):
         self.byCost[card.cost].append(card)
 
 
-Catalog = CardCatalog("../mtg_info.txt")
+Catalog = None
+def initCatalog():
+    global Catalog
+    Catalog = CardCatalog("../mtg_info.txt", "../classification.txt", "../localdb")
 
 
 class LocalDBPlugin(DefaultPlugin):
     DB_PATH = '../localdb'
 
     def __init__(self):
+        initCatalog()
         self.catalog = {}
         self.index = {}
         self.fullnames = {}
